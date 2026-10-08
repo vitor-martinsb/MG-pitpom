@@ -1,0 +1,70 @@
+cmake_minimum_required(VERSION 3.12)
+
+project(golf)
+option(GOLF_SANITIZE_ADDRESS "Instrument memory accesses for validation" OFF)
+if(GOLF_SANITIZE_ADDRESS)
+    add_compile_options(-fsanitize=address -g)
+    add_link_options(-fsanitize=address)
+endif()
+
+message(${CMAKE_SYSTEM_NAME})
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+include_directories(SYSTEM src/3rd_party)
+include_directories(src)
+
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
+    add_compile_definitions(SOKOL_GLCORE33)
+    add_compile_definitions(GOLF_PLATFORM_WINDOWS)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    add_compile_definitions(SOKOL_GLCORE33)
+    add_compile_definitions(GOLF_PLATFORM_LINUX)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Android)
+    add_compile_definitions(SOKOL_GLES3)
+    add_compile_definitions(GOLF_PLATFORM_ANDROID)
+    add_compile_options("SHELL:-O3")
+    add_compile_options("SHELL:-DNDEBUG")
+elseif(CMAKE_SYSTEM_NAME STREQUAL iOS)
+    set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM RMF5MGUCT2 CACHE INTERNAL "")
+    add_compile_definitions(SOKOL_GLES3)
+    add_compile_definitions(GOLF_PLATFORM_IOS)
+    add_compile_options("SHELL:-O3")
+    add_compile_options("SHELL:-DNDEBUG")
+elseif(CMAKE_SYSTEM_NAME STREQUAL Emscripten)
+    configure_file("build/emscripten/multiplayer.js" ${CMAKE_BINARY_DIR} COPYONLY)
+    configure_file("build/emscripten/multiplayer.css" ${CMAKE_BINARY_DIR} COPYONLY)
+    add_compile_definitions(SOKOL_GLES3 GOLF_PLATFORM_EMSCRIPTEN)
+    add_compile_options(-pthread -O2 -DNDEBUG)
+    add_link_options(-pthread "SHELL:-s MIN_WEBGL_VERSION=2" "SHELL:-s MAX_WEBGL_VERSION=2"
+        "SHELL:-s FULL_ES3=1" "SHELL:-s ALLOW_MEMORY_GROWTH=1"
+        "SHELL:-s MAXIMUM_MEMORY=536870912" "SHELL:-s INITIAL_MEMORY=134217728"
+        "SHELL:-s PTHREAD_POOL_SIZE=2" "SHELL:-s DEFAULT_PTHREAD_STACK_SIZE=1048576" "SHELL:-s STACK_SIZE=1048576" "SHELL:-s EXIT_RUNTIME=0" -lidbfs.js
+        "SHELL:-s EXPORTED_RUNTIME_METHODS=ccall"
+        "SHELL:--shell-file \"${CMAKE_SOURCE_DIR}/build/emscripten/multiplayer.html\"")
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    add_compile_options(-g)
+endif()
+
+add_subdirectory(src/3rd_party/cimgui)
+add_subdirectory(src/3rd_party/fast_obj)
+add_subdirectory(src/3rd_party/glad)
+add_subdirectory(src/3rd_party/glfw)
+add_subdirectory(src/3rd_party/lightmapper)
+add_subdirectory(src/3rd_party/mattiasgustavsson_libs)
+add_subdirectory(src/3rd_party/miniz)
+add_subdirectory(src/3rd_party/parson)
+add_subdirectory(src/3rd_party/sokol)
+add_subdirectory(src/3rd_party/stb)
+add_subdirectory(src/3rd_party/xatlas)
+add_subdirectory(src/common)
+add_subdirectory(src/golf)
+
+if(CMAKE_SYSTEM_NAME STREQUAL Windows OR CMAKE_SYSTEM_NAME STREQUAL Linux)
+    add_subdirectory(src/editor)
+endif()

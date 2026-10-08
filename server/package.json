@@ -1,0 +1,29 @@
+{
+  "name": "open-golf-multiplayer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "tsx --test test/*.test.ts",
+    "load-test": "tsx src/load-test.ts",
+    "build:native": "cmake -S native -B ../out/server-native && cmake --build ../out/server-native --config Release",
+    "test:browser": "npm run build && node test/browser.mjs",
+    "test:profile-input": "npm run build && node test/profile-input.mjs",
+    "test:mobile": "npm run build && node test/mobile.mjs"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.4",
+    "@types/ws": "8.18.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PitPom Minigolfe · Multiplayer</title><link rel="stylesheet" href="multiplayer.css"></head><body>
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+<div id="connect" class="overlay"><main class="panel"><p class="muted">MINIGOLFE · ATÉ 50 JOGADORES</p><h1>PitPom Minigolfe</h1><p>Entre na mesma sala e jogue ao mesmo tempo. Cada bola percorre seu próprio caminho.</p>
+<label for="nickname">Nickname</label><input id="nickname" maxlength="24" placeholder="Seu nome" value="Player" autocomplete="nickname">
+<div class="row"><div><label for="color">Cor da bola</label><input id="color" type="color" value="#ee6255"></div><div><label for="avatar">Avatar</label><select id="avatar"><option value="0">⛳ Golfe</option><option value="1">🏌️ Golfista</option><option value="2">⭐ Estrela</option><option value="3">🌙 Lua</option><option value="4">🍀 Trevo</option><option value="5">🔥 Fogo</option><option value="6">🌊 Água</option><option value="7">🎯 Alvo</option></select></div></div>
+<button id="create" disabled>Criar sala</button><p class="muted">Ou entre com o código de uma sala:</p><input id="join-code" placeholder="RD7K2" maxlength="5"><div class="row"><button id="join" disabled>Entrar na sala</button><button id="offline" class="secondary" disabled>Jogar sozinho</button></div><p id="engine-status" class="muted" role="status">Carregando o jogo…</p></main></div>
+<div id="lobby" class="overlay" hidden><section class="panel"><h2>Sala de espera</h2><p class="muted">Compartilhe este código:</p><div id="room-code" class="code"></div><p id="count"></p><div id="members" class="list"></div><label for="holes">Mapas da partida</label><select id="holes"><option>3</option><option>6</option><option>9</option><option>18</option></select><p id="host-note" class="muted"></p><button id="start">Iniciar partida</button></section></div>
+<div id="loading" class="overlay" hidden><section class="panel"><h2>Preparando o mapa</h2><p id="loading-count"></p><p class="muted">O cronômetro começa depois do carregamento. Aguarde os outros jogadores.</p></section></div>
+<aside id="hud" class="hud" hidden><strong id="hole"></strong><span id="timer">120s</span> · <span id="status"></span><div id="summary"></div><div id="spectator" hidden><label for="spectate">Acompanhar</label><select id="spectate"></select></div></aside>
+<div id="actions" class="actions" hidden><button id="show-scores" class="secondary">Placar</button><button id="leave" class="secondary">Sair</button></div><div id="help" class="help" hidden></div>
+<div id="scores" class="overlay" hidden><section class="panel scores"><h2 id="scores-title"></h2><div class="scroll"><table><thead id="score-head"></thead><tbody id="score-body"></tbody></table></div><p id="score-note" class="muted">Menos pontos vence.</p><button id="close-scores">Fechar</button><button id="finish-exit" hidden>Voltar ao início</button></section></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script>var Module={canvas:document.getElementById('canvas'),print:console.log,printErr:console.error,setStatus:function(text){document.getElementById('engine-status').textContent=text||'Preparando os mapas…';}};</script>
+<script src="multiplayer.js"></script>
+{{{ SCRIPT }}}
+</body></html>

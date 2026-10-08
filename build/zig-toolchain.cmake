@@ -1,0 +1,7 @@
+set(ZIG "${CMAKE_CURRENT_LIST_DIR}/../out/toolchain/ziglang/zig.exe")
+set(CMAKE_C_COMPILER "${ZIG}")
+set(CMAKE_C_COMPILER_ARG1 cc)
+set(CMAKE_CXX_COMPILER "${ZIG}")
+set(CMAKE_CXX_COMPILER_ARG1 c++)
+set(CMAKE_C_FLAGS_INIT "-fms-extensions -fno-sanitize=undefined -mcpu=baseline")
+set(CMAKE_CXX_FLAGS_INIT "-fno-sanitize=undefined -mcpu=baseline")

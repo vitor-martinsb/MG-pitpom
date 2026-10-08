@@ -1,0 +1,9 @@
+{
+  "holeSeconds": 120,
+  "graceSeconds": 5,
+  "loadingTimeoutSeconds": 10,
+  "resultsSeconds": 5,
+  "reconnectSeconds": 60,
+  "dnfPenalty": 12,
+  "snapshotHz": 15
+}
