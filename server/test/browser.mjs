@@ -61,6 +61,7 @@ try{
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/fifty-overlapping.png')});
   assert.deepEqual(errors,[]);console.log('One WebGL client plus 49 WebSocket clients: 50 balls, coincident labels and scrolling scoreboard passed.');
   await pages[0].locator('#leave').click();await pages[0].locator('#offline').click();
+  await pages[0].setViewportSize({width:850,height:650});
   assert.equal(await pages[0].evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).active),false);
   await new Promise(resolve=>setTimeout(resolve,1000));
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/offline-return.png')});
@@ -80,4 +81,4 @@ try{
   await pages[0].mouse.click(783,67);await pages[0].waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===7);
   await pages[0].mouse.click(425,433);await pages[0].waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===0);
   assert.deepEqual(errors,[]);console.log('Offline flow after online: level select, aim/shot, pause, retry, resume and exit passed.');
-}catch(error){console.log('FAILED:',String(error));for(const page of pages){console.log(await page.title());await page.screenshot({path:path.resolve('../out/browser-failed.png')}).catch(()=>{});}throw error;}finally{for(const bot of bots)bot.terminate();await browser.close();app.close();}
+}catch(error){console.log('FAILED:',String(error));for(const [index,page] of pages.entries()){console.log(await page.title());await page.screenshot({path:path.resolve(`../out/browser-failed-${index}.png`)}).catch(()=>{});}throw error;}finally{for(const bot of bots)bot.terminate();await browser.close();app.close();}
