@@ -82,7 +82,7 @@ static bool _capture_in_cup(golf_physics_world_t *world, golf_entity_t *hole,
 }
 
 void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player, float dt) {
-    if (player->ball.is_in_hole) return;
+    if (player->ball.is_in_hole || player->ball.capture_until>0) return;
     float EPS = 0.001f;
 
     vec3 bp = player->ball.pos;
@@ -461,7 +461,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
 }
 
 bool golf_physics_shoot(golf_physics_world_t *world, golf_player_t *player, vec3 direction, float power) {
-    if (!player || !player->connected || player->ball.is_moving || player->ball.is_in_hole ||
+    if (!player || !player->connected || player->ball.is_moving || player->ball.is_in_hole || player->ball.capture_until>0 ||
             !isfinite(power) || power < 0 || power > 1 ||
             !isfinite(direction.x) || !isfinite(direction.y) || !isfinite(direction.z)) return false;
     direction.y = 0;

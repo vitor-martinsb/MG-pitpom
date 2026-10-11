@@ -1,0 +1,49 @@
+#include "golf/game.h"
+#include "golf/golf.h"
+#include "golf/garden.h"
+#include "common/graphics.h"
+#include <stdio.h>
+#include <float.h>
+#include <string.h>
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+#include <emscripten.h>
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#endif
+
+/* A cached static projection and a small 10 Hz read-only HUD frame. */
+EMSCRIPTEN_KEEPALIVE const char *golf_course_geometry(void) {
+    static char text[262144];
+    golf_game_t *g=golf_game_get();golf_mechanics_t *m=&g->mechanics;
+    int used=snprintf(text,sizeof(text),"{\"bounds\":[%.5g,%.5g,%.5g,%.5g],\"start\":[%.5g,%.5g],\"hole\":[%.5g,%.5g],\"triangles\":[",m->bounds_min.x,m->bounds_min.z,m->bounds_max.x,m->bounds_max.z,m->start.x,m->start.z,m->hole.x,m->hole.z);
+    int count=0;
+    for(int i=0;i<g->physics.static_bvh.faces.length && count<2048;i++) {
+        golf_bvh_face_t *f=&g->physics.static_bvh.faces.data[i];
+        if(!f->entity || (f->entity->type!=GEO_ENTITY&&f->entity->type!=MODEL_ENTITY&&f->entity->type!=WATER_ENTITY))continue;
+        if(f->entity->type==MODEL_ENTITY&&(strstr(f->entity->model.model_path,"/tree_")||strstr(f->entity->model.model_path,"/platform_")))continue;
+        vec3 n=vec3_normalize(vec3_cross(vec3_sub(f->b,f->a),vec3_sub(f->c,f->a)));
+        int kind=f->entity->type==WATER_ENTITY?3:f->entity->type==MODEL_ENTITY?2:n.y>.6f?0:1;
+        int length=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%d]",count?",":"",f->a.x,f->a.z,f->b.x,f->b.z,f->c.x,f->c.z,kind);
+        if(length<0||(size_t)length>=sizeof(text)-(size_t)used-8)break;used+=length;count++;
+    }
+    snprintf(text+used,sizeof(text)-(size_t)used,"]}");return text;
+}
+EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
+    static char text[16384];golf_game_t *g=golf_game_get();golf_t *golf=golf_get();
+    golf_mechanics_t *m=&g->mechanics;golf_graphics_t *graphics=golf_graphics_get();
+    bool active=golf->state==GOLF_STATE_IN_GAME&&g->state!=GOLF_GAME_STATE_PAUSED;
+    int used=snprintf(text,sizeof(text),"{\"active\":%s,\"level\":%d,\"intro\":%s,\"progress\":%.5g,\"time\":%.5g,\"mode\":\"%s\",\"local\":%u,\"camera\":[%.5g,%.5g,%.5g],\"cat\":[%.5g,%.5g],\"dog\":[%.5g,%.5g],\"slapTime\":%.5g,\"wakeTime\":%.5g,\"players\":[",active?"true":"false",golf->level_num,g->begin_camera_animation.active?"true":"false",g->begin_camera_animation.t/7.5f,g->t,m->impact?"impact":"classic",g->local_player_id,graphics->cam_pos.x,graphics->cam_pos.y,graphics->cam_pos.z,m->cat.x,m->cat.z,m->dog.x,m->dog.z,m->cat_slap_time,m->dog_wake_time);
+    for(int i=0;i<g->player_count;i++) {
+        golf_player_t *p=&g->players[i];
+        int n=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g],\"color\":[%.4g,%.4g,%.4g],\"visible\":%s,\"captured\":%s,\"firstComplete\":%s,\"strokes\":%d}",i?",":"",p->id,p->ball.draw_pos.x,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z,golf_game_player_visible(p)?"true":"false",p->ball.captured?"true":"false",p->ball.first_shot_complete?"true":"false",p->stroke_count);
+        if(n<0||(size_t)n>=sizeof(text)-(size_t)used-8)break;used+=n;
+    }
+    vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time());
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
+    for(int i=0;i<g->physics.dynamic_bvh.node_infos.length&&i<32;i++) {
+        golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;
+        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);
+    }
+    snprintf(text+used,sizeof(text)-(size_t)used,"]}");return text;
+}
+EMSCRIPTEN_KEEPALIVE void golf_course_skip(void) {golf_game_skip_presentation();}

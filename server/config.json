@@ -5,5 +5,6 @@
   "resultsSeconds": 5,
   "reconnectSeconds": 60,
   "dnfPenalty": 12,
-  "snapshotHz": 15
+  "snapshotHz": 15,
+  "catForwardProbability": 0.5
 }

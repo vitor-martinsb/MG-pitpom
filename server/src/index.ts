@@ -15,10 +15,12 @@ export function createServer() {
   const options={...defaults,
     duration:bounded(Number(process.env.GOLF_HOLE_SECONDS ?? settings.holeSeconds),.1,3600)*1000,
     grace:bounded(Number(process.env.GOLF_GRACE_SECONDS ?? settings.graceSeconds),0,30)*1000,
-    loadingTimeout:bounded(settings.loadingTimeoutSeconds,1,60)*1000,
+    // Allow the configured asset-loading budget plus the local drone preview.
+    loadingTimeout:bounded(settings.loadingTimeoutSeconds,1,60)*1000+8000,
     resultsDuration:bounded(settings.resultsSeconds,0,30)*1000,
     reconnectTTL:bounded(settings.reconnectSeconds,1,300)*1000,
-    penalty:bounded(settings.dnfPenalty,1,100),snapshotHz:bounded(settings.snapshotHz,10,20)};
+    penalty:bounded(settings.dnfPenalty,1,100),snapshotHz:bounded(settings.snapshotHz,10,20),
+    catForwardProbability:bounded(Number(process.env.GOLF_CAT_FORWARD_PROBABILITY ?? settings.catForwardProbability ?? .5),0,1)};
   const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
   const levels=Array.from({length:config.num_levels},(_,i)=>config[`level${i+1}`]);
   const web=path.join(root,'out/web');
@@ -67,7 +69,7 @@ export function createServer() {
               room=rooms.get(String(message.code).toUpperCase()); if (!room) throw Error('Sala não encontrada.');
               member=message.type==='reconnect' ? await room.reconnect(socket,message.token) : room.join(socket,message.nickname,message.color,message.avatar);
             } else throw Error('Crie ou entre em uma sala.');
-          } else if (message.type==='start') await room!.start(member,message.holes);
+          } else if (message.type==='start') await room!.start(member,message.holes,message.mode ?? 'classic');
           else if (message.type==='ready') room!.ready(member,message.hole);
           else if (message.type==='shot') await room!.shot(member,message);
           else if (message.type==='chat') room!.chat(member,message.text);

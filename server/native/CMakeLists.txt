@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(OpenGolfPhysics C)
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 add_executable(golf_physics_worker worker.c headless.c
-    ${ROOT}/src/golf/physics.c ${ROOT}/src/golf/player.c
+    ${ROOT}/src/golf/physics.c ${ROOT}/src/golf/player.c ${ROOT}/src/golf/mechanics.c
     ${ROOT}/src/common/bvh.c ${ROOT}/src/common/level.c ${ROOT}/src/common/maths.c
     ${ROOT}/src/common/vec.c ${ROOT}/src/common/map.c ${ROOT}/src/common/json.c ${ROOT}/src/common/base64.c
     ${ROOT}/src/3rd_party/parson/parson.c ${ROOT}/src/3rd_party/fast_obj/fast_obj.c)
@@ -39,8 +39,17 @@ if(BUILD_TESTING)
     endforeach()
     add_test(NAME multiplayer_physics COMMAND golf_physics_test)
     set_tests_properties(multiplayer_physics PROPERTIES WORKING_DIRECTORY ${ROOT})
+    add_executable(golf_mechanics_test mechanics_test.c ${PHYSICS_SOURCES})
+    foreach(PROPERTY INCLUDE_DIRECTORIES COMPILE_DEFINITIONS COMPILE_OPTIONS LINK_OPTIONS LINK_LIBRARIES)
+        get_target_property(VALUE golf_physics_worker ${PROPERTY})
+        if(VALUE)
+            set_target_properties(golf_mechanics_test PROPERTIES ${PROPERTY} "${VALUE}")
+        endif()
+    endforeach()
     foreach(LEVEL RANGE 1 20)
         add_test(NAME cup_capture_map_${LEVEL} COMMAND golf_physics_test "data/levels/level-${LEVEL}.level")
         set_tests_properties(cup_capture_map_${LEVEL} PROPERTIES WORKING_DIRECTORY ${ROOT})
+        add_test(NAME mascots_and_impact_map_${LEVEL} COMMAND golf_mechanics_test "data/levels/level-${LEVEL}.level")
+        set_tests_properties(mascots_and_impact_map_${LEVEL} PROPERTIES WORKING_DIRECTORY ${ROOT})
     endforeach()
 endif()

@@ -6,25 +6,29 @@
 #include <string.h>
 #include "common/graphics.h"
 #include "golf/game.h"
+#include "golf/golf.h"
 #ifdef GOLF_PLATFORM_EMSCRIPTEN
 #include <emscripten/emscripten.h>
 #endif
 
 #define WORLD_LIMIT 72000
 #define FX_LIMIT 4096
+#define ACTOR_LIMIT 8192
 typedef struct garden_vertex { vec3 position, normal; vec4 color; } garden_vertex_t;
 typedef struct garden_mesh { garden_vertex_t *vertices; int count, capacity; } garden_mesh_t;
 static struct {
     golf_level_t *level;
     int level_number, entity_count;
-    sg_buffer world, effects, shadows;
+    sg_buffer world, effects, shadows, actors;
     unsigned vertex_count;
+    unsigned actor_count;
     bool replaced[1024];
     mat4 transform;
     vec3 center;
     float radius;
 } garden;
 static garden_vertex_t effects[FX_LIMIT], shadows[FX_LIMIT];
+static garden_vertex_t actors[ACTOR_LIMIT];
 
 static vec4 paint(float r, float g, float b, float sway) { return V4(r,g,b,sway); }
 static void emit(garden_mesh_t *mesh, vec3 p, vec3 n, vec4 color) {
@@ -215,6 +219,7 @@ void golf_garden_prepare(golf_level_t *level, int level_number) {
     garden.vertex_count=(unsigned)mesh.count;free(mesh.vertices);
     if(!garden.effects.id)garden.effects=sg_make_buffer(&(sg_buffer_desc){.size=sizeof(effects),.usage=SG_USAGE_STREAM});
     if(!garden.shadows.id)garden.shadows=sg_make_buffer(&(sg_buffer_desc){.size=sizeof(shadows),.usage=SG_USAGE_STREAM});
+    if(!garden.actors.id)garden.actors=sg_make_buffer(&(sg_buffer_desc){.size=sizeof(actors),.usage=SG_USAGE_STREAM});
     (void)trees;
 }
 static void render(sg_buffer buffer, int count, float time, bool transparent, vec4 style) {
@@ -227,11 +232,93 @@ static void render(sg_buffer buffer, int count, float time, bool transparent, ve
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,&(sg_range){vs->data,vs->size});sg_apply_uniforms(SG_SHADERSTAGE_FS,0,&(sg_range){fs->data,fs->size});sg_draw(0,count,1);
 }
 void golf_garden_draw_world(float time){render(garden.world,(int)garden.vertex_count,time,false,V4(1,1,1,0));}
+static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float event_age,vec3 forward) {
+    garden.transform=mat4_multiply(mat4_translation(position),mat4_rotation_y(atan2f(forward.x,forward.z)));
+    vec4 white=paint(.96f,.91f,.79f,0),orange=paint(.83f,.46f,.20f,0),black=paint(.14f,.17f,.16f,0),pink=paint(.88f,.51f,.46f,0);
+    vec4 coat=cat?orange:white;
+    float awake=cat?1:golf_clampf(event_age/.22f,0,1)*(1-golf_clampf((event_age-1.0f)/.5f,0,1));
+    float breath=.012f*sinf(golf_garden_flag_time()*2.2f),height=cat?.34f:.22f+awake*.19f;
+    oval(mesh,V3(0,height+breath,0),cat?V3(.22f,.22f,.40f):V3(.30f,.22f,.49f),coat,4,9);
+    if(!cat){oval(mesh,V3(-.19f,height+.07f,-.14f),V3(.13f,.14f,.22f),black,3,7);oval(mesh,V3(.16f,height+.09f,-.24f),V3(.15f,.14f,.19f),black,3,7);}
+    oval(mesh,V3(0,height,.27f),V3(cat?.17f:.22f,.20f,.14f),white,3,8);
+    for(int i=0;i<4;i++) {
+        float x=(i&1?1:-1)*(cat?.13f:.21f),z=i<2?.25f:-.27f;
+        float step=cat?.05f*sinf(time*6+i*MF_PI*.5f):0;
+        float paw_y=cat?.07f:.055f;
+        if(cat&&i==0&&event_age>=0&&event_age<.4f){z+=.27f*sinf(event_age/.4f*MF_PI);paw_y+=.16f*sinf(event_age/.4f*MF_PI);}
+        branch(mesh,V3(x,height-.07f,z),V3(x,paw_y+fabsf(step),z+step),cat?.06f:.085f,cat?.045f:.06f,white);
+        oval(mesh,V3(x,paw_y+fabsf(step),z+step),V3(cat?.065f:.09f,.055f,.10f),white,2,6);
+    }
+    float head_y=cat?.64f:.42f+awake*.29f;
+    oval(mesh,V3(0,head_y,.32f),V3(cat?.25f:.27f,cat?.22f:.245f,.24f),cat?orange:black,4,9);
+    if(cat) {
+        for(int side=-1;side<=1;side+=2){
+            triangle(mesh,V3(side*.23f,head_y+.06f,.3f),V3(side*.20f,head_y+.38f,.28f),V3(side*.06f,head_y+.18f,.43f),orange);
+            triangle(mesh,V3(side*.20f,head_y+.10f,.44f),V3(side*.18f,head_y+.31f,.32f),V3(side*.09f,head_y+.16f,.45f),pink);
+        }
+        for(int stripe=0;stripe<3;stripe++)oval(mesh,V3((stripe-1)*.075f,head_y+.14f,.48f),V3(.016f,.075f,.016f),paint(.58f,.30f,.15f,0),2,5);
+        // Pompom alone has the curved orange tail with its white tip.
+        branch(mesh,V3(0,height,-.35f),V3(.13f,.57f,-.65f),.055f,.045f,orange);
+        branch(mesh,V3(.13f,.57f,-.65f),V3(.30f,.61f,-.59f),.045f,.055f,white);
+    } else {
+        // Pituca has short fur, floppy black ears, white blaze and no tail.
+        float ear=.025f*sinf(golf_garden_flag_time()*1.7f);
+        oval(mesh,V3(-.27f,head_y-.02f+ear,.25f),V3(.11f,.23f,.13f),black,3,7);
+        oval(mesh,V3(.27f,head_y-.02f-ear,.25f),V3(.11f,.23f,.13f),black,3,7);
+        oval(mesh,V3(.015f,head_y+.05f,.54f),V3(.043f,.19f,.012f),white,3,6);
+        for(int spot=0;spot<7;spot++)oval(mesh,V3((spot%3-1)*.063f,height+(spot/3)*.055f,.397f),V3(.015f,.018f,.011f),black,2,5);
+    }
+    oval(mesh,V3(0,head_y-.07f,.52f),V3(cat?.14f:.18f,.10f,.13f),white,3,7);
+    for(int side=-1;side<=1;side+=2){
+        oval(mesh,V3(side*.115f,head_y+.045f,.522f),V3(.061f,.07f,.015f),cat?paint(.59f,.63f,.29f,0):paint(.56f,.37f,.18f,0),3,7);
+        oval(mesh,V3(side*.115f,head_y+.045f,.54f),V3(cat?.017f:.030f,.045f,.009f),black,2,6);
+        oval(mesh,V3(side*.105f,head_y+.065f,.55f),V3(.010f,.012f,.008f),white,2,5);
+    }
+    oval(mesh,V3(0,head_y-.04f,.654f),V3(cat?.035f:.057f,.028f,.026f),cat?pink:black,2,6);
+    if(!cat&&awake>.15f){oval(mesh,V3(0,head_y-.12f,.60f),V3(.08f,.04f+awake*.05f,.025f),black,2,7);oval(mesh,V3(.02f,head_y-.15f,.633f),V3(.036f,.043f,.014f),pink,2,6);}
+    garden.transform=mat4_identity();
+}
+vec3 golf_garden_flag_point(float u,float side,float time) {
+    float gust=.75f+.25f*sinf(time*.32f),wave=sinf(time*1.4f-u*9);
+    return V3(u*.055f*gust*wave,.919f+side*.122f*(1-u)+u*.012f*wave,.35f*u);
+}
+float golf_garden_flag_time(void) {
+    golf_t *golf=golf_get();
+    return golf->state==GOLF_STATE_IN_GAME?golf->in_game.t:golf->main_menu.t;
+}
+static void wind_flag(garden_mesh_t *mesh,golf_entity_t *entity,float time) {
+    garden.transform=golf_transform_get_model_mat(golf_entity_get_world_transform(garden.level,entity));
+    vec4 pole=paint(.74f,.65f,.44f,0),red=paint(.80f,.28f,.20f,0);
+    branch(mesh,V3(0,0,0),V3(0,1.05f,0),.017f,.014f,pole);
+    oval(mesh,V3(0,1.055f,0),V3(.027f,.027f,.027f),pole,2,6);
+    for(int i=0;i<12;i++) {
+        vec3 vertices[4];
+        for(int j=0;j<4;j++) {
+            float u=(i+(j==1||j==2))/12.f;
+            vertices[j]=golf_garden_flag_point(u,j>=2?1:-1,time);
+        }
+        triangle(mesh,vertices[0],vertices[1],vertices[2],red);triangle(mesh,vertices[0],vertices[2],vertices[3],red);
+        triangle(mesh,vertices[2],vertices[1],vertices[0],red);triangle(mesh,vertices[3],vertices[2],vertices[0],red);
+    }
+    garden.transform=mat4_identity();
+}
+bool golf_garden_replaces_flag(const golf_entity_t *e) {
+    return e->type==MODEL_ENTITY&&e->model.ignore_physics&&strstr(e->model.model_path,"/flag_");
+}
 void golf_garden_draw_feedback(float time) {
     garden.transform=mat4_identity();garden_mesh_t shadow={shadows,0,FX_LIMIT},fx={effects,0,FX_LIMIT};
     golf_game_t *game=golf_game_get();
+    garden_mesh_t actor={actors,0,ACTOR_LIMIT};
+    for(int i=0;i<garden.level->entities.length;i++)if(golf_garden_replaces_flag(&garden.level->entities.data[i]))wind_flag(&actor,&garden.level->entities.data[i],golf_garden_flag_time());
+    if(golf_get()->state==GOLF_STATE_IN_GAME&&game->mechanics.enabled){
+        vec3 forward=game->mechanics.across;if(cosf(time*.75f)<0)forward=vec3_scale(forward,-1);
+        animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward);
+        animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,game->mechanics.direction);
+    }
+    garden.actor_count=(unsigned)actor.count;
+    if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}
     for(int i=0;i<game->player_count;i++) {
-        golf_player_t *player=&game->players[i];if(!player->connected||player->ball.is_in_hole)continue;
+        golf_player_t *player=&game->players[i];if(!golf_game_player_visible(player)||player->ball.is_in_hole)continue;
         vec3 p=player->ball.draw_pos;p.y-=player->ball.radius-.004f;
         float r=player->ball.radius*1.2f;
         for(int j=0;j<12;j++) {
@@ -268,3 +355,4 @@ golf_texture_t *golf_garden_material(const golf_material_t *material, float *kin
 EMSCRIPTEN_KEEPALIVE
 #endif
 unsigned golf_garden_vertex_count(void){return garden.vertex_count;}
+unsigned golf_garden_actor_vertex_count(void){return garden.actor_count;}

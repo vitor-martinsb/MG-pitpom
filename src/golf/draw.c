@@ -39,7 +39,7 @@ static void _draw_player_balls(const char *pipeline_name) {
     sg_apply_bindings(&bindings);
     for (int i = 0; i < game->player_count; i++) {
         golf_player_t *player = &game->players[i];
-        if (!player->connected) continue;
+        if (!golf_game_player_visible(player)) continue;
         float radius = player->ball.radius;
         mat4 model_mat = mat4_multiply_n(3, mat4_translation(player->ball.draw_pos),
                 mat4_scale(V3(radius, radius, radius)), mat4_from_quat(player->ball.orientation));
@@ -77,7 +77,7 @@ static void _draw_game(void) {
 
             for (int i = 0; i < level->entities.length; i++) {
                 golf_entity_t *entity = &level->entities.data[i];
-                if (golf_garden_replaces_tree(entity)) continue;
+                if (golf_garden_replaces_tree(entity) || golf_garden_replaces_flag(entity)) continue;
                 if (entity->type != GEO_ENTITY && entity->type != MODEL_ENTITY) {
                     continue;
                 }
@@ -194,7 +194,7 @@ static void _draw_game(void) {
 
             for (int i = 0; i < game->player_count; i++) {
                 golf_player_t *player = &game->players[i];
-                if (!player->connected) continue;
+                if (!golf_game_player_visible(player)) continue;
                 vec3 cam_pos = graphics->cam_pos;
                 vec3 ball_pos = player->ball.draw_pos;
                 float ball_radius = player->ball.radius;
@@ -293,7 +293,7 @@ static void _draw_game(void) {
 
             for (int i = 0; i < game->player_count; i++) {
                 golf_player_t *player = &game->players[i];
-                if (!player->connected || !player->ball.is_in_water) continue;
+                if (!golf_game_player_visible(player) || !player->ball.is_in_water) continue;
                 golf_shader_uniform_t *vs_params = golf_shader_get_vs_uniform(shader, "vs_params");
                 golf_shader_uniform_set_mat4(vs_params, "mvp_mat", mat4_transpose(
                             mat4_multiply_n(4, 

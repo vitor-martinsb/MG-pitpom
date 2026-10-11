@@ -4,6 +4,7 @@
 #include "common/bvh.h"
 #include "common/level.h"
 #include "golf/player.h"
+#include "golf/mechanics.h"
 
 #define MAX_NUM_CONTACTS 8
 #define MAX_AIM_LINE_POINTS 5
@@ -40,6 +41,7 @@ typedef struct golf_game {
     int player_count;
     uint32_t local_player_id;
     bool debug_test_players;
+    golf_mechanics_t mechanics;
 
     struct {
         bool auto_rotate;
@@ -69,6 +71,8 @@ typedef struct golf_game {
 
     struct {
         float t;        
+        bool active;
+        vec3 overview, hole_view;
         vec3 cam_pos0, cam_dir0, cam_pos1, cam_dir1;
     } begin_camera_animation;
 
@@ -94,5 +98,7 @@ void golf_game_start_aiming(void);
 void golf_game_hit_ball(vec2 aim_delta);
 void golf_game_pause(void);
 void golf_game_resume(void);
+void golf_game_skip_presentation(void);
+bool golf_game_player_visible(const golf_player_t *player);
 
 #endif

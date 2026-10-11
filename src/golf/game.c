@@ -416,7 +416,7 @@ void golf_game_update(float dt) {
         }
     }
 
-    if (game.state > GOLF_GAME_STATE_MAIN_MENU && !golf_online_active()) {
+    if (game.state > GOLF_GAME_STATE_MAIN_MENU && !game.begin_camera_animation.active && !golf_online_active()) {
         float physics_dt = 1.0f/120.0f;
         game.physics.time_behind += dt;
 
@@ -427,6 +427,7 @@ void golf_game_update(float dt) {
             golf_physics_world_t world = _physics_world();
             golf_physics_build_world(&world, true);
             golf_physics_tick_player(&world, player, physics_dt);
+            golf_mechanics_tick(&game.mechanics,player,1,game.t);
             game.physics.time_behind -= physics_dt;
             num_ticks++;
         }
@@ -444,31 +445,25 @@ void golf_game_update(float dt) {
         player = golf_online_camera_player();
     }
 
+    if(game.begin_camera_animation.active)game.state=GOLF_GAME_STATE_BEGIN_CAMERA_ANIMATION;
     // Move around the camera
     switch (game.state) {
         case GOLF_GAME_STATE_BEGIN_CAMERA_ANIMATION: {
-            vec3 cam_pos0 = game.begin_camera_animation.cam_pos0;
-            vec3 cam_pos1 = game.begin_camera_animation.cam_pos1;
-            vec3 cam_dir0 = game.begin_camera_animation.cam_dir0;
-            vec3 cam_dir1 = game.begin_camera_animation.cam_dir1;
-            float t = game.begin_camera_animation.t;
-            float length0 = CFG_NUM(game_cfg, "begin_camera_animation_length0");
-            float length1 = CFG_NUM(game_cfg, "begin_camera_animation_length1");
-
-            if (t >= length0) {
-                t = t - length0;
-                float a = sinf(0.5f * MF_PI * t / length1);
-
-                graphics->cam_pos = vec3_add(vec3_scale(cam_pos0, 1 - a), vec3_scale(cam_pos1, a));
-                graphics->cam_dir = vec3_normalize(vec3_add(vec3_scale(cam_dir0, 1 - a), vec3_scale(cam_dir1, a)));
-
-                if (t >= length1) {
-                    game.state = GOLF_GAME_STATE_WAITING_FOR_AIM;
-                    graphics->cam_pos = cam_pos1;
-                    graphics->cam_dir = cam_dir1;
-                }
-            }
-
+            float t=game.begin_camera_animation.t;
+            vec3 positions[]={game.begin_camera_animation.cam_pos0,game.begin_camera_animation.hole_view,
+                game.begin_camera_animation.overview,
+                vec3_add(game.ball_start_pos,V3(0,game.mechanics.bounds_max.y-game.ball_start_pos.y+5,0)),
+                game.begin_camera_animation.cam_pos1};
+            vec3 targets[]={game.hole_pos,game.hole_pos,
+                vec3_scale(vec3_add(game.mechanics.bounds_min,game.mechanics.bounds_max),.5f),game.ball_start_pos,
+                vec3_add(game.ball_start_pos,V3(0,.3f,0))};
+            const float times[]={0,1.5f,3.5f,5.8f,7.5f};
+            int segment=0;while(segment<3&&t>times[segment+1])segment++;
+            float a=golf_clampf((t-times[segment])/(times[segment+1]-times[segment]),0,1);a=a*a*(3-2*a);
+            graphics->cam_pos=vec3_add(vec3_scale(positions[segment],1-a),vec3_scale(positions[segment+1],a));
+            vec3 target=vec3_add(vec3_scale(targets[segment],1-a),vec3_scale(targets[segment+1],a));
+            graphics->cam_dir=vec3_normalize(vec3_sub(target,graphics->cam_pos));
+            if(t>=7.5f)golf_game_skip_presentation();
             game.begin_camera_animation.t += dt;
             break;
         }
@@ -517,6 +512,7 @@ void golf_game_update(float dt) {
 }
 
 void golf_game_start_main_menu(void) {
+    game.begin_camera_animation.active=false;
     golf_game_set_debug_test_players(false);
     golf_player_t *player = golf_game_get_local_player();
 
@@ -560,7 +556,6 @@ void golf_game_start_level(void) {
 
     vec3 ball_start_pos = V3(0, 0, 0);
     vec3 hole_pos = V3(0, 0, 0);
-    vec3 begin_animation_pos = V3(0, 0, 0);
 
     golf_level_t *level = golf->level;
     for (int i = 0; i < level->entities.length; i++) {
@@ -580,7 +575,6 @@ void golf_game_start_level(void) {
                 ball_start_pos.y += player->ball.radius;
                 break;
             case BEGIN_ANIMATION_ENTITY:
-                begin_animation_pos = entity->begin_animation.transform.position;
                 break;
         }
     }
@@ -588,6 +582,8 @@ void golf_game_start_level(void) {
     golf_physics_world_t world = _physics_world();
     world.time = 0;
     golf_physics_build_world(&world, false);
+    golf_mechanics_init(&game.mechanics,level,&game.physics.static_bvh);
+    game.mechanics.enabled=true;
 
     game.t = 0;
 
@@ -614,7 +610,31 @@ void golf_game_start_level(void) {
     game.aim_line.num_points = 0;
 
     game.begin_camera_animation.t = 0;
-    game.begin_camera_animation.cam_pos0 = begin_animation_pos;
+    game.begin_camera_animation.active=true;
+    float width=game.mechanics.bounds_max.x-game.mechanics.bounds_min.x;
+    float depth=game.mechanics.bounds_max.z-game.mechanics.bounds_min.z;
+    float height=game.mechanics.bounds_max.y;
+    for(int i=0;i<game.physics.static_bvh.faces.length;i++) {
+        golf_bvh_face_t *f=&game.physics.static_bvh.faces.data[i];
+        height=fmaxf(height,fmaxf(f->a.y,fmaxf(f->b.y,f->c.y)));
+    }
+    float aspect=fmaxf(.35f,graphics->viewport_size.x/fmaxf(1,graphics->viewport_size.y));
+    float overview_height=fmaxf(8,fmaxf(width/aspect,depth)*1.15f);
+    vec3 back=vec3_scale(game.mechanics.direction,-2.0f);
+    game.begin_camera_animation.cam_pos0=vec3_add(hole_pos,vec3_add(back,V3(0,2.4f,0)));
+    /* Pick an unobstructed vertical ascent beside the cup before travelling
+       above the highest collider. No ray queries are needed per frame. */
+    for(int attempt=0;attempt<8;attempt++) {
+        vec3 offset=vec3_rotate_y(back,attempt*MF_PI/4);
+        vec3 candidate=vec3_add(hole_pos,vec3_add(offset,V3(0,2.4f,0)));
+        float t=FLT_MAX;int idx;golf_bvh_face_t face;
+        bool hit=golf_bvh_ray_test(&game.physics.static_bvh,candidate,V3(0,1,0),&t,&idx,&face);
+        if(!hit){game.begin_camera_animation.cam_pos0=candidate;break;}
+    }
+    /* Travel above all course geometry; retain the original playable camera. */
+    game.begin_camera_animation.hole_view=V3(game.begin_camera_animation.cam_pos0.x,height+overview_height*.8f,game.begin_camera_animation.cam_pos0.z);
+    game.begin_camera_animation.overview=V3((game.mechanics.bounds_min.x+game.mechanics.bounds_max.x)*.5f,
+        height+overview_height,(game.mechanics.bounds_min.z+game.mechanics.bounds_max.z)*.5f+2);
     game.begin_camera_animation.cam_dir0 = vec3_normalize(vec3_sub(hole_pos, game.begin_camera_animation.cam_pos0));
 
     vec3 cam_delta = vec3_rotate_y(V3(2.6f, 1.5f, 0), game.cam.angle);
@@ -626,6 +646,7 @@ void golf_game_start_level(void) {
 }
 
 void golf_game_start_aiming(void) {
+    if(game.begin_camera_animation.active || golf_game_get_local_player()->ball.capture_until>0)return;
     if (golf_online_active() && !golf_online_can_shoot()) return;
     game.state = GOLF_GAME_STATE_AIMING;
     game.aim_line.num_points = 0;
@@ -637,6 +658,7 @@ void golf_game_stop_aiming(void) {
 
 void golf_game_hit_ball(vec2 aim_delta) {
     golf_player_t *player = golf_game_get_local_player();
+    if(game.begin_camera_animation.active || player->ball.capture_until>0)return;
 
     if (golf_online_active()) {
         vec3 direction = vec3_normalize(vec3_rotate_y(V3(aim_delta.x, 0, aim_delta.y), game.cam.angle - .5f * MF_PI));
@@ -679,6 +701,7 @@ void golf_game_hit_ball(vec2 aim_delta) {
     player->ball.vel = vec3_scale(aim_direction, start_speed);
     player->ball.is_moving = true;
     player->ball.start_pos = player->ball.pos;
+    player->ball.time_going_slow=0;
     game.cam.start_angle = game.cam.angle;
 
     game.physics.collision_history.length = 0;
@@ -693,4 +716,17 @@ void golf_game_pause(void) {
 
 void golf_game_resume(void) {
     game.state = game.state_before_pause;
+}
+
+void golf_game_skip_presentation(void) {
+    if(!game.begin_camera_animation.active)return;
+    game.begin_camera_animation.active=false;game.begin_camera_animation.t=7.5f;
+    graphics->cam_pos=game.begin_camera_animation.cam_pos1;
+    graphics->cam_dir=game.begin_camera_animation.cam_dir1;
+    game.state=GOLF_GAME_STATE_WAITING_FOR_AIM;
+}
+bool golf_game_player_visible(const golf_player_t *p) {
+    if(!p->connected||p->ball.captured)return false;
+    const golf_player_t *local=golf_game_get_local_player();
+    return p->id==local->id || !game.mechanics.impact || local->ball.first_shot_complete;
 }

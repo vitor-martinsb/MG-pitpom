@@ -21,6 +21,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL Android)
     add_library(golf SHARED
         draw.c
         garden.c
+        mechanics.c
+        course.c
         i18n.c
         game.c
         golf.c
@@ -41,6 +43,8 @@ else()
     add_executable(golf
         draw.c
         garden.c
+        mechanics.c
+        course.c
         i18n.c
         game.c
         golf.c

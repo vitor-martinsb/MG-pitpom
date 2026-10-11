@@ -16,15 +16,17 @@
 EM_JS(void, online_ready, (int hole), { if (window.GolfOnline) window.GolfOnline.ready(hole); });
 EM_JS(void, online_send_shot, (float x, float z, float power), { if (window.GolfOnline) window.GolfOnline.shot([x,0,z],power); });
 EM_JS(int, online_blocked, (), { return window.GolfOnline && window.GolfOnline.blocked() ? 1 : 0; });
+EM_JS(void, online_preview, (), { if(window.GolfOnline)window.GolfOnline.preview(); });
 #else
 static void online_ready(int hole) { (void)hole; }
 static void online_send_shot(float x, float z, float power) { (void)x; (void)z; (void)power; }
 static int online_blocked(void) { return 0; }
+static void online_preview(void) {}
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 
 static struct {
-    bool active, playing, shot_pending, loading, has_snapshot;
+    bool active, playing, shot_pending, loading, has_snapshot, awaiting_ready, impact;
     int requested_level, hole;
     uint32_t local_id, camera_id;
     float age, interval, time;
@@ -52,7 +54,7 @@ bool golf_online_active(void) { return online.active; }
 bool golf_online_input_blocked(void) { return online_blocked()!=0; }
 bool golf_online_can_shoot(void) {
     golf_player_t *p=golf_game_get_local_player();
-    return online.active && online.playing && !online.loading && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole;
+    return online.active && online.playing && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
 }
 golf_player_t *golf_online_camera_player(void) {
     golf_player_t *p=golf_game_get_player(online.camera_id);
@@ -79,6 +81,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         game->local_player_id=online.local_id; game->players[0].id=online.local_id;
         game->debug_test_players=false;
     } else if (!strcmp(type,"room") && online.active) {
+        const char *mode=json_object_get_string(o,"mode");online.impact=mode&&!strcmp(mode,"impact");game->mechanics.impact=online.impact;
         const char *phase=json_object_get_string(o,"phase"); online.playing=phase && !strcmp(phase,"playing");
         JSON_Array *members=json_object_get_array(o,"players");
         golf_player_t previous[GOLF_MAX_PLAYERS]; memcpy(previous,game->players,sizeof(previous)); int old_count=game->player_count;
@@ -99,6 +102,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
     } else if (!strcmp(type,"load") && online.active) {
         online.requested_level=(int)json_object_get_number(o,"level"); online.hole=(int)json_object_get_number(o,"hole");
         online.loading=true; online.has_snapshot=false; online.shot_pending=false;
+        online.awaiting_ready=false;
     } else if (!strcmp(type,"snapshot") && online.active && (int)json_object_get_number(o,"hole")==online.hole) {
         float time=(float)json_object_get_number(o,"time");
         online.interval=golf_clampf(time-online.time,1.f/30,0.2f); online.time=time; online.age=0;
@@ -108,6 +112,10 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             online.target[i]=game->players[i].ball.pos;
         }
         JSON_Array *balls=json_object_get_array(o,"players");
+        JSON_Object *mascots=json_object_get_object(o,"mascots");
+        if(mascots){game->mechanics.enabled=json_object_get_boolean(mascots,"enabled")==1;
+            game->mechanics.cat=golf_json_object_get_vec3(mascots,"cat");game->mechanics.dog=golf_json_object_get_vec3(mascots,"dog");
+            game->mechanics.cat_slap_time=(float)json_object_get_number(mascots,"slapTime");game->mechanics.dog_wake_time=(float)json_object_get_number(mascots,"wakeTime");}
         for(size_t i=0;i<json_array_get_count(balls);i++) {
             JSON_Object *b=json_array_get_object(balls,i); golf_player_t *p=golf_game_get_player((uint32_t)json_object_get_number(b,"id")); if(!p)continue;
             int index=(int)(p-game->players);
@@ -115,9 +123,17 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             if (!online.has_snapshot || vec3_distance(p->ball.draw_pos,pos)>3) p->ball.draw_pos=pos;
             online.from[index]=p->ball.draw_pos; online.target[index]=pos;
             bool was_hole=p->ball.is_in_hole;
+            bool was_capturing=p->ball.capture_until>0;
             p->ball.pos=pos; p->ball.vel=golf_json_object_get_vec3(b,"vel"); p->ball.is_moving=json_object_get_boolean(b,"moving")==1;
             p->ball.is_in_hole=json_object_get_boolean(b,"hole")==1; p->ball.is_in_water=json_object_get_boolean(b,"water")==1;
             p->stroke_count=(int)json_object_get_number(b,"strokes");
+            p->ball.first_shot_complete=json_object_get_boolean(b,"firstComplete")==1;
+            p->ball.captured=json_object_get_boolean(b,"captured")==1;
+            p->ball.capture_until=(float)json_object_get_number(b,"captureUntil");
+            if(was_capturing&&!p->ball.capture_until){
+                p->ball.orientation=QUAT(0,0,0,1);p->ball.rot_vel=0;p->ball.rot_vec=V3(0,0,0);
+                p->ball.draw_pos=pos;online.from[index]=online.target[index]=pos;
+            }
             if(p->id==online.local_id && !was_hole && p->ball.is_in_hole) golf_audio_start_sound("ball_in_hole","data/audio/confirmation_002.ogg",1,false,true);
         }
         online.has_snapshot=true;
@@ -125,6 +141,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         online.shot_pending=false;
         golf_game_get_local_player()->ball.is_moving=true;
         golf_audio_start_sound("hit_ball","data/audio/impactPlank_medium_000.ogg",1,false,true);
+    } else if (!strcmp(type,"skip-presentation")) { golf_game_skip_presentation();
     } else if (!strcmp(type,"cancel-aim")) {
         if (game->state==GOLF_GAME_STATE_AIMING) game->state=GOLF_GAME_STATE_WAITING_FOR_AIM;
         game->aim_line.power=0;
@@ -135,6 +152,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
     } else if (!strcmp(type,"disconnected")) { online.playing=false; online.shot_pending=false;
     } else if (!strcmp(type,"leave")) {
         online.active=false; online.playing=false;
+        game->begin_camera_animation.active=false;
         golf_player_t local=*golf_game_get_local_player(); game->players[0]=local; game->player_count=1;
         if(golf_get()->level) golf_goto_main_menu();
     }
@@ -149,12 +167,14 @@ void golf_online_update(float dt) {
     }
     if(online.loading && online.requested_level<0 && golf->state==GOLF_STATE_IN_GAME) {
         online.loading=false; online.camera_id=online.local_id;
+        game->mechanics.impact=online.impact;
         for(int i=0;i<game->player_count;i++) {
             golf_player_start_level(&game->players[i],game->ball_start_pos);
             online.from[i]=online.target[i]=game->ball_start_pos;
         }
-        online.has_snapshot=false; online_ready(online.hole);
+        online.has_snapshot=false;online.awaiting_ready=true;online_preview();
     }
+    if(online.awaiting_ready&&!game->begin_camera_animation.active){online.awaiting_ready=false;online_ready(online.hole);}
     if(golf->state!=GOLF_STATE_IN_GAME || online.loading) return;
     online.age+=dt;
     float alpha=golf_clampf(online.age/online.interval,0,1);
@@ -176,5 +196,5 @@ void golf_online_update(float dt) {
         }
     }
     game->t=online.time+golf_clampf(online.age,0,online.interval);
-    if(game->state!=GOLF_GAME_STATE_AIMING || !golf_online_can_shoot()) game->state=golf_online_can_shoot()?GOLF_GAME_STATE_WAITING_FOR_AIM:GOLF_GAME_STATE_WATCHING_BALL;
+    if(!game->begin_camera_animation.active&&(game->state!=GOLF_GAME_STATE_AIMING || !golf_online_can_shoot())) game->state=golf_online_can_shoot()?GOLF_GAME_STATE_WAITING_FOR_AIM:GOLF_GAME_STATE_WATCHING_BALL;
 }

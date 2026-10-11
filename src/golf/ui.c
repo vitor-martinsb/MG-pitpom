@@ -1229,7 +1229,7 @@ static void _golf_ui_player_labels(void) {
     int count = 0;
     for (int i = 0; i < game->player_count && count < GOLF_MAX_PLAYERS; i++) {
         golf_player_t *player = &game->players[i];
-        if (!player->connected) continue;
+        if (!golf_game_player_visible(player)) continue;
         vec2 pos;
         if (!golf_graphics_world_to_screen_visible(
                     vec3_add(player->ball.draw_pos, V3(0, height, 0)), &pos)) continue;

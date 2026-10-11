@@ -137,3 +137,5 @@ Lifecycle, projection and label tests are independent of the renderer:
 - [sokol](https://github.com/floooh/sokol)
 - [stb](https://github.com/nothings/stb)
 - [xatlas](https://github.com/jpcy/xatlas)
+
+As mascotes interativas, o Modo Impacto, a apresentação dos mapas, o minimapa e a bandeira animada estão documentados em [Novas mecânicas](docs/new-mechanics.md).

@@ -2,7 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id);
   const t=(key,values)=>GolfI18n.t(key,values);
-  let scoresForced=false;
+  let scoresForced=false,presenting=false;
   const touchControls=matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0;
   function fitPanels(){
     const viewport=window.visualViewport;
@@ -72,11 +72,13 @@
         $('host-note').textContent=t(m.host===identity?.id?'hostYou':'hostWait');
         $('hole').textContent=t('hole',{current:Math.min(m.hole+1,m.holes),total:m.holes});
         $('status').textContent=phase==='lobby'?'':t('phase.'+phase);
-        $('loading').hidden=phase!=='loading';$('loading-count').textContent=t('readyCount',{ready:m.players.filter(p=>p.ready&&p.connected).length,total:m.players.filter(p=>p.connected).length});
+        $('loading').hidden=phase!=='loading'||presenting;$('loading-count').textContent=t('readyCount',{ready:m.players.filter(p=>p.ready&&p.connected).length,total:m.players.filter(p=>p.connected).length});
+        $('game-mode').disabled=m.host!==identity?.id;if(m.host!==identity?.id||phase!=='lobby')$('game-mode').value=m.mode;
+        $('mode-indicator').textContent=t('modeBadge.'+m.mode);
         if(phase==='results'||phase==='finished') showScores(true);else if(previous==='results') $('scores').hidden=true;
         renderSummary();renderSpectators();
       } else if(m.type==='load'){
-        loading=true;lastBalls.clear();call(m);$('scores').hidden=true;
+        loading=true;presenting=false;lastBalls.clear();call(m);$('scores').hidden=true;
       } else if(m.type==='snapshot'){
         if(!room||m.hole!==room.hole)return;
         if(m.full)lastBalls.clear();for(const b of m.players)lastBalls.set(b.id,b);
@@ -131,9 +133,10 @@
     if(options.some(o=>o.value===old))$('spectate').value=old;else $('spectate').value=String(identity?.id);
   }
   window.GolfOnline={
-    initialized(){initialized=true;GolfI18n.ready();$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;$('offline').disabled=false;
+    initialized(){initialized=true;window.GolfCourse.initialized=true;GolfI18n.ready();$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;$('offline').disabled=false;
       try{const saved=JSON.parse(sessionStorage.getItem('golf-session'));if(saved){identity=saved;online=true;connect({type:'reconnect',...saved});}}catch{}},
-    ready(hole){loading=false;send({type:'ready',hole});},
+    preview(){presenting=true;$('loading').hidden=true;},
+    ready(hole){loading=false;presenting=false;send({type:'ready',hole});},
     shot(direction,power){if(connected&&phase==='playing')send({type:'shot',direction,power,sequence:++sequence});else call({type:'error'});},
     cancelAim(){call({type:'cancel-aim'});},
     blocked(){return document.getElementById('music-controls').open||online&&(loading||!connected||!$('scores').hidden||!$('lobby').hidden||!$('connect').hidden||!$('chat-panel').hidden||$('music-controls').open);}
@@ -147,10 +150,11 @@
     $('host-note').textContent=t(room.host===identity?.id?'hostYou':'hostWait');
     $('hole').textContent=t('hole',{current:Math.min(room.hole+1,room.holes),total:room.holes});
     $('status').textContent=phase==='lobby'?'':t('phase.'+phase);
+    $('mode-indicator').textContent=t('modeBadge.'+room.mode);
     $('loading-count').textContent=t('readyCount',{ready:room.players.filter(p=>p.ready&&p.connected).length,total:room.players.filter(p=>p.connected).length});
     renderSummary();if(!$('scores').hidden)showScores(scoresForced);
   });
-  $('create').onclick=()=>join(true);$('join').onclick=()=>join(false);$('start').onclick=()=>send({type:'start',holes:Number($('holes').value)});
+  $('create').onclick=()=>join(true);$('join').onclick=()=>join(false);$('start').onclick=()=>send({type:'start',holes:Number($('holes').value),mode:$('game-mode').value});
   $('leave').onclick=leave;$('finish-exit').onclick=leave;$('show-scores').onclick=()=>showScores();$('close-scores').onclick=()=>$('scores').hidden=true;
   $('spectate').onchange=()=>call({type:'spectate',id:Number($('spectate').value)});
   $('open-chat').onclick=openChat;$('close-chat').onclick=closeChat;
