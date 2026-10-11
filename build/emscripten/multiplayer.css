@@ -20,3 +20,16 @@ button,input,select{min-height:44px;font-size:16px}button{touch-action:manipulat
  .list{max-height:30dvh;overflow:auto}.scroll{max-height:45dvh}td,th{padding:8px}
 }
 @media(max-height:500px) and (orientation:landscape){.panel{padding:12px 18px}.help{max-width:60%;font-size:.7rem}.hud #summary{display:none}.list{max-height:25dvh}}
+.chat-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.chat-heading h2{margin:0}.chat-heading button{flex:none}
+.chat-messages{height: min(40dvh,320px);overflow:auto;margin:16px 0;padding:12px;background:#102d23;border-radius:8px;overscroll-behavior:contain;user-select:text}
+.chat-message{margin:0 0 10px;overflow-wrap:anywhere;white-space:pre-wrap;font-size:.95rem}.chat-message:last-child{margin-bottom:0}
+#chat-form .row{align-items:center}#chat-input{flex:1;margin:8px 0}#send-chat{flex:none}.chat-panel .muted{margin-bottom:0}
+.music-controls{position:fixed;z-index:7;top:calc(76px + var(--safe-top));right:calc(16px + var(--safe-right));color:white}
+.music-controls summary{list-style:none;cursor:pointer;background:#15352bf2;border:1px solid #ffffff35;border-radius:8px;padding:12px;min-height:44px;text-align:center;font-weight:650;touch-action:manipulation}.music-controls summary::-webkit-details-marker{display:none}
+.music-panel{position:absolute;right:0;top:calc(100% + 6px);width:230px;padding:14px;background:#15352bf2;border:1px solid #ffffff35;border-radius:12px}.music-panel button{width:100%;margin-bottom:12px}.music-panel input{padding:0;margin-bottom:0}.music-panel p{margin:0;font-size:.8rem}
+@media(max-width:600px),(pointer:coarse){.music-controls{top:calc(168px + var(--safe-top));right:calc(8px + var(--safe-right));width:96px}.music-panel{max-width:calc(100vw - 24px)}.chat-messages{height:30dvh}.chat-panel{width:min(560px,100%)}}
+.chat-panel{height:min(560px,100%);display:flex;flex-direction:column}.chat-heading,#chat-form,.chat-panel>.muted{flex:none}.chat-messages{min-height:70px;flex:1}
+#chat-panel,#scores{z-index:8}
+.music-panel{max-height:calc(100dvh - 140px - var(--safe-top) - var(--safe-bottom));overflow:auto;overscroll-behavior:contain}
+.music-controls summary{font-size:14px;padding:12px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:600px),(pointer:coarse){.music-panel{max-height:calc(100dvh - 230px - var(--safe-top) - var(--safe-bottom))}}

@@ -20,6 +20,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Android)
         OpenSLES)
     add_library(golf SHARED
         draw.c
+        i18n.c
         game.c
         golf.c
         main.c
@@ -38,6 +39,7 @@ else()
 
     add_executable(golf
         draw.c
+        i18n.c
         game.c
         golf.c
         main.c

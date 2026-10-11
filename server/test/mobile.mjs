@@ -29,9 +29,9 @@ try {
   await guest.locator('#join-code').tap();await guest.keyboard.type(room.code);
   await guest.locator('#join').tap();await guest.locator('#lobby').waitFor({state:'visible'});
   await page.locator('#start').tap();
-  await page.waitForFunction(()=>document.getElementById('status').textContent==='Tacadas simultâneas',{},{timeout:30000});
-  await guest.waitForFunction(()=>document.getElementById('status').textContent==='Tacadas simultâneas',{},{timeout:30000});
-  assert.match(await page.locator('#help').textContent(),/Toque na bola/);
+  await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
+  await guest.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
+  assert.match(await page.locator('#help').textContent(),/Touch the ball/);
   const cdp=await context.newCDPSession(page);
   const touch=async(type,points=[])=>{
     await cdp.send('Input.dispatchTouchEvent',{type,touchPoints:points.map(([id,x,y])=>({id,x,y,radiusX:5,radiusY:5}))});

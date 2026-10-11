@@ -1,0 +1,33 @@
+name: Validate game and deployment
+on:
+  push:
+    branches: [dev, staging]
+  pull_request:
+    branches: [dev, staging]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Linux physics, WebAssembly and Node container
+        run: docker build -t pitpom:ci .
+      - name: Validate languages and protocol in the built container
+        run: |
+          docker run -d --name pitpom -p 3000:10000 pitpom:ci
+          for attempt in $(seq 1 30); do
+            curl --fail http://localhost:3000/health && break
+            sleep 1
+          done
+          mkdir -p out/server-native
+          docker cp pitpom:/app/out/server-native/golf_physics_worker out/server-native/
+          cd server
+          npm ci
+          npm test
+          npm run test:deployment -- --url http://localhost:3000
+      - name: Container logs
+        if: always()
+        run: docker logs pitpom || true

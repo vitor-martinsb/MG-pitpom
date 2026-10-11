@@ -1,0 +1,40 @@
+import { chromium } from '@playwright/test';
+import { createServer } from '../dist/index.js';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=createServer();let browser;
+const nativeLanguage=page=>page.evaluate(()=>Module.ccall('golf_get_language','string',[],[]));
+const nativeText=(page,key)=>page.evaluate(key=>Module.ccall('golf_i18n_t','string',['string'],[key]),key);
+async function language(page,value){await page.locator('#music-controls summary').click();await page.locator('#language').selectOption(value);await page.locator('#music-controls summary').click();assert.equal(await nativeLanguage(page),value);}
+try{
+  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${app.server.address().port}`;
+  browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
+  const hostContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,locale:'pt-BR'});
+  const host=await hostContext.newPage(),guest=await browser.newPage({viewport:{width:1100,height:720}}),errors=[];
+  for(const page of [host,guest])page.on('pageerror',error=>errors.push(String(error)));
+  await host.goto(url);await host.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+  assert.equal(await host.locator('html').getAttribute('lang'),'en');assert.equal(await nativeLanguage(host),'en');assert.equal(await host.locator('#create').textContent(),'Create room');
+  assert.equal(await host.evaluate(()=>GolfI18n.t('strokes.one',{count:1})),'1 stroke');assert.equal(await host.evaluate(()=>GolfI18n.t('strokes.other',{count:2})),'2 strokes');
+  await language(host,'pt-BR');assert.equal(await host.locator('#create').textContent(),'Criar sala');assert.equal(await nativeText(host,'c.you'),'VOCÊ');assert.equal(await nativeText(host,'c.success'),'CONCLUÍDO!');
+  await host.locator('#nickname').fill('LanguageHost');await host.locator('#create').click();await host.locator('#lobby').waitFor({state:'visible'});
+  const room=[...app.rooms.values()][0];
+  await guest.goto(url);await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});await language(guest,'es');
+  await guest.locator('#nickname').fill('LanguageGuest');await guest.locator('#join-code').fill(room.code);await guest.locator('#join').click();await guest.locator('#lobby').waitFor({state:'visible'});
+  assert.equal(await guest.locator('#start').textContent(),'Iniciar partida');assert.equal(await nativeText(guest,'c.next'),'SIGUIENTE');
+  await host.locator('#start').click();for(const page of [host,guest])await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
+  await host.locator('#open-chat').click();await host.locator('#chat-input').fill('Olá! ¡Hola! Hello!');await host.keyboard.press('Enter');await guest.waitForFunction(()=>document.getElementById('chat-messages').textContent.includes('Olá!'));
+  await host.locator('#close-chat').click();await language(host,'es');assert.equal(await host.locator('#status').textContent(),'Golpes simultáneos');assert.equal(await nativeText(host,'c.you'),'TÚ');assert.equal(room.members.size,2);assert.equal(room.members.get(1).ball.strokes,0);
+  assert.equal(await host.evaluate(()=>GolfI18n.error({code:'ROOM_FULL',message:'Sala cheia (50 jogadores).'})),'Sala llena (50 jugadores).');
+  await host.reload();await host.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:90000});assert.equal(await nativeLanguage(host),'es');assert.ok((await host.locator('#chat-messages').textContent()).includes('Olá! ¡Hola! Hello!'));
+  await host.locator('#show-scores').click();assert.equal(await host.locator('#scores-title').textContent(),'Marcador de la partida');await host.locator('#close-scores').click();
+  await host.locator('#leave').click();await host.locator('#offline').click();await host.setViewportSize({width:850,height:650});await host.waitForTimeout(500);
+  await host.mouse.click(425,450);await host.waitForTimeout(300);await host.mouse.click(247,208);
+  await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===2,{},{timeout:15000});
+  assert.equal(await nativeLanguage(host),'es');await host.mouse.click(783,67);await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===7);
+  fs.mkdirSync('../out/i18n-validation',{recursive:true});await host.screenshot({path:'../out/i18n-validation/offline-spanish.png'});
+  await language(host,'pt-BR');assert.equal(await nativeText(host,'c.paused'),'PAUSADO');await host.screenshot({path:'../out/i18n-validation/offline-portuguese.png'});
+  await language(host,'en');assert.equal(await nativeText(host,'c.paused'),'PAUSED');
+  await host.setViewportSize({width:844,height:390});await host.locator('#music-controls summary').click();await host.locator('#language').selectOption('pt-BR');await host.locator('#music-volume').scrollIntoViewIfNeeded();
+  const panel=await host.locator('.music-panel').boundingBox();assert.ok(panel.y+panel.height<=390);await host.screenshot({path:'../out/i18n-validation/settings-landscape.png'});
+  assert.deepEqual(errors,[]);console.log('Languages: English first access, browser locale independence, all three languages, C accents, pluralisation, mixed-language room, live switching, chat, reconnect, translated scoreboard, solo pause and mobile settings passed.');
+}finally{await browser?.close();app.close();}

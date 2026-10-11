@@ -359,6 +359,7 @@ static void _draw_game(void) {
         sg_begin_pass(draw.game_draw_pass, &aim_line_pass_action);
 
         // Draw the aim line
+        game->aim_line.num_arrows = 0;
         if (game->state == GOLF_GAME_STATE_AIMING && game->aim_line.power > 0) {
             golf_shader_t *shader = golf_data_get_shader("data/shaders/aim_line.glsl");
             golf_shader_pipeline_t *pipeline = golf_shader_get_pipeline(shader, "aim_line");
@@ -380,27 +381,33 @@ static void _draw_game(void) {
                 total_length += vec3_distance(p1, p0);
             }
 
-            vec2 offset = game->aim_line.offset;
-            float len0 = 0;
-            float len1 = 0;
-            for (int i = 0; i < game->aim_line.num_points - 1; i++) {
-                vec3 p0 = game->aim_line.points[i];
-                vec3 p1 = game->aim_line.points[i + 1];
+            /* Exactly five separate arrows follow the entire reflected path.
+             * Strength changes their spacing, never their number. */
+            for (int arrow = 0; arrow < GOLF_AIM_ARROW_COUNT && total_length > 0.001f; arrow++) {
+                float distance = total_length * (arrow + 0.5f) / GOLF_AIM_ARROW_COUNT;
+                int segment = 0;
+                float start = 0;
+                while (segment < game->aim_line.num_points - 2) {
+                    float length = vec3_distance(game->aim_line.points[segment], game->aim_line.points[segment + 1]);
+                    if (start + length >= distance) break;
+                    start += length;
+                    segment++;
+                }
+                vec3 p0 = game->aim_line.points[segment];
+                vec3 p1 = game->aim_line.points[segment + 1];
                 vec3 dir = vec3_normalize(vec3_sub(p1, p0));
-                float len = vec3_distance(p1, p0);
+                vec3 position = vec3_add(p0, vec3_scale(dir, distance - start));
+                float len = fminf(0.35f, total_length * 0.72f / GOLF_AIM_ARROW_COUNT);
                 vec2 dir2 = vec2_normalize(V2(dir.x, dir.z));
-                len0 = len1;
-                len1 += len;
 
                 float z_rotation = asinf(dir.y);
                 float y_rotation = acosf(dir2.x);
                 if (dir2.y > 0) y_rotation *= -1;
-                mat4 model_mat = mat4_multiply_n(6,
-                        mat4_translation(p0),
+                mat4 model_mat = mat4_multiply_n(5,
+                        mat4_translation(position),
                         mat4_rotation_y(y_rotation),
                         mat4_rotation_z(z_rotation),
                         mat4_scale(V3(0.5f * len, 1.0f, 0.1f)),
-                        mat4_translation(V3(1, 0, 0)),
                         mat4_rotation_x(0.5f * MF_PI));
 
                 golf_shader_uniform_t *vs_uniform = golf_shader_get_vs_uniform(shader, "aim_line_vs_params");
@@ -409,16 +416,16 @@ static void _draw_game(void) {
 
                 golf_shader_uniform_t *fs_uniform = golf_shader_get_fs_uniform(shader, "aim_line_fs_params");
                 golf_shader_uniform_set_vec4(fs_uniform, "color", V4(1, 1, 1, 1));
-                golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_offset", offset);
-                golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_scale", V2(4 * len, 1));
-                golf_shader_uniform_set_float(fs_uniform, "length0", len0);
-                golf_shader_uniform_set_float(fs_uniform, "length1", len1);
-                golf_shader_uniform_set_float(fs_uniform, "total_length", total_length);
+                golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_offset", V2(0, 0));
+                golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_scale", V2(1, 1));
+                golf_shader_uniform_set_float(fs_uniform, "length0", 0);
+                golf_shader_uniform_set_float(fs_uniform, "length1", 0);
+                golf_shader_uniform_set_float(fs_uniform, "total_length", 1);
                 sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &(sg_range) { fs_uniform->data, fs_uniform->size });
 
                 sg_draw(0, square->positions.length, 1);
 
-                offset.x += 4.0f * len;
+                game->aim_line.num_arrows++;
             }
         }
 

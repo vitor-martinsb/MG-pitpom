@@ -1,3 +1,4 @@
+import { errorCode } from './errors.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -69,8 +70,9 @@ export function createServer() {
           } else if (message.type==='start') await room!.start(member,message.holes);
           else if (message.type==='ready') room!.ready(member,message.hole);
           else if (message.type==='shot') await room!.shot(member,message);
+          else if (message.type==='chat') room!.chat(member,message.text);
           else throw Error('Mensagem desconhecida.');
-        } catch(error) { socket.send(JSON.stringify({type:'error',sequence:message.sequence,message:error instanceof Error?error.message:'Requisição inválida'})); }
+        } catch(error) { socket.send(JSON.stringify({type:'error',code:errorCode(error),scope:message.type,sequence:message.sequence,message:error instanceof Error?error.message:'Requisição inválida'})); }
       }).catch(console.error);
     });
     socket.on('error',()=>{});

@@ -7,7 +7,9 @@ export type Member = {
   id: number; slot: number; nickname: string; color: string; avatar: number; token: string;
   socket?: WebSocket; ready: boolean; lastSequence: number; scores: number[]; dnf: boolean[];
   disconnectedAt?: number; ball?: Ball;
+  lastChatAt?: number;
 };
+export type ChatMessage = { type: 'chat'; id: number; playerId: number; nickname: string; color: string; text: string; sentAt: number };
 export type RoomOptions = { duration: number; grace: number; loadingTimeout: number; resultsDuration: number; penalty: number; reconnectTTL: number; snapshotHz: number };
 export const defaults: RoomOptions = { duration: 120000, grace: 5000, loadingTimeout: 10000, resultsDuration: 5000, penalty: 12, reconnectTTL: 60000, snapshotHz: 15 };
 export class Room {
@@ -27,6 +29,8 @@ export class Room {
   private frameNumber = 0;
   private lastSent = new Map<number, string>();
   private closed = false;
+  private chatSequence = 0;
+  readonly chatHistory: ChatMessage[] = [];
   private lastPhysicsCpu = 0;
   readonly metrics = { physicsTicks: 0, snapshots: 0, bytes: 0, messages: 0, maxTickMs: 0, physicsCpuMs: 0, physicsPeakRssBytes: 0, physicsPeakTrackedBytes: 0 };
   constructor(readonly code: string, readonly root: string, readonly levels: string[], readonly options: RoomOptions = defaults, readonly now = () => performance.now()) {}
@@ -55,7 +59,8 @@ export class Room {
     const id=this.nextId++;
     const m: Member={ id,slot,nickname:nickname.trim(),color,avatar:avatar as number,token:randomBytes(24).toString('hex'),socket,ready:false,lastSequence:0,scores:[],dnf:[] };
     this.members.set(id,m); if (!this.host) this.host=id;
-    this.send(m,{ type:'welcome',id,token:m.token,code:this.code }); this.publish(); return m;
+    this.send(m,{ type:'welcome',id,token:m.token,code:this.code });
+    this.send(m,{type:'chat-history',messages:this.chatHistory}); this.publish(); return m;
   }
   async reconnect(socket: WebSocket, token: unknown): Promise<Member> {
     const m=[...this.members.values()].find(m=> typeof token==='string' && m.token===token);
@@ -65,6 +70,7 @@ export class Room {
     if (!this.host) this.host=m.id;
     if (this.physics) await this.physics.connected(m.slot,true);
     this.send(m,{type:'welcome',id:m.id,token:m.token,code:this.code,sequence:m.lastSequence});
+    this.send(m,{type:'chat-history',messages:this.chatHistory});
     this.send(m,this.state());
     if (this.phase!=='lobby') this.send(m,{type:'load',level:Math.min(this.hole,this.holes-1),hole:this.hole});
     this.publish(); return m;
@@ -116,6 +122,18 @@ export class Room {
     if (m.ball) { m.ball.moving=true; m.ball.strokes++; }
     this.send(m,{type:'shot',sequence:seq,accepted:true});
   }
+  chat(m: Member, text: unknown) {
+    if (this.members.get(m.id)!==m || !m.socket) throw new Error('Entre na sala para conversar.');
+    if (typeof text!=='string' || !text.trim() || text.length>240 || /[\u0000-\u001f\u007f]/.test(text))
+      throw new Error('Envie uma mensagem de 1 a 240 caracteres em uma linha.');
+    const now=this.now();
+    if (m.lastChatAt!==undefined && now-m.lastChatAt<1000) throw new Error('Aguarde um segundo entre mensagens.');
+    m.lastChatAt=now;
+    const message: ChatMessage={type:'chat',id:++this.chatSequence,playerId:m.id,nickname:m.nickname,color:m.color,text:text.trim(),sentAt:Date.now()};
+    this.chatHistory.push(message);
+    if (this.chatHistory.length>50) this.chatHistory.shift();
+    this.broadcast(message);
+  }
   async tick() {
     if (this.busy) return;
     const now=this.now();
@@ -163,6 +181,6 @@ export class Room {
     if (target) this.send(target,snapshot); else this.broadcast(snapshot);
     this.metrics.snapshots++;
   }
-  fail(error: unknown) { if(this.closed)return;console.error(`[${this.code}]`,error); this.broadcast({type:'error',message:'Falha na física. Crie uma nova sala.'}); this.phase='finished'; this.physics?.close(); this.physics=undefined; this.publish(); }
+  fail(error: unknown) { if(this.closed)return;console.error(`[${this.code}]`,error); this.broadcast({type:'error',code:'PHYSICS_FAILED',message:'Falha na física. Crie uma nova sala.'}); this.phase='finished'; this.physics?.close(); this.physics=undefined; this.publish(); }
   close() { this.closed=true;this.physics?.close(); for (const m of this.members.values()) m.socket?.close(1001,'Servidor encerrado'); }
 }

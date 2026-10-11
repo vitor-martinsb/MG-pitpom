@@ -11,7 +11,10 @@
     "build:native": "cmake -S native -B ../out/server-native && cmake --build ../out/server-native --config Release",
     "test:browser": "npm run build && node test/browser.mjs",
     "test:profile-input": "npm run build && node test/profile-input.mjs",
-    "test:mobile": "npm run build && node test/mobile.mjs"
+    "test:mobile": "npm run build && node test/mobile.mjs",
+    "test:social-music": "npm run build && node test/social-music.mjs",
+    "test:deployment": "node test/deployment.mjs",
+    "test:i18n-browser": "npm run build && node test/i18n-browser.mjs"
   },
   "dependencies": {
     "ws": "8.22.0"

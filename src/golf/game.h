@@ -7,6 +7,7 @@
 
 #define MAX_NUM_CONTACTS 8
 #define MAX_AIM_LINE_POINTS 5
+#define GOLF_AIM_ARROW_COUNT 5
 #define MAX_NUM_WATER_RIPPLES 64
 
 typedef struct golf_collision_data {
@@ -56,7 +57,7 @@ typedef struct golf_game {
         float power;
         vec2 aim_delta;
         vec2 offset;
-        int num_points;
+        int num_points, num_arrows;
         vec3 points[MAX_AIM_LINE_POINTS];
     } aim_line;
 

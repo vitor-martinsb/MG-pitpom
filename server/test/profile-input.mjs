@@ -35,7 +35,7 @@ try {
   await page.locator('#lobby').waitFor({state:'visible'});
   assert.equal([...app.rooms.values()][0].members.get(1).nickname,'Vitor Golf');
   await page.locator('#start').click();
-  await page.waitForFunction(()=>document.getElementById('status').textContent==='Tacadas simultâneas',{},{timeout:30000});
+  await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
   await page.locator('#canvas').focus();
   await page.keyboard.down('Tab');
   await page.locator('#scores').waitFor({state:'visible'});

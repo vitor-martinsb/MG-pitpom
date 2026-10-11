@@ -1,3 +1,4 @@
+#include "golf/i18n.h"
 #include "golf/online.h"
 #include "golf/ui.h"
 
@@ -298,16 +299,10 @@ static golf_font_atlas_t _golf_ui_font_atlas(golf_font_t *font, float font_size)
     return font->atlases.data[sz_idx];
 }
 
-static int _golf_ui_ascii_char(unsigned char c) {
-    return c >= 32 && c <= 126 ? c : '?';
-}
-
 static float _golf_ui_text_width(golf_font_t *font, float font_size, const char *text) {
     golf_font_atlas_t atlas = _golf_ui_font_atlas(font, font_size);
     float width = 0;
-    for (int i = 0; text[i]; i++) {
-        width += atlas.char_data[_golf_ui_ascii_char((unsigned char)text[i])].xadvance;
-    }
+    while (*text) width += atlas.char_data[golf_utf8_next(&text)].xadvance;
     return width * font_size / atlas.font_size;
 }
 
@@ -318,12 +313,8 @@ static void _golf_ui_draw_text(golf_font_t *font, vec2 pos, float font_size, vec
     float sz_scale = font_size / atlas.font_size;
 
     float width = 0.0f;
-    int i = 0;
-    while (text[i]) {
-        int c = _golf_ui_ascii_char((unsigned char)text[i]);
-        width += sz_scale * atlas.char_data[(int)c].xadvance;
-        i++;
-    }
+    const char *cursor = text;
+    while (*cursor) width += sz_scale * atlas.char_data[golf_utf8_next(&cursor)].xadvance;
 
     if (horiz_align == 0) {
         cur_x -= 0.5f * width;
@@ -349,9 +340,9 @@ static void _golf_ui_draw_text(golf_font_t *font, vec2 pos, float font_size, vec
         golf_log_warning("Invalid text vert_align %s", vert_align);
     }
 
-    i = 0;
-    while (text[i]) {
-        int c = _golf_ui_ascii_char((unsigned char)text[i]);
+    cursor = text;
+    while (*cursor) {
+        int c = golf_utf8_next(&cursor);
 
         int x0 = (int)atlas.char_data[(int)c].x0;
         int x1 = (int)atlas.char_data[(int)c].x1;
@@ -384,7 +375,6 @@ static void _golf_ui_draw_text(golf_font_t *font, vec2 pos, float font_size, vec
 
         cur_x += sz_scale * xadvance;
 
-        i++;
     }
 }
 
@@ -394,7 +384,14 @@ static void _golf_ui_text(golf_ui_layout_t *layout, golf_ui_layout_entity_t enti
     vec2 pos = _golf_ui_layout_get_entity_pos(layout, entity);
     float font_size = ui_scale * entity.text.font_size;
 
-    _golf_ui_draw_text(font, pos, font_size, entity.text.color, entity.text.horiz_align, entity.text.vert_align, entity.text.text.cstr, alpha);
+    const char *text = golf_i18n_translate(entity.text.text.cstr);
+    float limit = graphics->viewport_size.x * 0.9f;
+    golf_ui_layout_entity_t parent;
+    if (_golf_ui_layout_get_entity(layout, entity.parent_name, &parent) && parent.size.x > 0)
+        limit = fminf(limit, parent.size.x * ui_scale * 0.88f);
+    float width = _golf_ui_text_width(font, font_size, text);
+    if (width > limit && width > 0) font_size *= limit / width;
+    _golf_ui_draw_text(font, pos, font_size, entity.text.color, entity.text.horiz_align, entity.text.vert_align, text, alpha);
 }
 
 static void _golf_ui_text_name(golf_ui_layout_t *layout, const char *name, float alpha) {
@@ -579,7 +576,7 @@ static void _golf_ui_aim_circle_name(golf_ui_layout_t *layout, const char *name,
             aimer_size.y = max_length / vert_scale; 
             aimer_pos = vec2_add(pos, vec2_scale(delta, 0.5f * aimer_size.y));
         }
-        game->aim_line.power = (aimer_length - min_length) / (max_length - min_length);
+        game->aim_line.power = golf_clampf((aimer_length - min_length) / (max_length - min_length), 0, 1);
 
         vec4 wanted_color = V4(0, 0, 0, 1);
         float power = (aimer_size.y * vert_scale - min_length) / (max_length - min_length);
@@ -884,11 +881,11 @@ static int _golf_ui_level_select_scroll_box_name(golf_ui_layout_t *layout, const
                 char text_buf[256];
                 float stroke_count;
                 if (golf_storage_get_num(storage_key, &stroke_count)) {
-                    snprintf(text_buf, 256, "Best %d", (int)stroke_count);
+                    snprintf(text_buf, 256, golf_i18n_t("c.best"), (int)stroke_count);
                 }
                 else {
                     next_should_be_locked = true;
-                    snprintf(text_buf, 256, "Best -");
+                    snprintf(text_buf, 256, "%s", golf_i18n_t("c.bestEmpty"));
                 }
                 _golf_ui_draw_text(font, best_text_pos, best_text_size, best_text_color, 0, 0, text_buf, 1);
             }
@@ -949,7 +946,6 @@ static void _golf_ui_tutorial_name(golf_ui_layout_t *layout, const char *name, i
     vec2 text_2_pos = vec2_add(pos, vec2_scale(entity->tutorial.text_2_pos, ui_scale));
     golf_string_t text_1 = entity->tutorial.text_1;
     golf_string_t text_2 = entity->tutorial.text_2;
-    golf_string_t text_3 = entity->tutorial.text_3;
     golf_string_t text_4 = entity->tutorial.text_4;
     golf_string_t text_5 = entity->tutorial.text_5;
     vec4 text_color = entity->tutorial.text_color;
@@ -958,8 +954,8 @@ static void _golf_ui_tutorial_name(golf_ui_layout_t *layout, const char *name, i
     _golf_ui_texture_draw(black_texture, pos, size, bg_color, bg_color.w);
 
     if (step == 0) {
-        _golf_ui_draw_text(font, text_1_pos, text_size, text_color, 0, 0, text_1.cstr, 1);
-        _golf_ui_draw_text(font, text_2_pos, text_size, text_color, 0, 0, text_2.cstr, 1);
+        _golf_ui_draw_text(font, text_1_pos, text_size, text_color, 0, 0, golf_i18n_translate(text_1.cstr), 1);
+        _golf_ui_draw_text(font, text_2_pos, text_size, text_color, 0, 0, golf_i18n_translate(text_2.cstr), 1);
 
         {
             float a = entity->tutorial.pointer_t / entity->tutorial.pointer_1_time;
@@ -980,11 +976,11 @@ static void _golf_ui_tutorial_name(golf_ui_layout_t *layout, const char *name, i
         }
     }
     else if (step == 1) {
-        _golf_ui_draw_text(font, pos, text_size, text_color, 0, 0, text_3.cstr, 1);
+        _golf_ui_draw_text(font, pos, text_size, text_color, 0, 0, golf_i18n_t(inputs->is_touch ? "c.tutorial3" : "c.tutorialClick"), 1);
     }
     else if (step == 2) {
-        _golf_ui_draw_text(font, text_1_pos, text_size, text_color, 0, 0, text_4.cstr, 1);
-        _golf_ui_draw_text(font, text_2_pos, text_size, text_color, 0, 0, text_5.cstr, 1);
+        _golf_ui_draw_text(font, text_1_pos, text_size, text_color, 0, 0, golf_i18n_translate(text_4.cstr), 1);
+        _golf_ui_draw_text(font, text_2_pos, text_size, text_color, 0, 0, golf_i18n_translate(text_5.cstr), 1);
 
         {
             float a = entity->tutorial.pointer_t / entity->tutorial.pointer_2_time;
@@ -1191,10 +1187,10 @@ static void _golf_ui_in_game_finished(float dt) {
         if (_golf_ui_layout_get_entity_of_type(layout, "finished_menu_sub_text", GOLF_UI_TEXT, &entity)) {
             entity->text.text.len = 0;
             if (player->stroke_count == 1) {
-                golf_string_appendf(&entity->text.text, "%d STROKE", player->stroke_count);
+                golf_string_appendf(&entity->text.text, golf_i18n_t("c.strokeOne"), player->stroke_count);
             }
             else {
-                golf_string_appendf(&entity->text.text, "%d STROKES", player->stroke_count);
+                golf_string_appendf(&entity->text.text, golf_i18n_t("c.strokeOther"), player->stroke_count);
             }
             _golf_ui_text(layout, *entity, 1);
         }
@@ -1218,7 +1214,7 @@ static void _golf_ui_player_labels(void) {
                     vec3_add(player->ball.draw_pos, V3(0, height, 0)), &pos)) continue;
         bool local = player->id == game->local_player_id;
         float width = _golf_ui_text_width(font, font_size, player->name);
-        if (local) width = fmaxf(width, _golf_ui_text_width(font, font_size * 0.8f, "VOCE"));
+        if (local) width = fmaxf(width, _golf_ui_text_width(font, font_size * 0.8f, golf_i18n_t("c.you")));
         labels[count++] = (golf_player_label_t) {
             .player_id = player->id,
             .distance_squared = vec3_length_squared(vec3_sub(player->ball.draw_pos, graphics->cam_pos)),
@@ -1241,8 +1237,8 @@ static void _golf_ui_player_labels(void) {
                 V2(6 * scale, 6 * scale), player->color, 1);
         if (label->local) {
             vec2 badge_pos = vec2_sub(name_pos, V2(0, font_size * 1.1f));
-            _golf_ui_draw_text(font, vec2_add(badge_pos, shadow), font_size * 0.8f, V4(0, 0, 0, 1), 0, 0, "VOCE", 1);
-            _golf_ui_draw_text(font, badge_pos, font_size * 0.8f, V4(1, 1, 1, 1), 0, 0, "VOCE", 1);
+            _golf_ui_draw_text(font, vec2_add(badge_pos, shadow), font_size * 0.8f, V4(0, 0, 0, 1), 0, 0, golf_i18n_t("c.you"), 1);
+            _golf_ui_draw_text(font, badge_pos, font_size * 0.8f, V4(1, 1, 1, 1), 0, 0, golf_i18n_t("c.you"), 1);
         }
     }
 }
@@ -1251,6 +1247,7 @@ static void _golf_ui_in_game(float dt) {
     golf_player_t *player = golf_game_get_local_player();
 
     _golf_ui_player_labels();
+    if (golf_online_input_blocked()) return;
     if (golf_online_active()) {
         if (golf_online_input_blocked()) return;
         if (game->state == GOLF_GAME_STATE_AIMING && golf_online_can_shoot()) _golf_ui_in_game_aiming(dt);
@@ -1346,7 +1343,7 @@ static void _golf_ui_in_game(float dt) {
                 alpha = 1 - (golf->in_game.t - time_to_show_level_num) / fade_in_length;
             }
             entity->text.text.len = 0;
-            golf_string_appendf(&entity->text.text, "LEVEL %d", golf->level_num + 1);
+            golf_string_appendf(&entity->text.text, golf_i18n_t("c.level"), golf->level_num + 1);
             _golf_ui_text(layout, *entity, alpha);
         }
     }

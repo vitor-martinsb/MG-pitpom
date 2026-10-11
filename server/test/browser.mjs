@@ -22,7 +22,7 @@ try{
   }
   const room=[...app.rooms.values()][0];assert.equal(room.members.size,5);
   await pages[0].locator('#start').click();
-  await pages[0].waitForFunction(()=>document.getElementById('status').textContent==='Tacadas simultâneas',{},{timeout:30000});
+  await pages[0].waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
   assert.equal(room.phase,'playing');assert.ok([...room.members.values()].every(m=>m.ready));
   const diagnostics=await pages[0].evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])));
   assert.equal(diagnostics.players.length,5);assert.deepEqual(diagnostics.players[0].slice(8),[1,0,0]);
@@ -36,7 +36,7 @@ try{
   await pages[0].setViewportSize({width:850,height:600});
   fs.mkdirSync(path.resolve('../out/multiplayer-validation'),{recursive:true});
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/five-players.png')});
-  await pages[0].reload();await pages[0].waitForFunction(()=>document.getElementById('status').textContent==='Tacadas simultâneas',{},{timeout:90000});
+  await pages[0].reload();await pages[0].waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:90000});
   assert.equal(room.members.size,5);assert.equal(room.members.get(1).nickname,'Browser1');assert.equal(room.members.get(1).ball.strokes,1);
   assert.deepEqual(errors,[]);
   console.log('Five real WebGL clients: loaded, ready, authoritative shot, scoreboard, resize and reconnect passed.');
@@ -54,7 +54,7 @@ try{
     socket.on('open',()=>socket.send(JSON.stringify({type:'join',code,nickname:`Load${i}`,color:'#00ff00',avatar:i%8})));
     socket.on('message',data=>{const m=JSON.parse(data.toString());if(m.type==='welcome')resolve();if(m.type==='load')socket.send(JSON.stringify({type:'ready',hole:m.hole}));if(m.type==='error')reject(Error(m.message));});
   });
-  await pages[0].locator('#start').click();await pages[0].waitForFunction(()=>document.getElementById('status').textContent==='Tacadas simultâneas',{},{timeout:30000});
+  await pages[0].locator('#start').click();await pages[0].waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
   await pages[0].waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).players.length===50);
   assert.equal(fifty.members.size,50);
   await pages[0].keyboard.down('Tab');assert.equal(await pages[0].locator('#score-body tr').count(),50);await pages[0].keyboard.up('Tab');

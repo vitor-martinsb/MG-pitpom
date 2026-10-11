@@ -1,6 +1,30 @@
 # PitPom Minigolfe
 A cross-platform minigolf game written in C. 
 
+## Publish multiplayer
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vitor-martinsb/MG-pitpom/tree/staging)
+
+Create a Render account with your GitHub login, connect this repository and use
+the button above. It deploys the **staging** branch as a **Free** Docker web
+service, with the browser game, WebSocket server and native C physics together.
+The public HTTPS URL is assigned by Render after deployment. The button opens
+the deployment setup; it is not a playable game link until the service is live.
+After activation, copy the service URL to the repository's **About → Website**.
+See [deployment instructions](docs/render-deployment.md).
+
+Updates to `staging` deploy after the GitHub validation workflow passes.
+The free service sleeps after 15 minutes without traffic and takes about one
+minute to wake up. Rooms and chat are kept in memory and end on server restarts.
+
+## Languages
+
+Open **Settings → Language** to select **English**, **Português (Brasil)** or
+**Español**. English is the default on first access. Your choice is saved in
+the browser and applies immediately to multiplayer and the solo game's menus,
+tutorials and results. Each player can choose a different language. Chat messages
+and player names are displayed exactly as entered.
+
 ## Platforms
 - HTML: https://mgerdes.github.io/minigolf.html (Works best in Chrome)
 - iOS: https://apps.apple.com/us/app/open-golf/id1615224465
@@ -31,7 +55,7 @@ With this workspace's builds already generated:
 python build/multiplayer.py start
 ```
 
-Open **http://localhost:3000**. One player creates a room; the other four enter
+Open **http://localhost:3000**. One player creates a room; the others enter
 its five-character code. The host starts the match. Each browser tab controls
 one ball; **Tab** opens the scoreboard. On Windows, `build/run-multiplayer.cmd`
 starts the same server. Remote browsers require HTTPS because the Web client
@@ -49,6 +73,17 @@ aim and release to shoot; drag away from the ball to rotate the camera. Tap
 on-screen keyboard. `npm run test:mobile` in `server` validates touch controls
 with two mobile browser contexts; physical iOS/Android devices still need
 manual verification.
+
+The aiming preview uses five arrows at every shot strength. Tap **Chat** to
+send messages to the players in your room, in the lobby or during the match.
+The last 50 messages remain available when you reconnect. Messages accept
+up to 240 characters, with a one-second interval between sends.
+
+The browser plays an original, mellow lo-fi instrumental at 62 BPM after your
+first click or touch. Open **Settings** to adjust the volume or mute it; your
+preference is saved on that browser. Audio pauses while the tab is hidden.
+`npm run test:social-music` in `server` checks chat between mobile and desktop,
+reconnection, five arrows at different strengths and the audio controls.
 
 To rebuild, install Python 3, CMake, Ninja, a C/C++ compiler, Node.js 22+ and an
 activated Emscripten SDK (`EMSDK`), then run:

@@ -37,7 +37,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_online_diagnostics(void) {
     golf_game_t *game=golf_game_get();
     golf_player_t *local=golf_game_get_local_player();
     vec2 screen=golf_graphics_world_to_screen(local->ball.draw_pos);
-    int used=snprintf(buffer,sizeof(buffer),"{\"active\":%s,\"state\":%d,\"local\":%u,\"touch\":%s,\"cameraAngle\":%.9g,\"screen\":[%.9g,%.9g],\"players\":[",online.active?"true":"false",game->state,game->local_player_id,golf_inputs_get()->is_touch?"true":"false",game->cam.angle,screen.x,screen.y);
+    int used=snprintf(buffer,sizeof(buffer),"{\"active\":%s,\"state\":%d,\"local\":%u,\"touch\":%s,\"cameraAngle\":%.9g,\"aimPower\":%.9g,\"aimArrows\":%d,\"screen\":[%.9g,%.9g],\"players\":[",online.active?"true":"false",game->state,game->local_player_id,golf_inputs_get()->is_touch?"true":"false",game->cam.angle,game->aim_line.power,game->aim_line.num_arrows,screen.x,screen.y);
     for(int i=0;i<game->player_count;i++) {
         golf_player_t *p=&game->players[i];
         int n=snprintf(buffer+used,sizeof(buffer)-(size_t)used,"%s[%u,%d,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g]",i?",":"",p->id,p->connected,p->ball.pos.x,p->ball.pos.y,p->ball.pos.z,p->ball.draw_pos.x,p->ball.draw_pos.y,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z);
@@ -125,6 +125,9 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         online.shot_pending=false;
         golf_game_get_local_player()->ball.is_moving=true;
         golf_audio_start_sound("hit_ball","data/audio/impactPlank_medium_000.ogg",1,false,true);
+    } else if (!strcmp(type,"cancel-aim")) {
+        if (game->state==GOLF_GAME_STATE_AIMING) game->state=GOLF_GAME_STATE_WAITING_FOR_AIM;
+        game->aim_line.power=0;
     } else if (!strcmp(type,"error")) { online.shot_pending=false;
     } else if (!strcmp(type,"spectate")) {
         golf_player_t *local=golf_game_get_local_player();

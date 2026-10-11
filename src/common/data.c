@@ -1275,56 +1275,7 @@ static bool _golf_shader_unload(void *ptr) {
 // FONT
 //
 
-static void _stbi_write_func(void *context, void *data, int size) {
-    vec_char_t *bmp = (vec_char_t*)context;
-    vec_pusharr(bmp, (char*)data, size);
-}
-
-static JSON_Value *_golf_font_atlas_import(const char *file_data, int font_size, int img_size) {
-    unsigned char *bitmap = golf_alloc(img_size * img_size);
-    stbtt_bakedchar cdata[96];
-    memset(cdata, 0, sizeof(cdata));
-    stbtt_BakeFontBitmap((const unsigned char*)file_data, 0, (float)-font_size, bitmap, img_size, img_size, 32, 95, cdata);
-
-    float ascent, descent, linegap;
-    stbtt_GetScaledFontVMetrics((const unsigned char*)file_data, 0, (float)-font_size, &ascent, &descent, &linegap);
-
-    JSON_Value *val = json_value_init_object();
-    JSON_Object *obj = json_value_get_object(val);
-    json_object_set_number(obj, "font_size", font_size);
-    json_object_set_number(obj, "ascent", ascent);
-    json_object_set_number(obj, "descent", descent);
-    json_object_set_number(obj, "linegap", linegap);
-
-    JSON_Value *char_datas_val = json_value_init_array();
-    JSON_Array *char_datas_array = json_value_get_array(char_datas_val);
-    for (int i = 0; i < 96; i++) {
-        JSON_Value *char_data_val = json_value_init_object();
-        JSON_Object *char_data_obj = json_value_get_object(char_data_val);
-        json_object_set_number(char_data_obj, "c", 32 + i);
-        json_object_set_number(char_data_obj, "x0", cdata[i].x0);
-        json_object_set_number(char_data_obj, "x1", cdata[i].x1);
-        json_object_set_number(char_data_obj, "y0", cdata[i].y0);
-        json_object_set_number(char_data_obj, "y1", cdata[i].y1);
-        json_object_set_number(char_data_obj, "xoff", cdata[i].xoff);
-        json_object_set_number(char_data_obj, "yoff", cdata[i].yoff);
-        json_object_set_number(char_data_obj, "xadvance", cdata[i].xadvance);
-        json_array_append_value(char_datas_array, char_data_val);
-    }
-    json_object_set_value(obj, "char_datas", char_datas_val);
-
-    json_object_set_number(obj, "img_size", img_size);
-    {
-        vec_char_t img;
-        vec_init(&img, "data");
-        stbi_write_png_to_func(_stbi_write_func, &img, img_size, img_size, 1, bitmap, img_size);
-        golf_json_object_set_data(obj, "img_data", (unsigned char*)img.data, img.length);
-        vec_deinit(&img);
-    }
-
-    golf_free(bitmap);
-    return val;
-}
+#include "common/font_import.h"
 
 static bool _golf_font_import(const char *path, char *data, int data_len) {
     GOLF_UNUSED(path);
@@ -1336,14 +1287,14 @@ static bool _golf_font_import(const char *path, char *data, int data_len) {
     JSON_Value *atlases_val = json_value_init_array();
     JSON_Array *atlases_array = json_value_get_array(atlases_val);
 
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 16, 256));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 24, 256));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 32, 256));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 40, 512));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 48, 512));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 56, 512));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 64, 512));
-    json_array_append_value(atlases_array, _golf_font_atlas_import(data, 128, 1024));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 16, 512));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 24, 512));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 32, 512));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 40, 1024));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 48, 1024));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 56, 1024));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 64, 1024));
+    json_array_append_value(atlases_array, golf_font_atlas_import(data, 128, 2048));
 
     json_object_set_value(obj, "atlases", atlases_val);
 

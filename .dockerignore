@@ -1,0 +1,9 @@
+.git
+out
+server/node_modules
+server/dist
+src/common/data_zip.h
+**/__pycache__
+*.zip
+*.exe
+*.log
