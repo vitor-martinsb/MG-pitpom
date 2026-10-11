@@ -20,6 +20,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Android)
         OpenSLES)
     add_library(golf SHARED
         draw.c
+        garden.c
         i18n.c
         game.c
         golf.c
@@ -39,6 +40,7 @@ else()
 
     add_executable(golf
         draw.c
+        garden.c
         i18n.c
         game.c
         golf.c
@@ -84,7 +86,8 @@ else()
         set_target_properties( golf PROPERTIES 
             SUFFIX ".html")
         set_property(TARGET golf APPEND PROPERTY LINK_DEPENDS
-            "${CMAKE_SOURCE_DIR}/build/emscripten/multiplayer.html")
+            "${CMAKE_SOURCE_DIR}/build/emscripten/multiplayer.html"
+            "${CMAKE_BINARY_DIR}/garden-shell.html")
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
         add_custom_command(TARGET golf POST_BUILD
             COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/build/gzip-web.py" "${CMAKE_BINARY_DIR}/golf.wasm"

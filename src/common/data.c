@@ -525,6 +525,31 @@ static bool _golf_shader_finalize(void *ptr) {
             vec_push(&shader->pipelines, pipeline);
         }
     }
+    else if (strcmp(shader->file.path, "data/shaders/garden.glsl") == 0) {
+        for (int shadow = 0; shadow < 2; shadow++) {
+            sg_pipeline_desc desc = {
+                .shader = shader->sg_shader,
+                .layout = {
+                    .buffers[0].stride = 10 * sizeof(float),
+                    .attrs = {
+                        [0] = { .format = SG_VERTEXFORMAT_FLOAT3, .offset = 0 },
+                        [1] = { .format = SG_VERTEXFORMAT_FLOAT3, .offset = 3 * sizeof(float) },
+                        [2] = { .format = SG_VERTEXFORMAT_FLOAT4, .offset = 6 * sizeof(float) },
+                    },
+                },
+                .depth = { .compare = SG_COMPAREFUNC_LESS_EQUAL, .write_enabled = !shadow },
+                .colors[0].blend = {
+                    .enabled = shadow,
+                    .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+                    .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                },
+            };
+            golf_shader_pipeline_t pipeline;
+            snprintf(pipeline.name, GOLF_MAX_NAME_LEN, "%s", shadow ? "garden_shadow" : "garden");
+            pipeline.sg_pipeline = sg_make_pipeline(&desc);
+            vec_push(&shader->pipelines, pipeline);
+        }
+    }
     else if (strcmp(shader->file.path, "data/shaders/environment_material.glsl") == 0) {
         {
             sg_pipeline_desc desc = {

@@ -1,0 +1,62 @@
+{
+  "environment": "Windows Chrome headless with SwiftShader; synthetic, not a device benchmark",
+  "method": "4-second rAF samples, 1100x720 viewport, one WebGL client and 49 WebSocket bots; refresh-limited comparison",
+  "baseline": {
+    "environment": "Windows Chrome headless with SwiftShader; synthetic, not a device benchmark",
+    "measurements": [
+      {
+        "name": "lobby",
+        "frames": 241,
+        "meanMs": 16.643506223987245,
+        "p95Ms": 16.769999999999982,
+        "drawCallsPerFrame": 39,
+        "wasmHeapBytes": 0
+      },
+      {
+        "name": "50 players",
+        "frames": 241,
+        "meanMs": 16.61786307006456,
+        "p95Ms": 16.764999999999418,
+        "drawCallsPerFrame": 262,
+        "wasmHeapBytes": 0
+      }
+    ],
+    "sizes": {
+      "golf.wasm": 30269658,
+      "golf.wasm.gz": 17963363
+    }
+  },
+  "redesign": {
+    "environment": "Windows Chrome headless with SwiftShader; synthetic, not a device benchmark",
+    "measurements": [
+      {
+        "name": "lobby",
+        "frames": 241,
+        "meanMs": 16.599605809286917,
+        "p95Ms": 16.704999999999927,
+        "drawCallsPerFrame": 26,
+        "wasmHeapBytes": 0
+      },
+      {
+        "name": "50 players",
+        "frames": 241,
+        "meanMs": 16.642053942264862,
+        "p95Ms": 16.734999999998763,
+        "drawCallsPerFrame": 222,
+        "wasmHeapBytes": 0
+      }
+    ],
+    "sizes": {
+      "golf.wasm": 35822385,
+      "golf.wasm.gz": 23323957
+    }
+  },
+  "decorationVertexBudget": 72000,
+  "maxObservedDecorationVertices": 68706,
+  "originalGameFilesUnchanged": 706,
+  "notes": [
+    "wasmHeapBytes=0 means unavailable from Module, not zero memory usage",
+    "Physical iOS/Android performance has not been measured",
+    "Approved mascot image is pending and is outside the WebAssembly download"
+  ]
+}

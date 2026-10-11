@@ -33,3 +33,38 @@ button,input,select{min-height:44px;font-size:16px}button{touch-action:manipulat
 #chat-panel,#scores{z-index:8}
 .music-panel{max-height:calc(100dvh - var(--settings-top) - 64px - var(--safe-top) - var(--safe-bottom));overflow:auto;overscroll-behavior:contain}
 .music-controls summary{font-size:14px;padding:12px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Storybook garden: readable paper surfaces, warm wood and quiet moss accents. */
+:root{color:#354831;background:#789b65;color-scheme:light;--paper:#f5e9ce;--ink:#354831;--moss:#526b48;--wood:#96724d;--gold:#d9b976}
+.overlay{background:linear-gradient(135deg,#526b48d9,#789b65c7);backdrop-filter:blur(3px)}
+.panel{background:radial-gradient(ellipse at 20% 0%,#fffaf0c9,transparent 65%),var(--paper);border:1px solid #96724d78;border-radius:28px 22px 26px 20px;box-shadow:0 18px 65px #35483145,inset 0 0 0 5px #fff9e652;padding:28px}
+h1,h2{font-family:Georgia,'Times New Roman',serif;font-weight:600;letter-spacing:-.035em;color:var(--moss)}
+h1{font-size:clamp(2rem,5vw,2.65rem);line-height:1.1}h2{font-size:1.7rem}
+.muted{color:#75664c}.panel>label,.music-panel>label{font-size:.86rem;font-weight:650;color:#526b48}
+input,select{background:#fffaf0;color:var(--ink);border:1px solid #96724d66;border-radius:10px;box-shadow:inset 0 2px 3px #96724d0c}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+button{background:var(--moss);color:#fff7e7;border:1px solid #35483166;border-radius:12px 10px 12px 9px;box-shadow:0 3px 0 #35483136;transition:background .15s,transform .15s}
+button:hover{background:#637e54}button:active{transform:translateY(1px)}
+.secondary,.actions .secondary{background:#f5e9cef2;color:var(--ink);border:1px solid #96724d88}
+.secondary:hover,.actions .secondary:hover{background:#fffaee}
+.garden-header{height:126px;margin:-28px -28px 20px;overflow:hidden;background:linear-gradient(175deg,#a8d8e8 45%,#789b65 46%,#526b48);border-radius:27px 21px 0 0;border-bottom:3px solid #d9b976}
+.garden-header img{width:100%;height:100%;object-fit:cover;object-position:center 57%}
+#connect .panel>.muted:first-of-type{font-size:.7rem;letter-spacing:.12em;margin-bottom:8px}
+#connect .panel>p:not(.muted){font-size:.92rem;margin:10px 0 16px}
+.code{color:var(--moss);background:#fffaec;border:1px dashed #96724d7d;border-radius:14px;padding:12px;text-align:center}
+.list .player{padding:9px 11px;background:#fff8e58a;border-radius:10px;border:1px solid #d9b97645}
+.dot{box-shadow:0 0 0 2px #fff8e5,0 0 0 3px #96724d44}
+.hud,.help{background:#f5e9cef0;color:var(--ink);border:1px solid #96724d77;box-shadow:0 4px 15px #35483124;border-radius:16px 12px 15px 11px}
+.hud strong{font-family:Georgia,serif;font-weight:600;color:var(--moss)}
+#timer{font-variant-numeric:tabular-nums;font-weight:700;color:#96724d}
+td,th{border-bottom:1px solid #96724d33}th{background:#f5e9ce;color:#526b48}tr.local{background:#d9b97635}
+.toast{background:#526b48;color:#fff6e3;border:1px solid #d9b976;border-radius:15px}
+.chat-messages{background:#fffaf080;border:1px solid #96724d33;border-radius:13px}
+.music-controls{color:var(--ink)}
+.music-controls summary,.music-panel{background:#f5e9cef5;color:var(--ink);border:1px solid #96724d88;box-shadow:0 4px 14px #35483126}
+.music-controls summary{border-radius:12px}.music-panel{border-radius:17px 13px 15px 12px}.music-panel .muted{color:#75664c}
+input[type=range]{accent-color:var(--moss)}
+@media(max-width:600px),(pointer:coarse){.panel{padding:18px}.garden-header{height:100px;margin:-18px -18px 16px}.hud{border-radius:12px}.actions button{font-size:14px}}
+@media(max-height:600px){.garden-header{height:72px}}
+@media(max-height:500px) and (orientation:landscape){.panel{padding:12px 18px}.garden-header{height:60px;margin:-12px -18px 12px}}
+@media(prefers-reduced-motion:reduce){button{transition:none}.overlay{backdrop-filter:none}}

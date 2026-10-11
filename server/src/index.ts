@@ -29,7 +29,7 @@ export function createServer() {
     let pathname: string; try { pathname=decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname); } catch { res.writeHead(400).end(); return; }
     const file=path.resolve(web,pathname==='/'?'golf.html':'.'+pathname);
     if (file!==web && !file.startsWith(web+path.sep)) { res.writeHead(403).end(); return; }
-    const mime: Record<string,string>={'.html':'text/html; charset=utf-8','.js':'text/javascript','.wasm':'application/wasm','.css':'text/css'};
+    const mime: Record<string,string>={'.html':'text/html; charset=utf-8','.js':'text/javascript','.wasm':'application/wasm','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp'};
     fs.stat(file,(error,stat)=>{
       if (error || !stat.isFile()) { res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'}).end('Arquivo Web ausente. Execute o build Emscripten; consulte README.md.'); return; }
       res.setHeader('Content-Type',mime[path.extname(file)] ?? 'application/octet-stream');

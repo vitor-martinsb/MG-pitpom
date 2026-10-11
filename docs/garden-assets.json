@@ -1,0 +1,29 @@
+{
+  "assets": [
+    {
+      "name": "grass",
+      "prompt": "Use case: stylized-concept. Asset type: tileable diffuse albedo texture for a real 3D minigolf ground, 1024x1024 square. Create an orthographic directly overhead hand-painted gouache meadow surface, inspired by warm pastoral Studio Ghibli background paintings. Extremely subtle small brush strokes and short grass marks, natural sage green #789B65 with moss #526B48 and lighter olive patches, low contrast and flat even illumination, subdued muted hues. This is playable short turf: no large plants, no objects, no flowers, no borders, no checkerboard, no cast shadows, no perspective, no black or saturated lime areas, no text, no watermark. Edges should blend seamlessly when repeated. Soft broad organic color mottling with fine artisanal brush texture, painterly but calm so a small colored golf ball is easy to see.",
+      "mode": "built-in image generation",
+      "output": "data/textures/garden/meadow.png",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "name": "wood",
+      "prompt": "Use case: stylized-concept. Asset type: tileable diffuse albedo texture for minigolf wooden borders and hand-crafted garden objects, 1024x1024 square. Create a hand-painted watercolor/gouache warm weathered cedar wood grain in the pastoral Studio Ghibli background-painting aesthetic. Full-frame wood with flowing delicate wavy lengthwise grain, soft irregular brush variation and a few tiny rounded knots; light honey brown #96724D and golden cream #D9B976, warm restrained colors and low contrast, flat even illumination. Organic aged surface, understated handcrafted charm, no photorealism, no hard dividing plank seams, no perspective, no lighting gradient, no cast shadows, no objects, no text, no watermark. All edges visually blend when tiled. Keep the grain readable but soft, suitable for a small 3D game.",
+      "mode": "built-in image generation",
+      "output": "data/textures/garden/cedar.png",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    }
+  ],
+  "mascots": {
+    "source": "User-approved conversation illustration; original file pending",
+    "output": "build/emscripten/art/pit-and-pom.png",
+    "firstGeneratedIllustrationUsed": false
+  }
+}

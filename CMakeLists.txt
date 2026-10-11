@@ -19,6 +19,10 @@ file(MAKE_DIRECTORY "${I18N_DIR}")
 execute_process(COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/build/generate-i18n.py" "${I18N_DIR}" COMMAND_ERROR_IS_FATAL ANY)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/data/locales.json" "${CMAKE_SOURCE_DIR}/build/generate-i18n.py")
 include_directories("${I18N_DIR}")
+execute_process(COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/build/generate-visual-shaders.py" COMMAND_ERROR_IS_FATAL ANY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/build/generate-visual-shaders.py"
+    "${CMAKE_SOURCE_DIR}/data/shaders/environment_material.glsl" "${CMAKE_SOURCE_DIR}/data/shaders/ball.glsl"
+    "${CMAKE_SOURCE_DIR}/data/shaders/ui.glsl" "${CMAKE_SOURCE_DIR}/data/shaders/aim_line.glsl" "${CMAKE_SOURCE_DIR}/data/shaders/garden.glsl")
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR})
@@ -40,8 +44,14 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL iOS)
     add_compile_options("SHELL:-O3")
     add_compile_options("SHELL:-DNDEBUG")
 elseif(CMAKE_SYSTEM_NAME STREQUAL Emscripten)
+    set(GOLF_MASCOT_IMAGE "")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/build/emscripten/art/pit-and-pom.png")
+        set(GOLF_MASCOT_IMAGE "<img src=\"art/pit-and-pom.png\" alt=\"\">")
+    endif()
+    configure_file("build/emscripten/multiplayer.html" "${CMAKE_BINARY_DIR}/garden-shell.html" @ONLY)
     configure_file("build/emscripten/multiplayer.js" ${CMAKE_BINARY_DIR} COPYONLY)
     configure_file("build/emscripten/multiplayer.css" ${CMAKE_BINARY_DIR} COPYONLY)
+    file(COPY "${CMAKE_SOURCE_DIR}/build/emscripten/art" DESTINATION "${CMAKE_BINARY_DIR}")
     configure_file("build/emscripten/music.js" ${CMAKE_BINARY_DIR} COPYONLY)
     configure_file("build/emscripten/i18n.js" ${CMAKE_BINARY_DIR} COPYONLY)
     configure_file("${I18N_DIR}/i18n-data.js" "${CMAKE_BINARY_DIR}/i18n-data.js" COPYONLY)
@@ -52,7 +62,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL Emscripten)
         "SHELL:-s MAXIMUM_MEMORY=536870912" "SHELL:-s INITIAL_MEMORY=134217728"
         "SHELL:-s PTHREAD_POOL_SIZE=2" "SHELL:-s DEFAULT_PTHREAD_STACK_SIZE=1048576" "SHELL:-s STACK_SIZE=1048576" "SHELL:-s EXIT_RUNTIME=0" -lidbfs.js
         "SHELL:-s EXPORTED_RUNTIME_METHODS=ccall"
-        "SHELL:--shell-file \"${CMAKE_SOURCE_DIR}/build/emscripten/multiplayer.html\"")
+        "SHELL:--shell-file \"${CMAKE_BINARY_DIR}/garden-shell.html\"")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)

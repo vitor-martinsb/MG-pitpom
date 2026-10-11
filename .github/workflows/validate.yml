@@ -13,6 +13,10 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - name: Preserve original gameplay and generated shaders
+        run: |
+          python3 build/verify-gameplay-assets.py
+          python3 build/generate-visual-shaders.py --check
       - name: Compile Linux physics, WebAssembly and Node container
         run: docker build -t pitpom:ci .
       - name: Validate languages and protocol in the built container
@@ -28,6 +32,11 @@ jobs:
           npm ci
           npm test
           npm run test:deployment -- --url http://localhost:3000
+      - name: Validate compiled visual shaders in WebGL2
+        working-directory: server
+        run: |
+          npx playwright install --with-deps chromium
+          node test/visual-shaders.mjs
       - name: Container logs
         if: always()
         run: docker logs pitpom || true

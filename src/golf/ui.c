@@ -231,6 +231,16 @@ static void _golf_ui_pixel_pack_square_section(vec2 pos, vec2 size, float tile_s
 }
 
 static void _golf_ui_draw_pixel_pack_square(vec2 pos, vec2 size, float tile_size, vec4 overlay_color, golf_pixel_pack_t *pixel_pack, const char *square_name) {
+    if (strstr(square_name, "blue")) {
+        golf_texture_t *paper = golf_data_get_texture("data/textures/colors/white.png");
+        float inset = fmaxf(2, tile_size * .065f);
+        vec4 edge = V4(.59f,.45f,.30f,1);
+        vec4 fill = strstr(square_name,"button_down") ? V4(.85f,.76f,.58f,1) : V4(.96f,.91f,.81f,1);
+        vec_push(&ui.draw_entities, _golf_ui_draw_entity(paper->sg_image, vec2_add(pos,V2(0,inset)),size,0,V2(0,0),V2(1,1),0,edge,.5f));
+        vec_push(&ui.draw_entities, _golf_ui_draw_entity(paper->sg_image,pos,size,0,V2(0,0),V2(1,1),0,edge,1));
+        vec_push(&ui.draw_entities, _golf_ui_draw_entity(paper->sg_image,pos,vec2_sub(size,V2(inset*2,inset*2)),0,V2(0,0),V2(1,1),0,fill,1));
+        return;
+    }
     golf_pixel_pack_square_t *pixel_pack_square = map_get(&pixel_pack->squares, square_name);
     if (!pixel_pack_square) {
         golf_log_warning("Could not find pixel pack square %s", square_name);
@@ -934,7 +944,7 @@ static void _golf_ui_tutorial_name(golf_ui_layout_t *layout, const char *name, i
         return;
     }
 
-    golf_texture_t *black_texture = golf_data_get_texture("data/textures/colors/black.png");
+    golf_texture_t *black_texture = golf_data_get_texture("data/textures/colors/white.png");
     golf_texture_t *pointer_texture = entity->tutorial.pointer_texture;
     golf_font_t *font = entity->tutorial.font;
 
@@ -1121,6 +1131,17 @@ static void _golf_ui_in_game_aiming(float dt) {
     vec2 aim_delta;
     _golf_ui_aim_circle_name(layout, "aim_circle", true, dt, &aim_delta, NULL);
 
+    /* Five visual steps; the continuous shot power remains unchanged. */
+    golf_texture_t *power_texture = golf_data_get_texture("data/textures/colors/white.png");
+    float power_scale = _get_ui_scale();
+    int filled = (int)ceilf(game->aim_line.power * 5);
+    vec2 power_origin = V2(graphics->viewport_size.x * .5f, graphics->viewport_size.y - fmaxf(92 * power_scale, 88));
+    for (int step = 0; step < 5; step++) {
+        vec2 pos = vec2_add(power_origin, V2((step - 2) * 29 * power_scale, 0));
+        _golf_ui_texture_draw(power_texture, pos, V2(23 * power_scale, 9 * power_scale),
+                step < filled ? V4(.85f,.72f,.46f,1) : V4(.96f,.91f,.81f,1), .95f);
+    }
+
     game->aim_line.aim_delta = aim_delta;
 
     bool hit_ball = false;
@@ -1224,21 +1245,21 @@ static void _golf_ui_player_labels(void) {
         };
     }
     golf_player_labels_layout(labels, count, graphics->viewport_size, 4 * scale, 120 * scale);
-    golf_texture_t *square = golf_data_get_texture("data/textures/colors/black.png");
+    golf_texture_t *square = golf_data_get_texture("data/textures/colors/white.png");
     for (int i = 0; i < count; i++) {
         golf_player_label_t *label = &labels[i];
         if (!label->visible) continue;
         golf_player_t *player = golf_game_get_player(label->player_id);
         vec2 name_pos = vec2_add(label->pos, V2(0, label->local ? font_size * 0.45f : 0));
-        vec2 shadow = V2(scale, scale);
-        _golf_ui_draw_text(font, vec2_add(name_pos, shadow), font_size, V4(0, 0, 0, 1), 0, 0, player->name, 1);
-        _golf_ui_draw_text(font, name_pos, font_size, V4(1, 1, 1, 1), 0, 0, player->name, 1);
+        _golf_ui_texture_draw(square, vec2_add(label->pos,V2(0,2*scale)),
+                vec2_add(label->size,V2(4*scale,4*scale)), V4(.59f,.45f,.30f,1), .6f);
+        _golf_ui_texture_draw(square, label->pos,label->size,V4(.96f,.91f,.81f,1),.94f);
+        _golf_ui_draw_text(font, name_pos, font_size, V4(.21f,.28f,.19f,1), 0, 0, player->name, 1);
         _golf_ui_texture_draw(square, V2(label->pos.x - 0.5f * label->size.x + 4 * scale, name_pos.y),
                 V2(6 * scale, 6 * scale), player->color, 1);
         if (label->local) {
             vec2 badge_pos = vec2_sub(name_pos, V2(0, font_size * 1.1f));
-            _golf_ui_draw_text(font, vec2_add(badge_pos, shadow), font_size * 0.8f, V4(0, 0, 0, 1), 0, 0, golf_i18n_t("c.you"), 1);
-            _golf_ui_draw_text(font, badge_pos, font_size * 0.8f, V4(1, 1, 1, 1), 0, 0, golf_i18n_t("c.you"), 1);
+            _golf_ui_draw_text(font, badge_pos, font_size * 0.8f, V4(.32f,.42f,.28f,1), 0, 0, golf_i18n_t("c.you"), 1);
         }
     }
 }

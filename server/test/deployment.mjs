@@ -19,6 +19,11 @@ try{
     if(name==='golf.wasm')assert.equal(response.headers.get('content-type'),'application/wasm');
     if(name==='i18n-data.js')for(const text of ['English','Português','Español'])assert.ok(html.includes(text));
   }
+  if(html.includes('src="art/pit-and-pom.png"')){
+    const illustration=await fetch(url+'/art/pit-and-pom.png');assert.equal(illustration.status,200);
+    assert.equal(illustration.headers.get('content-type'),'image/png');
+    assert.deepEqual([...new Uint8Array(await illustration.arrayBuffer()).slice(0,8)],[137,80,78,71,13,10,26,10]);
+  }
   const host=await client();host.send({type:'create',nickname:'DeployHost',color:'#ffffff',avatar:0});const welcome=await host.wait(m=>m.type==='welcome');
   const guest=await client();guest.send({type:'join',code:welcome.code,nickname:'DeployGuest',color:'#ff0000',avatar:1});await guest.wait(m=>m.type==='welcome');
   host.send({type:'chat',text:'Olá · ¡Hola! · Hello'});await guest.wait(m=>m.type==='chat'&&m.text.includes('¡Hola!'));

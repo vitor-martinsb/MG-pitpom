@@ -10,6 +10,7 @@
 #include "golf/game.h"
 #include "golf/golf.h"
 #include "golf/ui.h"
+#include "golf/garden.h"
 
 typedef struct golf_draw {
     vec2 game_draw_pass_size;
@@ -61,10 +62,12 @@ static void _draw_game(void) {
         sg_pass_action action = {
             .colors[0] = {
                 .action = SG_ACTION_CLEAR,
-                .value = { 0.529f, 0.808f, 0.922f, 1.0f },
+                .value = { 0.659f, 0.847f, 0.910f, 1.0f },
             },
         };
         sg_begin_pass(draw.game_draw_pass, &action);
+        golf_garden_prepare(level, golf->level_num);
+        golf_garden_draw_world(game->t);
 
         // Draw environment
         {
@@ -74,6 +77,7 @@ static void _draw_game(void) {
 
             for (int i = 0; i < level->entities.length; i++) {
                 golf_entity_t *entity = &level->entities.data[i];
+                if (golf_garden_replaces_tree(entity)) continue;
                 if (entity->type != GEO_ENTITY && entity->type != MODEL_ENTITY) {
                     continue;
                 }
@@ -142,10 +146,14 @@ static void _draw_game(void) {
                             UNIFORM_MAT4("model_mat", mat4_transpose(model_mat)));
                     sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range) { vs_uniform->data, vs_uniform->size });
 
-                    golf_shader_uniform_t *fs_uniform = golf_shader_fs_uniform_setup(shader, "environment_material_fs_params", 3,
+                    float garden_kind;
+                    golf_texture_t *painted_texture = golf_garden_material(&material, &garden_kind);
+                    golf_shader_uniform_t *fs_uniform = golf_shader_fs_uniform_setup(shader, "environment_material_fs_params", 5,
                             UNIFORM_VEC4("ball_position", V4(ball_pos.x, ball_pos.y, ball_pos.z, 0)),
                             UNIFORM_FLOAT("lightmap_texture_a", lightmap_t),
-                            UNIFORM_FLOAT("uv_scale", uv_scale));
+                            UNIFORM_FLOAT("uv_scale", uv_scale),
+                            UNIFORM_VEC4("camera_position", V4(graphics->cam_pos.x, graphics->cam_pos.y, graphics->cam_pos.z, 1)),
+                            UNIFORM_VEC4("garden_surface", V4(garden_kind, 0, 0, 0)));
                     sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &(sg_range) { fs_uniform->data, fs_uniform->size });
 
                     sg_bindings bindings = {
@@ -153,7 +161,7 @@ static void _draw_game(void) {
                         .vertex_buffers[1] = model->sg_texcoords_buf,
                         .vertex_buffers[2] = model->sg_normals_buf,
                         .vertex_buffers[3] = lightmap_section->sg_uvs_buf,
-                        .fs_images[0] = material.texture->sg_image,
+                        .fs_images[0] = painted_texture->sg_image,
                         .fs_images[1] = lightmap_image.sg_image[sample0],
                         .fs_images[2] = lightmap_image.sg_image[sample1],
                     };
@@ -164,6 +172,7 @@ static void _draw_game(void) {
             }
         }
 
+        golf_garden_draw_feedback(game->t);
         // Draw the ball
         {
             _draw_player_balls("ball");
@@ -415,7 +424,9 @@ static void _draw_game(void) {
                 sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range) { vs_uniform->data, vs_uniform->size });
 
                 golf_shader_uniform_t *fs_uniform = golf_shader_get_fs_uniform(shader, "aim_line_fs_params");
-                golf_shader_uniform_set_vec4(fs_uniform, "color", V4(1, 1, 1, 1));
+                int force_level = (int)ceilf(game->aim_line.power * GOLF_AIM_ARROW_COUNT);
+                vec4 arrow_color = arrow < force_level ? V4(.92f, .78f, .42f, 1) : V4(.96f, .92f, .82f, .70f);
+                golf_shader_uniform_set_vec4(fs_uniform, "color", arrow_color);
                 golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_offset", V2(0, 0));
                 golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_scale", V2(1, 1));
                 golf_shader_uniform_set_float(fs_uniform, "length0", 0);

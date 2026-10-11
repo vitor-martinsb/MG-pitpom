@@ -33,6 +33,11 @@ layout(location = 0) out vec4 g_frag_color;
 void main() {
     vec2 tc = vec2(tex_x, tex_y) + frag_texture_coord * vec2(tex_dx, tex_dy);
     g_frag_color = texture(ui_texture, tc);
+    // Reinterpret the existing blue nine-slice frames as warm paper and wood.
+    if (is_font < 0.5 && g_frag_color.b > 0.25 && g_frag_color.b > g_frag_color.r * 1.4 && g_frag_color.g > g_frag_color.r * 1.25) {
+        float paper = smoothstep(0.28, 0.88, max(g_frag_color.g, g_frag_color.b));
+        g_frag_color.rgb = mix(vec3(0.59, 0.45, 0.30), vec3(0.96, 0.91, 0.81), paper);
+    }
     g_frag_color.a = alpha * (is_font*g_frag_color.x + (1.0 - is_font)*g_frag_color.a);
     if (g_frag_color.a < 0.01) discard;
     g_frag_color.xyz = (1.0 - is_font)*((1.0 - color.a)*g_frag_color.xyz + color.a*color.xyz) + is_font*color.xyz;

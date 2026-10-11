@@ -34,15 +34,10 @@ layout(location = 0) out vec4 g_frag_color;
 void main() {
     vec3 n = texture(ball_normal_map, vec2(frag_texture_coord.x, 1.0 - frag_texture_coord.y)).xyz;
     n = 2.0 * n - 1.0;
-    float kd0 = abs(dot(normalize(n), normalize(vec3(-2.0, -3.0, -10.0))));
-    if (kd0 < 0.0) {
-        kd0 = 0.0;
-    }
-    float kd1 = dot(normalize(frag_normal), normalize(vec3(0.0, 8.0, 0.0)));
-    kd1 = (kd1 + 1.0) / 2.0;
-    if (kd1 < 0.3) {
-        kd1 = 0.3;
-    }
-    g_frag_color = vec4(kd0 * kd1 * color.xyz, 1.0);
+    float dimples = 0.90 + 0.10 * abs(dot(normalize(n), normalize(vec3(-2.0, -3.0, -10.0))));
+    float sunlight = max(dot(normalize(frag_normal), normalize(vec3(-0.5, 0.9, 0.35))), 0.0);
+    float rim = pow(1.0 - abs(frag_normal.z), 3.0) * 0.055;
+    vec3 ceramic = color.rgb * dimples * (0.60 + 0.40 * sunlight) + vec3(1.0, 0.91, 0.73) * rim;
+    g_frag_color = vec4(ceramic, 1.0);
 }
 //@end

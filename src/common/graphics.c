@@ -41,6 +41,9 @@ void golf_graphics_init(void) {
     golf_data_load("data/shaders/water_around_ball.glsl", false);
     golf_data_load("data/shaders/water_ripple.glsl", false);
     golf_data_load("data/shaders/ball_hidden.glsl", false);
+    golf_data_load("data/shaders/garden.glsl", false);
+    golf_data_load("data/textures/garden/meadow.png", false);
+    golf_data_load("data/textures/garden/cedar.png", false);
 }
 
 void golf_graphics_begin_frame(float dt) {
