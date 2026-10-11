@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {chromium} from '@playwright/test';
-import {createServer} from '../dist/index.js';
 
 const urlIndex=process.argv.indexOf('--url');
-const app=urlIndex<0?createServer():null;
+const app=urlIndex<0?(await import('../dist/index.js')).createServer():null;
 let browser;
 try{
   if(app)await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
