@@ -130,19 +130,24 @@ static void mascot_sign(garden_mesh_t *mesh, vec3 origin, vec3 toward) {
     branch(mesh,V3(0,0,0),V3(0,1.4f,0),.075f,.055f,wood);
     box(mesh,V3(0,1.15f,0),V3(.62f,.34f,.07f),wood);
     box(mesh,V3(0,1.15f,.08f),V3(.57f,.29f,.025f),paper);
-    // Two small painted relief portraits: orange/white cat, black/white dog.
+    // Pompom/Pom is the orange-white cat; Pituca/Pit is the black-white dog.
     oval(mesh,V3(-.28f,1.14f,.13f),V3(.18f,.18f,.025f),paper,4,8);
     triangle(mesh,V3(-.44f,1.24f,.15f),V3(-.42f,1.43f,.15f),V3(-.26f,1.26f,.15f),orange);
-    triangle(mesh,V3(-.29f,1.26f,.15f),V3(-.12f,1.43f,.15f),V3(-.12f,1.23f,.15f),paper);
+    triangle(mesh,V3(-.29f,1.26f,.15f),V3(-.12f,1.43f,.15f),V3(-.12f,1.23f,.15f),orange);
     oval(mesh,V3(-.35f,1.21f,.16f),V3(.075f,.07f,.015f),orange,2,6);
     oval(mesh,V3(.27f,1.14f,.13f),V3(.19f,.18f,.025f),ink,4,8);
     oval(mesh,V3(.12f,1.21f,.16f),V3(.07f,.14f,.02f),ink,3,6);
     oval(mesh,V3(.43f,1.21f,.16f),V3(.07f,.14f,.02f),ink,3,6);
     oval(mesh,V3(.27f,1.10f,.17f),V3(.09f,.08f,.012f),paper,3,7);
     oval(mesh,V3(.27f,1.22f,.17f),V3(.023f,.10f,.012f),paper,3,6);
-    for(int i=0;i<4;i++)oval(mesh,V3((i<2?-.28f:.27f)+(i%2?-.06f:.06f),1.17f,.18f),V3(.014f,.019f,.014f),ink,2,5);
+    for(int i=0;i<4;i++){
+        vec3 eye=V3((i<2?-.28f:.27f)+(i%2?-.06f:.06f),1.17f,.18f);
+        oval(mesh,eye,V3(.023f,.028f,.011f),i<2?paint(.53f,.55f,.24f,0):paint(.60f,.39f,.17f,0),2,6);
+        oval(mesh,vec3_add(eye,V3(0,0,.008f)),V3(.011f,.017f,.008f),ink,2,5);
+    }
     oval(mesh,V3(-.28f,1.08f,.18f),V3(.022f,.015f,.013f),orange,2,5);
     oval(mesh,V3(.27f,1.08f,.18f),V3(.027f,.02f,.013f),ink,2,5);
+    oval(mesh,V3(.27f,1.04f,.18f),V3(.025f,.025f,.009f),paint(.84f,.48f,.42f,0),2,5);
 }
 bool golf_garden_replaces_tree(const golf_entity_t *entity) {
     if(!garden.level||!entity)return false;

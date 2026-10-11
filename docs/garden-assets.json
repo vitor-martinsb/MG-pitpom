@@ -22,8 +22,19 @@
     }
   ],
   "mascots": {
-    "source": "User-approved conversation illustration; original file pending",
+    "source": "Generated from the user's supplied illustration, preserving markings and composition; derived artwork, not a byte-for-byte original",
+    "mode": "built-in image editing with one conversation reference",
     "output": "build/emscripten/art/pit-and-pom.png",
-    "firstGeneratedIllustrationUsed": false
+    "dimensions": [
+      1774,
+      887
+    ],
+    "sha256": "6b844ca6cf82a1f467c1b36e9895f59f139a0ad7f0e8258ca67ca600c02baa4b",
+    "characters": {
+      "Pituca": "black-and-white short-haired dog",
+      "Pompom": "orange-and-white cat"
+    },
+    "firstGeneratedIllustrationUsed": false,
+    "prompt": "Use case: identity-preserve. Asset type: finished wide illustrated mascot header for the existing PitPom Minigolfe game. Input image 1 is the user's approved visual reference and composition. Produce a faithful game-ready illustration based on that reference; preserve the same two animals, their species, markings, face shapes, expressions, relative sizes, seated poses, placement, garden composition, warm painted watercolor/gouache storybook aesthetic and golden afternoon light. Identity correction: PITuca/Pit is the SHORT-HAIRED BLACK AND WHITE DOG at the right, with a mostly black head, floppy black ears, brown eyes, a narrow irregular white blaze, white speckled muzzle and chest, black shoulder/body patches, happy open mouth and pink tongue. POMPOM/Pom is the ORANGE AND WHITE CAT at the left, with orange tabby face patches, orange ears and tail, white muzzle/chest/legs and round olive-golden eyes. These names do not imply swapping species or positions. Preserve the large flowering tree at left, sage garden, cream daisies, mossy stones, mushrooms, winding aged wood mini-golf borders, blank wooden sign at right, distant lake/mountains/village, pastel blue sky and peach clouds. Horizontal 2:1 composition, approximately 1536x768 or matching the reference aspect ratio. Keep both animals' full faces and bodies clearly visible together in the center, leaving surrounding garden. No new animals, no altered dog fur length, no fluffy mostly-white dog, no added text or lettering, no names drawn in the image, no logo, no watermark. Opaque image."
   }
 }

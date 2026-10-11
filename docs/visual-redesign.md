@@ -47,17 +47,19 @@ configurações continua reservando o espaço do botão de pausa.
 - `build/generate-visual-shaders.py`: gera fontes GL330/GLES300 e reflexão std140
   juntas para os cinco shaders visuais. É um conversor do subconjunto usado pelo
   jogo, não um compilador GLSL geral. CMake o executa antes do empacotamento.
-- `build/emscripten/art/pit-and-pom.png`: local preparado para **a ilustração
-  exata aprovada pelo usuário**. O arquivo ainda precisa ser disponibilizado;
-  a imagem embutida na conversa não foi montada como arquivo nesta sessão.
-  A primeira ilustração gerada, com a aparência anterior da cachorra, não foi
-  incorporada. Os retratos da placa usam cabeça preta, focinho branco e orelhas
-  caídas para Pom, e branco/laranja para Pit.
+- `build/emscripten/art/pit-and-pom.png`: ilustração de 1774 × 887 gerada a partir
+  da referência enviada pelo usuário, preservando poses, marcas e composição.
+  **Pituca/Pit é a cachorra preta e branca**, de pelo curto, orelhas caídas,
+  focinho branco e peito salpicado. **Pompom/Pom é a gata laranja e branca**,
+  com orelhas laranjas e olhos dourados. A arte aparece inteira no início;
+  os retratos da placa do cenário seguem a mesma identidade. Trata-se de uma
+  versão derivada da referência, não de uma cópia binária do arquivo original.
 
 As texturas foram geradas com o recurso integrado de imagens, seguindo a skill
 `imagegen`, e copiadas sem processamento para o projeto. Os prompts completos
-estão em `docs/garden-assets.json`. A ilustração aprovada deve ser copiada intacta;
-será servida separadamente do WebAssembly. CMake e Docker já copiam a pasta `art`.
+estão em `docs/garden-assets.json`. A ilustração é servida separadamente do
+WebAssembly e acrescenta cerca de 3 MB ao primeiro acesso. CMake e Docker copiam
+a pasta `art`; o navegador valida seu carregamento em desktop e celular.
 O servidor acrescenta MIME types de imagens; o protocolo multiplayer não muda.
 
 ```sh

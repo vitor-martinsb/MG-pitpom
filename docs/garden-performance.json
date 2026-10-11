@@ -57,6 +57,6 @@
   "notes": [
     "wasmHeapBytes=0 means unavailable from Module, not zero memory usage",
     "Physical iOS/Android performance has not been measured",
-    "Approved mascot image is pending and is outside the WebAssembly download"
+    "Mascot illustration is served separately from WebAssembly; 3,021,002 bytes on first load"
   ]
 }

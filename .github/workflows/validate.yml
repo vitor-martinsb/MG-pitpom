@@ -37,6 +37,7 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           node test/visual-shaders.mjs
+          node test/mascot-art.mjs --url http://localhost:3000
       - name: Container logs
         if: always()
         run: docker logs pitpom || true
