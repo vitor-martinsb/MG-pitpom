@@ -24,6 +24,9 @@ feche a passagem da Pompom.
   de 3 s. Posição, velocidade, rotação e estado de água/limites são
   restaurados sem remover a tacada. Novas tacadas ficam bloqueadas durante
   a captura. Cinquenta capturas simultâneas não usam uma fila global.
+  Deitadinha, fica de frente para a bola visível que se aproxima mais perto;
+  sem bolas em movimento, acompanha a bola visível mais próxima. Na ausência
+  de uma bola disponível, olha para o início da pista.
 
 Os modelos são **geometria procedural final de baixa complexidade**, feita
 com volumes, manchas, olhos, patas e movimentos articulados no renderizador

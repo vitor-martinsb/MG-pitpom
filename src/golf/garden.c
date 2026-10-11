@@ -305,6 +305,24 @@ static void wind_flag(garden_mesh_t *mesh,golf_entity_t *entity,float time) {
 bool golf_garden_replaces_flag(const golf_entity_t *e) {
     return e->type==MODEL_ENTITY&&e->model.ignore_physics&&strstr(e->model.model_path,"/flag_");
 }
+static vec3 dog_facing(golf_game_t *game) {
+    vec3 forward=vec3_sub(game->mechanics.start,game->mechanics.dog);
+    float nearest=FLT_MAX;bool following_incoming=false;
+    for(int i=0;i<game->player_count;i++) {
+        golf_player_t *p=&game->players[i];
+        if(!golf_game_player_visible(p)||p->ball.is_in_hole||p->ball.capture_until>0||
+           p->ball.is_out_of_bounds||p->ball.is_in_water)continue;
+        vec3 toward=vec3_sub(p->ball.draw_pos,game->mechanics.dog);toward.y=0;
+        float distance=vec3_dot(toward,toward);
+        if(distance<.01f)continue;
+        bool incoming=p->ball.is_moving&&vec3_dot(toward,p->ball.vel)<0;
+        if((incoming&&!following_incoming)||(incoming==following_incoming&&distance<nearest)) {
+            forward=toward;nearest=distance;following_incoming=incoming;
+        }
+    }
+    forward.y=0;
+    return vec3_length(forward)>.01f?vec3_normalize(forward):vec3_scale(game->mechanics.direction,-1);
+}
 void golf_garden_draw_feedback(float time) {
     garden.transform=mat4_identity();garden_mesh_t shadow={shadows,0,FX_LIMIT},fx={effects,0,FX_LIMIT};
     golf_game_t *game=golf_game_get();
@@ -313,7 +331,7 @@ void golf_garden_draw_feedback(float time) {
     if(golf_get()->state==GOLF_STATE_IN_GAME&&game->mechanics.enabled){
         vec3 forward=game->mechanics.across;if(cosf(time*.75f)<0)forward=vec3_scale(forward,-1);
         animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward);
-        animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,game->mechanics.direction);
+        animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game));
     }
     garden.actor_count=(unsigned)actor.count;
     if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}
