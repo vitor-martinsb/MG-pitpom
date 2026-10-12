@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(OpenGolfPhysics C)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Native simulation optimization" FORCE)
+endif()
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
-add_executable(golf_physics_worker worker.c headless.c
-    ${ROOT}/src/golf/physics.c ${ROOT}/src/golf/player.c ${ROOT}/src/golf/mechanics.c
+add_executable(golf_physics_worker worker.c headless.c bot.c
+    ${ROOT}/src/golf/physics.c ${ROOT}/src/golf/player.c ${ROOT}/src/golf/mechanics.c ${ROOT}/src/golf/navigation.c
     ${ROOT}/src/common/bvh.c ${ROOT}/src/common/level.c ${ROOT}/src/common/maths.c
     ${ROOT}/src/common/vec.c ${ROOT}/src/common/map.c ${ROOT}/src/common/json.c ${ROOT}/src/common/base64.c
     ${ROOT}/src/3rd_party/parson/parson.c ${ROOT}/src/3rd_party/fast_obj/fast_obj.c)

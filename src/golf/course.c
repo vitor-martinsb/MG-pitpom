@@ -39,7 +39,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         if(n<0||(size_t)n>=sizeof(text)-(size_t)used-8)break;used+=n;
     }
     vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time());
-    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"catActive\":%s,\"dogActive\":%s,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
     for(int i=0;i<g->physics.dynamic_bvh.node_infos.length&&i<32;i++) {
         golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);

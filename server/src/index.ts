@@ -70,6 +70,9 @@ export function createServer() {
               member=message.type==='reconnect' ? await room.reconnect(socket,message.token) : room.join(socket,message.nickname,message.color,message.avatar);
             } else throw Error('Crie ou entre em uma sala.');
           } else if (message.type==='start') await room!.start(member,message.holes,message.mode ?? 'classic');
+          else if(message.type==='configure')room!.configure(member,message.holes,message.mode);
+          else if(message.type==='bot')room!.botSettings(member,message.action,message.id,message.settings);
+          else if(message.type==='rematch')room!.rematch(member);
           else if (message.type==='ready') room!.ready(member,message.hole);
           else if (message.type==='shot') await room!.shot(member,message);
           else if (message.type==='chat') room!.chat(member,message.text);

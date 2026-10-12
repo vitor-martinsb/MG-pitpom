@@ -5,7 +5,8 @@ import path from 'node:path';
 
 export type Ball = { id: number; pos: number[]; vel: number[]; moving: boolean; hole: boolean; water: boolean; strokes: number; firstComplete: boolean; captured: boolean; captureUntil: number };
 export type Mascots = { enabled: boolean; cat: number[]; dog: number[]; slapTime: number; wakeTime: number };
-export type Frame = { time: number; players: Ball[]; mascots: Mascots; cpuMs: number; rssBytes: number; memoryBytes: number };
+export type SoundEvent={id:number;player:number;kind:string;strength:number};
+export type Frame = { time: number; players: Ball[]; mascots: Mascots; events:SoundEvent[]; cpuMs: number; rssBytes: number; memoryBytes: number };
 export class Physics {
   private child: ChildProcessWithoutNullStreams;
   private sequence = 0;
@@ -55,5 +56,6 @@ export class Physics {
   connected(slot: number, connected: boolean) { return this.command({ cmd: 'connected', slot, connected }); }
   async shot(slot: number, direction: number[], power: number): Promise<boolean> { return (await this.command({ cmd: 'shot', slot, direction, power })).ok; }
   async step(ticks: number): Promise<Frame> { return this.command({ cmd: 'step', ticks }); }
+  plan(slot:number,difficulty:'easy'|'medium'|'hard'){return this.command({cmd:'plan',slot,difficulty});}
   close() { this.child.kill(); }
 }

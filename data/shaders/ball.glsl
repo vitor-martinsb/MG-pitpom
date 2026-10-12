@@ -38,6 +38,6 @@ void main() {
     float sunlight = max(dot(normalize(frag_normal), normalize(vec3(-0.5, 0.9, 0.35))), 0.0);
     float rim = pow(1.0 - abs(frag_normal.z), 3.0) * 0.055;
     vec3 ceramic = color.rgb * dimples * (0.60 + 0.40 * sunlight) + vec3(1.0, 0.91, 0.73) * rim;
-    g_frag_color = vec4(ceramic, 1.0);
+    g_frag_color = vec4(ceramic, color.a);
 }
 //@end

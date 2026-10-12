@@ -39,9 +39,10 @@ com retratos das mascotes continuam no jardim.
 
 O anfitrião escolhe **Clássico** ou **Impacto** no lobby. A opção enviada
 em `start.mode` é validada pelo servidor e permanece fixa na partida.
-Clássico mantém as bolas independentes. Em Impacto, cada cliente oculta as
-outras bolas, seus rótulos, sombras e marcadores no minimapa até terminar
-sua primeira tacada. A autoridade permite colisão somente quando **ambos**
+Clássico mantém as bolas independentes. Em Impacto, todas as bolas permanecem
+visíveis; proteção aparece como transparência parcial, halo e escudo. A
+proteção termina quando a primeira tacada válida para completamente.
+A autoridade permite colisão somente quando **ambos**
 os jogadores já terminaram essa primeira tacada no mapa.
 
 As colisões usam massas unitárias iguais, restituição 0,72, quatro passagens
@@ -51,6 +52,12 @@ jogadores desconectados são excluídos. O cálculo segue a ordem fixa dos slots
 a 120 Hz no worker C. Os clientes recebem posições e velocidades calculadas
 pelo servidor, além de `firstComplete`, `captured`, `captureUntil` e estado das
 mascotes. Reconexões recebem o mesmo estado autoritativo.
+
+Uma tolerância de 0,25 s ao liberar proteção separa sobreposições sem impulso.
+Bots e sequência aleatória são configurados pelo anfitrião no lobby, com as
+mesmas regras de física e placar. A navegação também exclui regiões varridas
+por obstáculos móveis ao colocar mascotes. Consulte a
+[evolução completa do navegador e servidor](game-evolution.md).
 
 A probabilidade inicial de tapa para frente é **50%**. Configure
 `catForwardProbability` em `server/config.json` ou

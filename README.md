@@ -53,6 +53,12 @@ colors/nicknames, authoritative C physics, timed holes, scoring and reconnect.
 The desktop game retains its offline flow and five-player debug fixtures.
 See [execution instructions and architecture](docs/multiplayer-architecture.md).
 
+The human host chooses the mode, course count and bots with three difficulties.
+Each match draws a fixed course sequence without repeats. The illustrated journey,
+visible protection in Impact, articulated loading mascots, independent audio
+controls and final celebration extend the existing game.
+See [game evolution and validation](docs/game-evolution.md).
+
 With this workspace's builds already generated:
 
 ```sh

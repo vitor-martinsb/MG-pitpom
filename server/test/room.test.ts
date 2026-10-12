@@ -52,6 +52,9 @@ test('loading waits, deadline rejects shots, grace simulates and DNF accumulates
   const host=room.join(socket(),'Host','#ffffff',0), other=room.join(socket(),'Other','#ff0000',1);
   try{
     await room.start(host,3);assert.equal(room.phase,'loading');
+    // This deadline/grace fixture exercises the original first-course trajectory;
+    // separate tests validate the production shuffle rather than depending on luck.
+    room.selectedLevels=[0,1,2];await (room as any).load();
     room.ready(host,0);assert.equal(room.phase,'loading');
     now=101;await room.tick();assert.equal(room.phase,'playing');
     await assert.rejects(room.shot(other,{sequence:1,direction:[0,0,-1],power:.2}),/indisponível/);

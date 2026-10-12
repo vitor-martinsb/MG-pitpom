@@ -29,6 +29,22 @@ static int _ball_contact_cmp(const void *a, const void *b) {
         return 0;
     }
 }
+static const char *collision_kind(golf_physics_world_t *world,golf_ball_contact_t *contact){
+    golf_bvh_t *trees[]={world->static_bvh,world->dynamic_bvh};
+    for(int t=0;t<2;t++)for(int i=0;i<trees[t]->faces.length;i++){
+        golf_bvh_face_t *f=&trees[t]->faces.data[i];if(vec3_distance(f->a,contact->triangle_a)>.001f||vec3_distance(f->b,contact->triangle_b)>.001f)continue;
+        if(f->entity->type==MODEL_ENTITY){const char *path=f->entity->model.model_path;return strstr(path,"stone")||strstr(path,"rock")?"stone":"wood";}
+        if(f->entity->type==GEO_ENTITY)for(int j=0;j<f->entity->geo.geo.faces.length;j++){
+            golf_material_t material;if(!golf_level_get_material(world->level,f->entity->geo.geo.faces.data[j].material_name,&material))continue;
+            if(fabsf(material.restitution-contact->restitution)<.001f&&fabsf(material.vel_scale-contact->vel_scale)<.001f){
+                if(strstr(material.texture_path,"wood")||strstr(material.name,"wood"))return "wood";
+                if(strstr(material.texture_path,"stone")||strstr(material.texture_path,"rock"))return "stone";
+            }
+        }
+        return "stone";
+    }
+    return "stone";
+}
 
 void golf_physics_build_world(golf_physics_world_t *world, bool dynamic) {
     golf_bvh_t *bvh = dynamic ? world->dynamic_bvh : world->static_bvh;
@@ -334,7 +350,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
 
         if (contact->impulse_mag > 1 && contact->cull_dot < -0.15f) {
             if (player->ball.time_since_impact_sound > 0.1f) {
-                if (world->sound) world->sound("ball_impact", "data/audio/footstep_grass_004.ogg", 1, false, true);
+                if (world->sound) world->sound(collision_kind(world,contact), "data/audio/footstep_grass_004.ogg", golf_clampf(contact->impulse_mag/8,.15f,1), false, true);
                 player->ball.time_since_impact_sound = 0;
             }
         }

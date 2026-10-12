@@ -36,7 +36,7 @@ try{
   await Promise.all([a,b].map(p=>p.waitForFunction(()=>document.getElementById('loading').hidden && document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:15000})));
   for(const p of [a,b]){
     await p.waitForFunction(()=>GolfCourse.inspect().frame.mode==='impact'&&!GolfCourse.inspect().frame.intro);
-    const f=await p.evaluate(()=>GolfCourse.inspect().frame);assert.equal(f.players.filter(p=>p.visible).length,1);
+    const f=await p.evaluate(()=>GolfCourse.inspect().frame);assert.equal(f.players.filter(p=>p.visible).length,2);assert.ok(f.players.every(p=>!p.firstComplete));
     await p.locator('#minimap').waitFor({state:'visible'});
     assert.equal(await p.locator('#minimap-canvas').isVisible(),true);
   }
@@ -46,7 +46,7 @@ try{
   await a.evaluate(()=>GolfOnline.shot([0,0,-1],0));
   await a.waitForFunction(()=>GolfCourse.inspect().frame.players.find(p=>p.id===GolfCourse.inspect().frame.local).firstComplete,{},{timeout:20000});
   const after=await a.evaluate(()=>GolfCourse.inspect().frame);assert.equal(after.players.filter(p=>p.visible).length,2);
-  const guest=await b.evaluate(()=>GolfCourse.inspect().frame);assert.equal(guest.players.filter(p=>p.visible).length,1);
+  const guest=await b.evaluate(()=>GolfCourse.inspect().frame);assert.equal(guest.players.filter(p=>p.visible).length,2);assert.equal(guest.players.find(p=>p.id===guest.local).firstComplete,false);
   assert.ok(distance(after.cat,cat0)>.005);
   assert.ok(Math.abs(after.flagPoint[0]-flag0[0])>.0001);assert.ok(after.actorVertices>1000&&after.actorVertices<8192);
   // Exercise a trusted capture/return snapshot in the renderer. The native

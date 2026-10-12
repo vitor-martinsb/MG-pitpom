@@ -5,6 +5,10 @@
 
 #include "common/data.h"
 #include "common/map.h"
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+#include <emscripten.h>
+EM_JS(int,pitpom_browser_sound,(const char *name,float volume),{if(window.GolfAudio){window.GolfAudio.engine(UTF8ToString(name),volume);return 1;}return 0;});
+#endif
 
 typedef struct _sound {
     bool repeat, on, stopping;
@@ -37,6 +41,9 @@ void golf_audio_init(void) {
 }
 
 void golf_audio_start_sound(const char *name, const char *path, float volume, bool repeat, bool force) {
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+    if(pitpom_browser_sound(name,volume))return;
+#endif
     golf_audio_t *audio = golf_data_get_audio(path);
 
     _sound_t *sound = map_get(&_sounds, name);

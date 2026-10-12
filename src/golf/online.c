@@ -114,6 +114,8 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         JSON_Array *balls=json_object_get_array(o,"players");
         JSON_Object *mascots=json_object_get_object(o,"mascots");
         if(mascots){game->mechanics.enabled=json_object_get_boolean(mascots,"enabled")==1;
+            game->mechanics.cat_valid=json_object_has_value(mascots,"catActive")?json_object_get_boolean(mascots,"catActive")==1:true;
+            game->mechanics.dog_valid=json_object_has_value(mascots,"dogActive")?json_object_get_boolean(mascots,"dogActive")==1:true;
             game->mechanics.cat=golf_json_object_get_vec3(mascots,"cat");game->mechanics.dog=golf_json_object_get_vec3(mascots,"dog");
             game->mechanics.cat_slap_time=(float)json_object_get_number(mascots,"slapTime");game->mechanics.dog_wake_time=(float)json_object_get_number(mascots,"wakeTime");}
         for(size_t i=0;i<json_array_get_count(balls);i++) {

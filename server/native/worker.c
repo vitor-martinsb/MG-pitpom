@@ -1,5 +1,6 @@
 #include "golf/physics.h"
 #include "golf/mechanics.h"
+#include "bot.h"
 #include "common/json.h"
 #include "parson/parson.h"
 #include <stdio.h>
@@ -48,6 +49,22 @@ static golf_bvh_t static_bvh, dynamic_bvh;
 static golf_physics_world_t world;
 static vec3 spawn;
 static golf_mechanics_t mechanics;
+static const golf_navigation_t *navigation;
+typedef struct sound_event{unsigned id,player;const char *kind;float strength;} sound_event_t;
+static sound_event_t events[64];static unsigned event_id;static int event_count;static golf_player_t *sound_player;
+static bool incidental(const char *kind){return !strcmp(kind,"wood")||!strcmp(kind,"stone")||!strcmp(kind,"impact");}
+static void event(const char *kind,golf_player_t *p,float strength){
+    if(incidental(kind))for(int i=0;i<event_count;i++)if(events[i].player==p->id&&!strcmp(events[i].kind,kind)){events[i].strength=fmaxf(events[i].strength,strength);return;}
+    if(event_count==64){
+        if(incidental(kind))return;
+        int discard=-1;for(int i=0;i<event_count;i++)if(incidental(events[i].kind)){discard=i;break;}
+        if(discard<0)return;memmove(events+discard,events+discard+1,(event_count-discard-1)*sizeof(*events));event_count--;
+    }
+    events[event_count++]=(sound_event_t){++event_id,p->id,kind,strength};
+}
+static void collision_sound(const char *name,const char *path,float volume,bool loop,bool restart){
+    (void)path;(void)loop;(void)restart;if(sound_player&&(!strcmp(name,"wood")||!strcmp(name,"stone")))event(name,sound_player,volume);
+}
 
 int main(int argc, char **argv) {
     if (argc != 2) return 2;
@@ -56,6 +73,7 @@ int main(int argc, char **argv) {
     golf_bvh_init(&static_bvh); golf_bvh_init(&dynamic_bvh);
     world.level=&level; world.config=&config; world.static_bvh=&static_bvh; world.dynamic_bvh=&dynamic_bvh;
     world.multiplayer=true;
+    world.sound=collision_sound;
     world.funnel_radius=CFG_NUM(&config,"multiplayer_funnel_radius");
     world.funnel_force=CFG_NUM(&config,"multiplayer_funnel_force");
     world.capture_radius=CFG_NUM(&config,"multiplayer_capture_radius");
@@ -63,6 +81,7 @@ int main(int argc, char **argv) {
     for (int i=0;i<level.entities.length;i++) if (level.entities.data[i].type==BALL_START_ENTITY) { spawn=level.entities.data[i].ball_start.transform.position; spawn.y+=GOLF_BALL_RADIUS; }
     golf_physics_build_world(&world,false);
     golf_mechanics_init(&mechanics,&level,&static_bvh);
+    navigation=golf_mechanics_navigation();
     printf("{\"type\":\"ready\",\"spawn\":[%.9g,%.9g,%.9g]}\n",spawn.x,spawn.y,spawn.z); fflush(stdout);
     char line[16384];
     while (fgets(line,sizeof(line),stdin)) {
@@ -75,10 +94,16 @@ int main(int argc, char **argv) {
             mechanics.seed=(uint32_t)json_object_get_number(o,"seed");
             float probability=(float)json_object_get_number(o,"forwardProbability");
             mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;ok=true;
+        } else if(cmd&&!strcmp(cmd,"plan")&&slot>=0&&slot<GOLF_MAX_PLAYERS){
+            const char *difficulty=json_object_get_string(o,"difficulty");int d=difficulty&&!strcmp(difficulty,"hard")?2:difficulty&&!strcmp(difficulty,"medium")?1:0;
+            golf_player_t *p=&players[slot];bool available=p->id&&p->connected&&!p->ball.is_moving&&!p->ball.is_in_hole&&!p->ball.capture_until;
+            golf_bot_plan_t plan={0};if(available)plan=golf_bot_plan(&world,&mechanics,navigation,p,d);
+            printf("{\"request\":%d,\"ok\":%s,\"direction\":[%.9g,0,%.9g],\"power\":%.9g,\"candidates\":%d}\n",request,available?"true":"false",plan.direction.x,plan.direction.z,plan.power,plan.candidates);
+            fflush(stdout);json_value_free(value);continue;
         } else if (cmd && !strcmp(cmd,"add") && slot>=0 && slot<GOLF_MAX_PLAYERS) {
             golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn); ok=true;
         } else if (cmd && !strcmp(cmd,"connected") && slot>=0 && slot<GOLF_MAX_PLAYERS) { players[slot].connected=json_object_get_boolean(o,"connected")==1; ok=true;
-        } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { ok=golf_physics_shoot(&world,&players[slot],golf_json_object_get_vec3(o,"direction"),(float)json_object_get_number(o,"power"));
+        } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { ok=golf_physics_shoot(&world,&players[slot],golf_json_object_get_vec3(o,"direction"),(float)json_object_get_number(o,"power"));if(ok)event("shot",&players[slot],(float)json_object_get_number(o,"power"));
         } else if (cmd && !strcmp(cmd,"step")) {
             int ticks=(int)json_object_get_number(o,"ticks"); if (ticks<0 || ticks>1200) ticks=0;
             for (int t=0;t<ticks;t++) {
@@ -86,21 +111,30 @@ int main(int argc, char **argv) {
                 golf_physics_build_world(&world,true);
                 for (int i=0;i<GOLF_MAX_PLAYERS;i++) {
                     golf_player_t *p=&players[i]; if (!p->id || !p->connected || p->ball.is_in_hole) continue;
-                    golf_physics_tick_player(&world,p,1.0f/120);
+                    bool was_hole=p->ball.is_in_hole;sound_player=p;golf_physics_tick_player(&world,p,1.0f/120);sound_player=NULL;
+                    if(!was_hole&&p->ball.is_in_hole)event("hole",p,1);
                     if (p->ball.is_out_of_bounds && (!p->ball.is_moving || p->ball.pos.y < CFG_NUM(&config,"physics_kill_y"))) {
                         golf_ball_return_before_shot(p);
                     }
                 }
+                uint32_t hits[GOLF_MAX_PLAYERS];float captures[GOLF_MAX_PLAYERS];vec3 velocities[GOLF_MAX_PLAYERS];
+                for(int i=0;i<GOLF_MAX_PLAYERS;i++){hits[i]=players[i].ball.cat_hits;captures[i]=players[i].ball.capture_until;velocities[i]=players[i].ball.vel;}
                 golf_mechanics_tick(&mechanics,players,GOLF_MAX_PLAYERS,world.time);
+                for(int i=0;i<GOLF_MAX_PLAYERS;i++)if(players[i].id){
+                    if(players[i].ball.cat_hits!=hits[i])event("slap",&players[i],1);
+                    else if(!captures[i]&&players[i].ball.capture_until)event("capture",&players[i],1);
+                    else if(mechanics.impact&&!captures[i]&&vec3_distance(velocities[i],players[i].ball.vel)>.8f)event("impact",&players[i],golf_clampf(vec3_distance(velocities[i],players[i].ball.vel)/8,.1f,1));
+                }
                 for(int i=0;i<GOLF_MAX_PLAYERS;i++)players[i].ball.draw_pos=players[i].ball.pos;
             }
-            printf("{\"request\":%d,\"ok\":true,\"time\":%.9g,\"cpuMs\":%.3f,\"rssBytes\":%zu,\"memoryBytes\":%zu,\"mascots\":{\"enabled\":%s,\"cat\":[%.9g,%.9g,%.9g],\"dog\":[%.9g,%.9g,%.9g],\"slapTime\":%.9g,\"wakeTime\":%.9g},\"players\":[",request,world.time,cpu_ms(),rss_bytes(),headless_allocated_bytes(),mechanics.enabled?"true":"false",mechanics.cat.x,mechanics.cat.y,mechanics.cat.z,mechanics.dog.x,mechanics.dog.y,mechanics.dog.z,mechanics.cat_slap_time,mechanics.dog_wake_time);
+            printf("{\"request\":%d,\"ok\":true,\"time\":%.9g,\"cpuMs\":%.3f,\"rssBytes\":%zu,\"memoryBytes\":%zu,\"mascots\":{\"enabled\":%s,\"cat\":[%.9g,%.9g,%.9g],\"dog\":[%.9g,%.9g,%.9g],\"slapTime\":%.9g,\"wakeTime\":%.9g,\"catActive\":%s,\"dogActive\":%s},\"players\":[",request,world.time,cpu_ms(),rss_bytes(),headless_allocated_bytes(),mechanics.enabled?"true":"false",mechanics.cat.x,mechanics.cat.y,mechanics.cat.z,mechanics.dog.x,mechanics.dog.y,mechanics.dog.z,mechanics.cat_slap_time,mechanics.dog_wake_time,mechanics.cat_valid?"true":"false",mechanics.dog_valid?"true":"false");
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {
                 golf_player_t *p=&players[i]; golf_ball_t *b=&p->ball;
                 printf("%s{\"id\":%u,\"pos\":[%.9g,%.9g,%.9g],\"vel\":[%.9g,%.9g,%.9g],\"moving\":%s,\"hole\":%s,\"water\":%s,\"strokes\":%d,\"firstComplete\":%s,\"captured\":%s,\"captureUntil\":%.9g}",comma?",":"",p->id,b->pos.x,b->pos.y,b->pos.z,b->vel.x,b->vel.y,b->vel.z,b->is_moving?"true":"false",b->is_in_hole?"true":"false",b->is_in_water?"true":"false",p->stroke_count,b->first_shot_complete?"true":"false",b->captured?"true":"false",b->capture_until); comma=true;
             }
-            puts("]}"); fflush(stdout); json_value_free(value); continue;
+            printf("],\"events\":[");for(int i=0;i<event_count;i++)printf("%s{\"id\":%u,\"player\":%u,\"kind\":\"%s\",\"strength\":%.5g}",i?",":"",events[i].id,events[i].player,events[i].kind,events[i].strength);
+            puts("]}");event_count=0; fflush(stdout); json_value_free(value); continue;
         }
         printf("{\"request\":%d,\"ok\":%s}\n",request,ok?"true":"false"); fflush(stdout); json_value_free(value);
     }

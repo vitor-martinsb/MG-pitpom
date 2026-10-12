@@ -37,7 +37,7 @@
       ]
     },
     "fs": {
-      "source": "#version 330\nuniform vec4 ball_fs_params[1];\nuniform sampler2D ball_normal_map;\n\nin vec3 frag_normal;\nin vec2 frag_texture_coord;\n\nout vec4 g_frag_color;\n\nvoid main() {\n    vec3 n = texture(ball_normal_map, vec2(frag_texture_coord.x, 1.0 - frag_texture_coord.y)).xyz;\n    n = 2.0 * n - 1.0;\n    float dimples = 0.90 + 0.10 * abs(dot(normalize(n), normalize(vec3(-2.0, -3.0, -10.0))));\n    float sunlight = max(dot(normalize(frag_normal), normalize(vec3(-0.5, 0.9, 0.35))), 0.0);\n    float rim = pow(1.0 - abs(frag_normal.z), 3.0) * 0.055;\n    vec3 ceramic = ball_fs_params[0].rgb * dimples * (0.60 + 0.40 * sunlight) + vec3(1.0, 0.91, 0.73) * rim;\n    g_frag_color = vec4(ceramic, 1.0);\n}\n",
+      "source": "#version 330\nuniform vec4 ball_fs_params[1];\nuniform sampler2D ball_normal_map;\n\nin vec3 frag_normal;\nin vec2 frag_texture_coord;\n\nout vec4 g_frag_color;\n\nvoid main() {\n    vec3 n = texture(ball_normal_map, vec2(frag_texture_coord.x, 1.0 - frag_texture_coord.y)).xyz;\n    n = 2.0 * n - 1.0;\n    float dimples = 0.90 + 0.10 * abs(dot(normalize(n), normalize(vec3(-2.0, -3.0, -10.0))));\n    float sunlight = max(dot(normalize(frag_normal), normalize(vec3(-0.5, 0.9, 0.35))), 0.0);\n    float rim = pow(1.0 - abs(frag_normal.z), 3.0) * 0.055;\n    vec3 ceramic = ball_fs_params[0].rgb * dimples * (0.60 + 0.40 * sunlight) + vec3(1.0, 0.91, 0.73) * rim;\n    g_frag_color = vec4(ceramic, ball_fs_params[0].a);\n}\n",
       "inputs": [
         {
           "name": "frag_normal",
@@ -108,7 +108,7 @@
       ]
     },
     "fs": {
-      "source": "#version 300 es\nprecision highp float;\nprecision highp int;\nuniform vec4 ball_fs_params[1];\nuniform sampler2D ball_normal_map;\n\nin vec3 frag_normal;\nin vec2 frag_texture_coord;\n\nout vec4 g_frag_color;\n\nvoid main() {\n    vec3 n = texture(ball_normal_map, vec2(frag_texture_coord.x, 1.0 - frag_texture_coord.y)).xyz;\n    n = 2.0 * n - 1.0;\n    float dimples = 0.90 + 0.10 * abs(dot(normalize(n), normalize(vec3(-2.0, -3.0, -10.0))));\n    float sunlight = max(dot(normalize(frag_normal), normalize(vec3(-0.5, 0.9, 0.35))), 0.0);\n    float rim = pow(1.0 - abs(frag_normal.z), 3.0) * 0.055;\n    vec3 ceramic = ball_fs_params[0].rgb * dimples * (0.60 + 0.40 * sunlight) + vec3(1.0, 0.91, 0.73) * rim;\n    g_frag_color = vec4(ceramic, 1.0);\n}\n",
+      "source": "#version 300 es\nprecision highp float;\nprecision highp int;\nuniform vec4 ball_fs_params[1];\nuniform sampler2D ball_normal_map;\n\nin vec3 frag_normal;\nin vec2 frag_texture_coord;\n\nout vec4 g_frag_color;\n\nvoid main() {\n    vec3 n = texture(ball_normal_map, vec2(frag_texture_coord.x, 1.0 - frag_texture_coord.y)).xyz;\n    n = 2.0 * n - 1.0;\n    float dimples = 0.90 + 0.10 * abs(dot(normalize(n), normalize(vec3(-2.0, -3.0, -10.0))));\n    float sunlight = max(dot(normalize(frag_normal), normalize(vec3(-0.5, 0.9, 0.35))), 0.0);\n    float rim = pow(1.0 - abs(frag_normal.z), 3.0) * 0.055;\n    vec3 ceramic = ball_fs_params[0].rgb * dimples * (0.60 + 0.40 * sunlight) + vec3(1.0, 0.91, 0.73) * rim;\n    g_frag_color = vec4(ceramic, ball_fs_params[0].a);\n}\n",
       "inputs": [
         {
           "name": "frag_normal",

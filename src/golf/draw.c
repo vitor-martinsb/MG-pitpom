@@ -37,9 +37,13 @@ static void _draw_player_balls(const char *pipeline_name) {
         .fs_images[0] = texture->sg_image,
     };
     sg_apply_bindings(&bindings);
-    for (int i = 0; i < game->player_count; i++) {
+    for(int pass=0;pass<2;pass++)for (int i = 0; i < game->player_count; i++) {
         golf_player_t *player = &game->players[i];
         if (!golf_game_player_visible(player)) continue;
+        bool protected=game->mechanics.impact&&!player->ball.first_shot_complete&&!player->ball.is_in_hole;
+        if(protected!=(pass==1))continue;
+        sg_apply_pipeline(golf_shader_get_pipeline(shader,protected?"ball_protected":pipeline_name)->sg_pipeline);
+        sg_apply_bindings(&bindings);
         float radius = player->ball.radius;
         mat4 model_mat = mat4_multiply_n(3, mat4_translation(player->ball.draw_pos),
                 mat4_scale(V3(radius, radius, radius)), mat4_from_quat(player->ball.orientation));
@@ -47,8 +51,10 @@ static void _draw_player_balls(const char *pipeline_name) {
                 UNIFORM_MAT4("proj_view_mat", mat4_transpose(graphics->proj_view_mat)),
                 UNIFORM_MAT4("model_mat", mat4_transpose(model_mat)));
         sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range){ vs->data, vs->size });
+        vec4 color=player->color;
+        if(game->mechanics.impact&&!player->ball.first_shot_complete)color=V4(.65f*color.x+.35f,.65f*color.y+.35f,.65f*color.z+.35f,.72f);
         golf_shader_uniform_t *fs = golf_shader_fs_uniform_setup(shader, "ball_fs_params", 1,
-                UNIFORM_VEC4("color", player->color));
+                UNIFORM_VEC4("color", color));
         sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &(sg_range){ fs->data, fs->size });
         sg_draw(0, model->positions.length, 1);
     }

@@ -706,7 +706,7 @@ void golf_game_hit_ball(vec2 aim_delta) {
 
     game.physics.collision_history.length = 0;
 
-    golf_audio_start_sound("hit_ball", "data/audio/impactPlank_medium_000.ogg", 1, false, true);
+    golf_audio_start_sound("hit_ball", "data/audio/impactPlank_medium_000.ogg", golf_clampf(p,0,1), false, true);
 }
 
 void golf_game_pause(void) {
@@ -727,6 +727,5 @@ void golf_game_skip_presentation(void) {
 }
 bool golf_game_player_visible(const golf_player_t *p) {
     if(!p->connected||p->ball.captured)return false;
-    const golf_player_t *local=golf_game_get_local_player();
-    return p->id==local->id || !game.mechanics.impact || local->ball.first_shot_complete;
+    return true;
 }

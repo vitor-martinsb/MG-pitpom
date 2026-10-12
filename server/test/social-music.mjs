@@ -20,7 +20,7 @@ try {
   await host.waitForFunction(()=>GolfMusic.status().state==='running'&&GolfMusic.level()>0.000001);
   assert.equal(await host.evaluate(()=>GolfMusic.status().bpm),62);
   await host.locator('#music-controls summary').tap();await host.locator('#toggle-music').tap();
-  await host.waitForFunction(()=>GolfMusic.status().state==='suspended');
+  await host.waitForFunction(()=>GolfMusic.status().enabled===false);
   assert.equal(await host.evaluate(()=>GolfMusic.status().enabled),false);
   await host.reload();await host.locator('#lobby').waitFor({state:'visible',timeout:90000});
   assert.equal(await host.evaluate(()=>GolfMusic.status().enabled),false);

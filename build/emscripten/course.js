@@ -2,6 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id),t=key=>GolfI18n.t(key);
   let geometry,level,base,frame,collapsed=false,last=0;
+  let lastSlap=-100,lastWake=-100,soloStarted=-1;
   const canvas=$('minimap-canvas'),ctx=canvas.getContext('2d');
   const size=240,padding=14;
   function point(p){
@@ -24,16 +25,24 @@
   function draw(){
     ctx.drawImage(base,0,0);ctx.font='18px sans-serif';ctx.textAlign='center';
     ctx.fillStyle='#997650';for(const box of frame.obstacles??[]){const a=point(box.slice(0,2)),b=point(box.slice(2,4));ctx.fillRect(a[0],a[1],Math.max(2,b[0]-a[0]),Math.max(2,b[1]-a[1]));}
-    for(const [p,icon] of [[frame.cat,'🐈'],[frame.dog,'🐕']]){const v=point(p);ctx.fillText(icon,v[0],v[1]+6);}
+    for(const [p,icon,active] of [[frame.cat,'🐈',frame.catActive],[frame.dog,'🐕',frame.dogActive]]){if(active===false)continue;const v=point(p);ctx.fillText(icon,v[0],v[1]+6);}
     for(const p of frame.players){
       if(!p.visible)continue;const v=point(p.pos);ctx.beginPath();ctx.arc(v[0],v[1],p.id===frame.local?5:3,0,Math.PI*2);
-      ctx.fillStyle=`rgb(${p.color.map(n=>Math.round(n*255)).join(',')})`;ctx.fill();
+      const protectedBall=frame.mode==='impact'&&!p.firstComplete;ctx.globalAlpha=protectedBall?.72:1;
+      ctx.fillStyle=`rgb(${p.color.map(n=>Math.round(n*255)).join(',')})`;ctx.fill();ctx.globalAlpha=1;
+      if(protectedBall){ctx.strokeStyle='#8dd2ed';ctx.lineWidth=2;ctx.stroke();}
       if(p.id===frame.local){ctx.strokeStyle='#fffaf0';ctx.lineWidth=2;ctx.stroke();}
     }
   }
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;
     frame=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
+    if(window.GolfAudio&&!GolfAudio.status().network){
+      if(frame.active&&!frame.intro&&soloStarted!==frame.level){soloStarted=frame.level;GolfAudio.phase('game');}
+      if(frame.slapTime>lastSlap&&frame.slapTime>=0)GolfAudio.play('slap');
+      if(frame.wakeTime>lastWake&&frame.wakeTime>=0)GolfAudio.play('capture');
+    }
+    lastSlap=frame.slapTime;lastWake=frame.wakeTime;
     $('minimap').hidden=!frame.active;$('presentation').hidden=!frame.active||!frame.intro;
     if(!frame.active)return;
     $('presentation-progress').value=Math.min(1,frame.progress);

@@ -17,7 +17,7 @@ typedef struct golf_ball {
           time_out_of_water, time_since_impact_sound;
     bool is_moving, is_in_hole, is_in_water, is_out_of_bounds;
     bool first_shot_complete, captured, cat_contact;
-    float capture_until, cat_cooldown, dog_cooldown;
+    float capture_until, cat_cooldown, dog_cooldown, collision_grace;
     uint32_t cat_hits;
     int dog_stroke;
 } golf_ball_t;

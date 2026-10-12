@@ -1257,6 +1257,12 @@ static void _golf_ui_player_labels(void) {
         _golf_ui_draw_text(font, name_pos, font_size, V4(.21f,.28f,.19f,1), 0, 0, player->name, 1);
         _golf_ui_texture_draw(square, V2(label->pos.x - 0.5f * label->size.x + 4 * scale, name_pos.y),
                 V2(6 * scale, 6 * scale), player->color, 1);
+        if(game->mechanics.impact&&!player->ball.first_shot_complete){
+            vec2 shield=vec2_add(label->pos,V2(label->size.x*.5f+8*scale,0));
+            _golf_ui_texture_draw(square,shield,V2(12*scale,12*scale),V4(.48f,.75f,.89f,1),.9f);
+            _golf_ui_texture_draw(square,vec2_add(shield,V2(0,5*scale)),V2(6*scale,4*scale),V4(.48f,.75f,.89f,1),.9f);
+            _golf_ui_draw_text(font,shield,font_size*.6f,V4(1,1,1,1),0,0,"+",1);
+        }
         if (label->local) {
             vec2 badge_pos = vec2_sub(name_pos, V2(0, font_size * 1.1f));
             _golf_ui_draw_text(font, badge_pos, font_size * 0.8f, V4(.32f,.42f,.28f,1), 0, 0, golf_i18n_t("c.you"), 1);

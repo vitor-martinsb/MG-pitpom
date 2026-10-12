@@ -749,6 +749,12 @@ static bool _golf_shader_finalize(void *ptr) {
             snprintf(pipeline.name, GOLF_MAX_NAME_LEN, "%s", "ball");
             pipeline.sg_pipeline = sg_make_pipeline(&desc);
             vec_push(&shader->pipelines, pipeline);
+            desc.depth.write_enabled=false;
+            desc.colors[0].blend.enabled=true;
+            desc.colors[0].blend.src_factor_rgb=SG_BLENDFACTOR_SRC_ALPHA;
+            desc.colors[0].blend.dst_factor_rgb=SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+            snprintf(pipeline.name,GOLF_MAX_NAME_LEN,"%s","ball_protected");
+            pipeline.sg_pipeline=sg_make_pipeline(&desc);vec_push(&shader->pipelines,pipeline);
         }
 
         {

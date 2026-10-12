@@ -1,5 +1,6 @@
 #include "golf/mechanics.h"
 #include "golf/physics.h"
+#include "golf/navigation.h"
 #undef NDEBUG
 #include <assert.h>
 #include <math.h>
@@ -18,13 +19,19 @@ int main(int argc,char **argv) {
     golf_config_t config={0};golf_physics_world_t world={0};world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;
     golf_physics_build_world(&world,false);
     golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
+    assert(m.cat_valid&&m.dog_valid);
     assert(m.cat_span>=.1f&&m.cat_span<=1.25f);
     assert(vec3_distance(m.start,m.cat_center)>1.4f&&vec3_distance(m.hole,m.dog)>1.4f);
     for(int animal=0;animal<2;animal++) {
         vec3 p=animal?m.dog:m.cat_center;
+        vec3 floor;assert(golf_nav_floor(&fixed,p,&floor,.72f));
         float t=100;int idx;golf_bvh_face_t face;
         assert(golf_bvh_ray_test(&fixed,vec3_add(p,V3(0,.5f,0)),V3(0,-1,0),&t,&idx,&face));
         assert(fabsf(t-.5f)<.02f);
+    }
+    for(int i=-10;i<=10;i++){
+        vec3 p=vec3_add(m.cat_center,vec3_scale(m.across,m.cat_span*i/10.f)),floor;
+        assert(golf_nav_floor(&fixed,p,&floor,.72f));assert(fabsf(floor.y-p.y)<.12f);
     }
     golf_mechanics_animate(&m,2);vec3 a=m.cat;golf_mechanics_animate(&m,6);assert(vec3_distance(a,m.cat)>.05f);
     golf_player_t players[50];
@@ -54,6 +61,12 @@ int main(int argc,char **argv) {
     players[0].ball.first_shot_complete=true;golf_mechanics_impacts(players,2);
     assert(players[1].ball.vel.x>0&&players[0].ball.vel.x<6);assert(players[1].stroke_count==2);
     assert(vec3_distance(players[0].ball.pos,players[1].ball.pos)>=.239f);
+    // Newly released overlapping balls separate without gaining an impulse.
+    place(&players[0],1,V3(0,.12f,0));place(&players[1],2,V3(.1f,.12f,0));
+    players[0].ball.first_shot_complete=players[1].ball.first_shot_complete=true;
+    players[0].ball.collision_grace=.25f;players[1].ball.vel=V3(-6,0,0);
+    golf_mechanics_impacts(players,2);assert(vec3_length(players[0].ball.vel)==0);
+    assert(players[1].ball.vel.x==-6&&vec3_distance(players[0].ball.pos,players[1].ball.pos)>=.239f);
     // Repeatable crowded resolution, bounded velocities, no phantom strokes.
     for(int i=0;i<50;i++){place(&players[i],i+1,V3((i%10)*.08f,.12f,(i/10)*.08f));players[i].ball.first_shot_complete=true;players[i].ball.vel=V3((i%2?1:-1)*8,0,0);}
     for(int step=0;step<120;step++)golf_mechanics_impacts(players,50);

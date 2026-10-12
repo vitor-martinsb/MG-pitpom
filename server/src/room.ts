@@ -1,6 +1,8 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { WebSocket } from 'ws';
-import { Physics, type Ball, type Mascots } from './physics.js';
+import { Physics, type Ball, type Mascots, type SoundEvent } from './physics.js';
 
 export type Phase = 'lobby' | 'loading' | 'playing' | 'settling' | 'results' | 'finished';
 export type Member = {
@@ -8,6 +10,7 @@ export type Member = {
   socket?: WebSocket; ready: boolean; lastSequence: number; scores: number[]; dnf: boolean[];
   disconnectedAt?: number; ball?: Ball;
   lastChatAt?: number;
+  bot?: 'easy' | 'medium' | 'hard'; nextDecision?: number;
 };
 export type ChatMessage = { type: 'chat'; id: number; playerId: number; nickname: string; color: string; text: string; sentAt: number };
 export type RoomOptions = { duration: number; grace: number; loadingTimeout: number; resultsDuration: number; penalty: number; reconnectTTL: number; snapshotHz: number; catForwardProbability: number };
@@ -21,6 +24,8 @@ export class Room {
   deadline = 0;
   worldTime = 0;
   mode: 'classic' | 'impact' = 'classic';
+  selectedLevels: number[] = [];
+  match=0;
   mascots?: Mascots;
   readonly physicsSeed = randomBytes(4).readUInt32LE();
   private nextId = 1;
@@ -36,8 +41,16 @@ export class Room {
   readonly chatHistory: ChatMessage[] = [];
   private lastPhysicsCpu = 0;
   private generation = 0;
+  private botCursor = 0;
+  private events:SoundEvent[]=[];
   readonly metrics = { physicsTicks: 0, snapshots: 0, bytes: 0, messages: 0, maxTickMs: 0, physicsCpuMs: 0, physicsPeakRssBytes: 0, physicsPeakTrackedBytes: 0 };
-  constructor(readonly code: string, readonly root: string, readonly levels: string[], readonly options: RoomOptions = defaults, readonly now = () => performance.now()) {}
+  readonly validLevels:number[];
+  constructor(readonly code: string, readonly root: string, readonly levels: string[], readonly options: RoomOptions = defaults, readonly now = () => performance.now()) {
+    const seen=new Set<string>();this.validLevels=levels.flatMap((file,index)=>{
+      try{if(seen.has(file))return [];seen.add(file);const data=JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));return Array.isArray(data.entities)&&data.entities.some((e:any)=>e.type==='ball-start')&&data.entities.some((e:any)=>e.type==='hole')?[index]:[];}catch{return [];}
+    });
+    this.holes=Math.min(3,this.validLevels.length);
+  }
   send(member: Member, message: unknown) {
     if (member.socket?.readyState === 1) {
       const text = JSON.stringify(message);
@@ -48,9 +61,10 @@ export class Room {
   broadcast(message: unknown) { for (const member of this.members.values()) this.send(member, message); }
   state() {
     return { type: 'room', code: this.code, phase: this.phase, host: this.host, hole: this.hole, holes: this.holes, penalty: this.options.penalty,
-      level: this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,
+      level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,
+      sequence:this.selectedLevels, availableMaps:this.validLevels.length,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,
       players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,
-        connected: !!m.socket, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
+        connected: !!m.socket || !!m.bot, bot:m.bot, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
   }
   publish() { this.broadcast(this.state()); }
   join(socket: WebSocket, nickname: unknown, color: unknown, avatar: unknown): Member {
@@ -68,7 +82,7 @@ export class Room {
   }
   async reconnect(socket: WebSocket, token: unknown): Promise<Member> {
     const m=[...this.members.values()].find(m=> typeof token==='string' && m.token===token);
-    if (!m || (m.disconnectedAt !== undefined && this.now()-m.disconnectedAt>this.options.reconnectTTL)) throw new Error('Reconexão expirada.');
+    if (!m || m.bot || (m.disconnectedAt !== undefined && this.now()-m.disconnectedAt>this.options.reconnectTTL)) throw new Error('Reconexão expirada.');
     if (m.socket) throw new Error('Jogador já conectado.');
     m.socket=socket; m.disconnectedAt=undefined; m.ready=false;
     if (!this.host) this.host=m.id;
@@ -76,7 +90,7 @@ export class Room {
     this.send(m,{type:'welcome',id:m.id,token:m.token,code:this.code,sequence:m.lastSequence});
     this.send(m,{type:'chat-history',messages:this.chatHistory});
     this.send(m,this.state());
-    if (this.phase!=='lobby') this.send(m,{type:'load',level:Math.min(this.hole,this.holes-1),hole:this.hole});
+    if (this.phase!=='lobby'&&this.phase!=='finished') this.send(m,{type:'load',level:this.selectedLevels[Math.min(this.hole,this.holes-1)] ?? Math.min(this.hole,this.holes-1),hole:this.hole});
     this.publish(); return m;
   }
   disconnect(m: Member, socket: WebSocket) {
@@ -84,31 +98,63 @@ export class Room {
     m.socket=undefined; m.ready=false; m.disconnectedAt=this.now();
     const physics=this.physics;
     void physics?.connected(m.slot,false).catch(e=>{if(this.physics===physics)this.fail(e);});
-    if (m.id===this.host) this.host=[...this.members.values()].find(p=>p.socket)?.id ?? 0;
+    if (m.id===this.host) this.host=[...this.members.values()].filter(p=>p.socket&&!p.bot).sort((a,b)=>a.id-b.id)[0]?.id ?? 0;
     this.publish();
   }
   async start(m: Member, holes: unknown, mode: unknown = 'classic') {
-    if (m.id!==this.host || this.phase!=='lobby') throw new Error('Somente o anfitrião pode iniciar no lobby.');
-    if (![3,6,9,18].includes(holes as number)) throw new Error('Escolha 3, 6, 9 ou 18 mapas.');
-    if (mode!=='classic' && mode!=='impact') throw new Error('Modo de jogo inválido.');
-    this.mode=mode;
-    this.holes=holes as number; this.hole=0; await this.load();
+    this.configure(m,holes,mode);
+    this.selectedLevels=[...this.validLevels];
+    for(let i=this.selectedLevels.length-1;i>0;i--){const j=randomInt(i+1);[this.selectedLevels[i],this.selectedLevels[j]]=[this.selectedLevels[j]!,this.selectedLevels[i]!];}
+    this.selectedLevels.length=this.holes;
+    this.match++;
+    this.hole=0;for(const p of this.members.values()){p.scores=[];p.dnf=[];} await this.load();
+  }
+  private hostOnly(m:Member){if(this.members.get(m.id)!==m||m.id!==this.host||!m.socket||m.bot||this.phase!=='lobby')throw Error('Somente o anfitrião pode configurar no lobby.');}
+  rematch(m:Member){
+    if(this.members.get(m.id)!==m||m.id!==this.host||!m.socket||m.bot||this.phase!=='finished')throw Error('Somente o anfitrião pode reiniciar após os resultados.');
+    this.generation++;this.physics?.close();this.physics=undefined;this.phase='lobby';this.hole=0;this.deadline=0;this.selectedLevels=[];this.events=[];
+    for(const p of this.members.values()){p.scores=[];p.dnf=[];p.ball=undefined;p.ready=!!p.bot;}this.publish();
+  }
+  configure(m:Member,holes:unknown=this.holes,mode:unknown=this.mode){
+    this.hostOnly(m);
+    if(!Number.isInteger(holes)||(holes as number)<1||(holes as number)>this.validLevels.length)throw Error('Quantidade de mapas inválida.');
+    if(mode!=='classic'&&mode!=='impact')throw Error('Modo de jogo inválido.');
+    this.holes=holes as number;this.mode=mode;this.publish();
+  }
+  botSettings(m:Member,action:unknown,id:unknown,settings:any={}){
+    this.hostOnly(m);
+    if(action==='remove'){const bot=this.members.get(id as number);if(!bot?.bot)throw Error('Bot não encontrado.');this.members.delete(bot.id);this.publish();return;}
+    if(action!=='add'&&action!=='update')throw Error('Configuração de bot inválida.');
+    let bot=action==='update'?this.members.get(id as number):undefined;
+    if(action==='update'&&!bot?.bot)throw Error('Bot não encontrado.');
+    const difficulty=settings.difficulty ?? bot?.bot ?? 'medium';
+    const nickname=settings.nickname ?? bot?.nickname ?? `Bot ${this.nextId}`;
+    const color=settings.color ?? bot?.color ?? '#d8a951';
+    if(!['easy','medium','hard'].includes(difficulty)||typeof nickname!=='string'||!/^[\x20-\x7e]{1,24}$/.test(nickname.trim())||typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw Error('Configuração de bot inválida.');
+    if(!bot){
+      if(this.members.size>=50)throw Error('Sala cheia (50 jogadores).');
+      const slots=new Set([...this.members.values()].map(p=>p.slot));let slot=0;while(slots.has(slot))slot++;
+      bot={id:this.nextId++,slot,nickname,color,avatar:0,token:'',ready:true,lastSequence:0,scores:[],dnf:[],bot:difficulty};this.members.set(bot.id,bot);
+    }
+    bot.nickname=nickname.trim();bot.color=color;bot.bot=difficulty;this.publish();
   }
   private async load() {
-    this.generation++;
-    this.phase='loading'; this.loading=true; this.deadline=0; this.worldTime=0;this.lastPhysicsCpu=0;
-    for (const m of this.members.values()) { m.ready=false; m.ball=undefined; }
+    const generation=++this.generation;
+    this.phase='loading'; this.loading=true; this.deadline=0; this.worldTime=0;this.lastPhysicsCpu=0;this.events=[];
+    for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0; }
     this.lastSent.clear(); this.physics?.close();
-    this.publish(); this.broadcast({type:'load',level:this.hole,hole:this.hole});
+    const level=this.selectedLevels[this.hole] ?? this.hole;
+    this.publish(); this.broadcast({type:'load',level,hole:this.hole});
+    const physics=this.physics=new Physics(this.root,this.levels[level]!);
+    const current=()=>!this.closed&&generation===this.generation&&physics===this.physics;
     try {
-      this.physics=new Physics(this.root,this.levels[this.hole]!);
-      await this.physics.ready;
-      await this.physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability);
-      for (const m of this.members.values()) { await this.physics.add(m.slot,m.id); if (!m.socket) await this.physics.connected(m.slot,false); }
+      await physics.ready;if(!current())return;
+      await physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability);if(!current())return;
+      for (const m of this.members.values()) { await physics.add(m.slot,m.id);if(!current())return; if (!m.socket&&!m.bot) await physics.connected(m.slot,false);if(!current())return; }
       this.loading=false; this.deadline=this.now()+this.options.loadingTimeout; this.lastStep=this.now(); this.accumulated=0;
-      const frame=await this.physics.step(0); this.mascots=frame.mascots; for (const b of frame.players) this.members.get(b.id)!.ball=b;
+      const frame=await physics.step(0);if(!current())return; this.mascots=frame.mascots; for (const b of frame.players) this.members.get(b.id)!.ball=b;
       this.snapshot(true); this.publish(); this.maybeBegin();
-    } catch(e) { this.fail(e); }
+    } catch(e) { if(current())this.fail(e); }
   }
   ready(m: Member, hole: unknown) {
     if (hole!==this.hole || this.phase==='lobby') return;
@@ -124,7 +170,7 @@ export class Room {
     const seq=message.sequence;
     if (!Number.isSafeInteger(seq) || seq<=m.lastSequence) throw new Error('Tacada duplicada ou fora de ordem.');
     m.lastSequence=seq;
-    if (this.phase!=='playing' || this.now()>=this.deadline || !m.socket || !m.ready || m.ball?.moving || m.ball?.hole || m.ball?.captureUntil) throw new Error('Tacada indisponível.');
+    if (this.phase!=='playing' || this.now()>=this.deadline || (!m.socket&&!m.bot) || !m.ready || m.ball?.moving || m.ball?.hole || m.ball?.captureUntil || (m.bot&&(m.ball?.strokes??0)>=this.options.penalty)) throw new Error('Tacada indisponível.');
     const d=message.direction, power=message.power;
     if (!Array.isArray(d) || d.length!==3 || d.some(v=>typeof v!=='number' || !Number.isFinite(v) || Math.abs(v)>1) || Math.abs(d[1])>.001 || Math.hypot(d[0],d[2])<.001 || typeof power!=='number' || !Number.isFinite(power) || power<0 || power>1) throw new Error('Direção ou potência inválida.');
     if (!this.physics || !await this.physics.shot(m.slot,d,power)) throw new Error('Bola ainda em movimento.');
@@ -163,13 +209,21 @@ export class Room {
       const ticks=Math.min(120,Math.floor(this.accumulated)); this.accumulated-=ticks;
       const started=performance.now(), frame=await physics.step(ticks);
       if(generation!==this.generation || physics!==this.physics)return;
-      this.worldTime=frame.time; this.mascots=frame.mascots; this.metrics.physicsTicks+=ticks; this.metrics.maxTickMs=Math.max(this.metrics.maxTickMs,performance.now()-started);
+      this.worldTime=frame.time; this.mascots=frame.mascots;this.events=frame.events; this.metrics.physicsTicks+=ticks; this.metrics.maxTickMs=Math.max(this.metrics.maxTickMs,performance.now()-started);
       this.metrics.physicsCpuMs+=Math.max(0,frame.cpuMs-this.lastPhysicsCpu);this.lastPhysicsCpu=frame.cpuMs;
       this.metrics.physicsPeakRssBytes=Math.max(this.metrics.physicsPeakRssBytes,frame.rssBytes);this.metrics.physicsPeakTrackedBytes=Math.max(this.metrics.physicsPeakTrackedBytes,frame.memoryBytes);
       for (const b of frame.players) this.members.get(b.id)!.ball=b;
       this.snapshot(++this.frameNumber % (this.options.snapshotHz*2) === 0);
-      const active=[...this.members.values()].filter(m=>m.socket);
-      if (active.length && active.every(m=>m.ball?.hole) || this.phase==='settling' && now>=this.deadline) this.finishHole();
+      const active=[...this.members.values()].filter(m=>m.socket||m.bot);
+      if (active.length && active.every(m=>m.ball?.hole||(m.bot&&!m.ball?.moving&&(m.ball?.strokes??0)>=this.options.penalty)) || this.phase==='settling' && now>=this.deadline) this.finishHole();
+      else if(this.phase==='playing'){
+        const bots=active.filter(m=>m.bot&&m.ready&&!m.ball?.moving&&!m.ball?.hole&&!m.ball?.captureUntil&&(m.ball?.strokes??0)<this.options.penalty&&(m.nextDecision??0)<=now);
+        if(bots.length){
+          const bot=bots[this.botCursor++%bots.length]!;bot.nextDecision=now+700+randomInt(600);
+          const plan=await physics.plan(bot.slot,bot.bot!);
+          if(generation===this.generation&&this.phase==='playing'&&plan.ok)await this.shot(bot,{sequence:bot.lastSequence+1,direction:plan.direction,power:plan.power});
+        }
+      }
     } catch(e) { if(generation===this.generation && physics===this.physics)this.fail(e); }
     finally { this.busy=false; }
   }
@@ -188,7 +242,7 @@ export class Room {
       if (full || this.lastSent.get(m.id)!==text) players.push(m.ball);
       if (!target) this.lastSent.set(m.id,text);
     }
-    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,remaining:Math.max(0,this.deadline-this.now()),mascots:this.mascots,players};
+    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,remaining:Math.max(0,this.deadline-this.now()),mascots:this.mascots,players,events:target?[]:this.events};
     if (target) this.send(target,snapshot); else this.broadcast(snapshot);
     this.metrics.snapshots++;
   }

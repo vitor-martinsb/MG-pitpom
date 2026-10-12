@@ -330,8 +330,18 @@ void golf_garden_draw_feedback(float time) {
     for(int i=0;i<garden.level->entities.length;i++)if(golf_garden_replaces_flag(&garden.level->entities.data[i]))wind_flag(&actor,&garden.level->entities.data[i],golf_garden_flag_time());
     if(golf_get()->state==GOLF_STATE_IN_GAME&&game->mechanics.enabled){
         vec3 forward=game->mechanics.across;if(cosf(time*.75f)<0)forward=vec3_scale(forward,-1);
-        animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward);
-        animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game));
+        if(game->mechanics.cat_valid)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward);
+        if(game->mechanics.dog_valid)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game));
+        if(game->mechanics.impact)for(int i=0;i<game->player_count;i++){
+            golf_player_t *p=&game->players[i];if(!golf_game_player_visible(p)||p->ball.first_shot_complete||p->ball.is_in_hole)continue;
+            vec3 center=vec3_add(p->ball.draw_pos,V3(0,.02f,0));
+            for(int k=0;k<8;k++){
+                float a=k*MF_PI/4,b=(k+1)*MF_PI/4;float r=.15f+.008f*sinf(golf_garden_flag_time()*2);
+                vec3 a0=vec3_add(center,V3(cosf(a)*r,0,sinf(a)*r)),b0=vec3_add(center,V3(cosf(b)*r,0,sinf(b)*r));
+                vec3 a1=vec3_add(center,V3(cosf(a)*(r+.012f),0,sinf(a)*(r+.012f))),b1=vec3_add(center,V3(cosf(b)*(r+.012f),0,sinf(b)*(r+.012f)));
+                triangle(&fx,a0,b0,b1,paint(.69f,.91f,1,0));triangle(&fx,a0,b1,a1,paint(.69f,.91f,1,0));
+            }
+        }
     }
     garden.actor_count=(unsigned)actor.count;
     if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}
