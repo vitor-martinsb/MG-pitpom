@@ -36,11 +36,12 @@ try{
   assert.equal(await a.locator('#match-adventure .trail-node').count(),2);assert.equal(await a.locator('#match-adventure .current').count(),1);await a.locator('#close-adventure').click();
   fs.mkdirSync('../out/evolution-validation',{recursive:true});await a.screenshot({path:'../out/evolution-validation/desktop.png'});await b.screenshot({path:'../out/evolution-validation/mobile.png'});
   if(app){
-    const room=app.rooms.get(code);room.deadline=performance.now()-6000;await room.tick();assert.equal(room.phase,'results');
+    const room=app.rooms.get(code);room.deadline=performance.now()-6000;await room.tick();
+    await a.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.results'));assert.equal(room.phase,'results');
     await a.waitForFunction(()=>document.getElementById('scores-title').textContent===GolfI18n.t('holeScores'));assert.equal(await a.evaluate(()=>GolfAudio.status().celebrations),0);
     room.deadline=0;await room.tick();await Promise.all([a,b].map(p=>p.locator('#presentation').waitFor({state:'visible'})));await Promise.all([a,b].map(p=>p.locator('#skip-presentation').click()));
     await a.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));
-    room.deadline=performance.now()-6000;await room.tick();room.deadline=0;await room.tick();
+    room.deadline=performance.now()-6000;await room.tick();await a.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.results'));room.deadline=0;await room.tick();
     await Promise.all([a,b].map(p=>p.waitForFunction(()=>GolfAudio.status().celebrations===1)));
     assert.equal(await a.locator('#results-adventure .completed').count(),2);assert.ok((await a.locator('#winner-banner').textContent()).length>0);
     room.publish();await a.waitForTimeout(150);assert.equal(await a.evaluate(()=>GolfAudio.status().celebrations),1);

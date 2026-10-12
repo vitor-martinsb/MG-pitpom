@@ -221,7 +221,7 @@ export class Room {
         if(bots.length){
           const bot=bots[this.botCursor++%bots.length]!;bot.nextDecision=now+700+randomInt(600);
           const plan=await physics.plan(bot.slot,bot.bot!);
-          if(generation===this.generation&&this.phase==='playing'&&plan.ok)await this.shot(bot,{sequence:bot.lastSequence+1,direction:plan.direction,power:plan.power});
+          if(generation===this.generation&&this.phase==='playing'&&this.now()<this.deadline&&plan.ok)await this.shot(bot,{sequence:bot.lastSequence+1,direction:plan.direction,power:plan.power});
         }
       }
     } catch(e) { if(generation===this.generation && physics===this.physics)this.fail(e); }

@@ -91,6 +91,17 @@ test('a retired startup cannot fail the newer map or publish a celebration',asyn
     room.ready(host,0);assert.equal(room.phase,'playing');
   }finally{room.close();}
 });
+test('a bot decision finishing after the deadline skips the shot without failing the room',async()=>{
+  let now=0;const room=new Room('CLOCK',root,levels,defaults,()=>now),host=room.join(socket(),'Host','#ffffff',0);
+  try{
+    room.botSettings(host,'add',null,{difficulty:'hard'});await room.start(host,1);room.ready(host,0);
+    const physics=(room as any).physics,plan=physics.plan.bind(physics);
+    physics.plan=async(...args:any[])=>{const result=await plan(...args);now=room.deadline+1;return result;};
+    await room.tick();assert.equal(room.phase,'playing');assert.equal(room.state().completed,false);
+    const bot=[...room.members.values()].find(m=>m.bot)!;assert.equal(bot.ball!.strokes,0);
+    await room.tick();assert.equal(room.phase,'settling');
+  }finally{room.close();}
+});
 test('49 server bots share one physics world and no sockets, respect readiness, and publish real finite shots',async()=>{
   let now=0;const room=new Room('BOTS1',root,levels,{...defaults,duration:120000},()=>now),host=room.join(socket(),'Host','#ffffff',0);
   try{
