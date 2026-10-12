@@ -65,7 +65,7 @@ try{
   assert.equal(await pages[0].evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).active),false);
   await new Promise(resolve=>setTimeout(resolve,1000));
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/offline-return.png')});
-  await pages[0].mouse.click(425,450);await new Promise(resolve=>setTimeout(resolve,300));await pages[0].mouse.click(247,208);
+  await pages[0].mouse.click(425,450);await new Promise(resolve=>setTimeout(resolve,300));await pages[0].locator('#level-adventure [data-level="0"]').click();
   await pages[0].waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===2,{},{timeout:15000});
   const offline=await pages[0].evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])));
   assert.equal(offline.players.length,1);

@@ -161,13 +161,14 @@
     if(options.some(o=>o.value===old))$('spectate').value=old;else $('spectate').value=String(identity?.id);
   }
   window.GolfOnline={
+    active(){return online;},
     initialized(){initialized=true;window.GolfCourse.initialized=true;GolfI18n.ready();GolfAdventure.busy(false);$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;$('offline').disabled=false;
       try{const saved=JSON.parse(sessionStorage.getItem('golf-session'));if(saved){identity=saved;online=true;connect({type:'reconnect',...saved});}}catch{}},
     preview(){presenting=true;$('loading').hidden=true;},
     ready(hole){loading=false;presenting=false;send({type:'ready',hole});},
     shot(direction,power){if(connected&&phase==='playing')send({type:'shot',direction,power,sequence:++sequence});else call({type:'error'});},
     cancelAim(){call({type:'cancel-aim'});},
-    blocked(){return document.getElementById('music-controls').open||online&&(loading||!connected||!$('scores').hidden||!$('adventure-modal').hidden||!$('lobby').hidden||!$('connect').hidden||!$('chat-panel').hidden||$('music-controls').open);}
+    blocked(){return !$('level-selection').hidden||!$('solo-loading').hidden||document.getElementById('music-controls').open||online&&(loading||!connected||!$('scores').hidden||!$('adventure-modal').hidden||!$('lobby').hidden||!$('connect').hidden||!$('chat-panel').hidden||$('music-controls').open);}
   };
   window.addEventListener('languagechange',()=>{
     $('engine-status').textContent=t(initialized?'engineReady':'engineLoading');

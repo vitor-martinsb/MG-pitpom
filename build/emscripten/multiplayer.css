@@ -80,9 +80,8 @@ input[type=range]{accent-color:var(--moss)}
 @media(max-height:500px) and (orientation:landscape){.panel{padding:12px 18px}.garden-header{height:60px;margin:-12px -18px 12px}}
 @media(max-height:500px) and (orientation:landscape){.garden-header:has(img){height:90px;aspect-ratio:auto;background:var(--paper)}}
 @media(prefers-reduced-motion:reduce){button{transition:none}.overlay{backdrop-filter:none}}
-.welcome-wrap{width:min(1150px,100%);height:100%;max-height:900px;min-height:0;display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,470px);grid-template-rows:minmax(0,1fr);gap:22px;align-items:center}
-.welcome-wrap>.panel{width:100%;height:100%;min-height:0}.adventure-welcome{height:100%;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:18px;background:#f5e9ceeb;border:1px solid #96724d78;border-radius:28px;box-shadow:0 18px 65px #35483135}.adventure-welcome h2{text-align:center;margin:0 0 10px}
-.adventure-map{overflow:auto;max-height:65dvh;min-height:120px;scrollbar-width:thin;border-radius:20px}.adventure-map>svg{width:100%;height:auto;display:block}.adventure-welcome .adventure-map{flex:1;min-height:0;max-height:none}.compact-trail{max-height:190px;margin:12px 0;border:1px solid #c6b48b}.compact-trail>svg{min-width:360px}
+.welcome-wrap{width:min(560px,100%);height:100%;max-height:100%;min-height:0;display:flex;align-items:center}.welcome-wrap>.panel{width:100%;max-height:100%;min-height:0}
+.adventure-map{overflow:auto;max-height:65dvh;min-height:120px;scrollbar-width:thin;border-radius:20px}.adventure-map>svg{width:100%;height:auto;display:block}.compact-trail{max-height:190px;margin:12px 0;border:1px solid #c6b48b}.compact-trail>svg{min-width:360px}
 .trail-node.current>circle{animation:trail-glow 2s ease-in-out infinite}.trail-pets{animation:pet-breathe 3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 .pet-definitions{position:absolute;width:0;height:0;overflow:hidden}.mascot-chase{width:210px;max-width:100%;height:210px;display:block;margin:auto}.real-loading{text-align:center}.real-loading.compact{display:flex;align-items:center;justify-content:center;gap:14px}.compact .mascot-chase{width:94px;height:94px;margin:0}
 .pet-leg{transform-box:fill-box;transform-origin:top center;animation:pet-gallop .64s linear infinite}.pet-leg.opposite{animation-delay:-.32s}.pet-leg.rear{animation-delay:-.16s}.pet-ear{transform-box:fill-box;transform-origin:right center;animation:pet-ears .64s ease-in-out infinite}.pet-ear.opposite{animation-delay:-.32s}
@@ -93,8 +92,8 @@ input[type=range]{accent-color:var(--moss)}
 #ready-progress{width:100%;accent-color:#526b48}#winner-banner{background:#efd39b;border-radius:14px;padding:12px;font-weight:700}tr.winner{background:#efd39b55}#adventure-modal{z-index:8}
 #celebration{position:fixed;inset:0;z-index:10;pointer-events:none;overflow:hidden}#celebration i{position:absolute;left:var(--x);top:-24px;width:10px;height:18px;background:#e8ba69;border-radius:80% 0 80% 0;animation:petal-fall 4s var(--delay) ease-in forwards}#celebration i:nth-child(3n){background:#e6aa99}#celebration i:nth-child(3n+1){background:#a7bd86}@keyframes petal-fall{to{transform:translateY(105dvh) rotate(calc(var(--turn) + 540deg));opacity:0}}
 .music-panel{width:260px}.music-panel input[type=range]{margin:5px 0 12px}.music-panel #mute-all{margin-top:10px}.actions{max-width:70vw}
-@media(max-width:760px),(pointer:coarse){.welcome-wrap{display:block;overflow:auto;height:100%;max-width:560px;padding:0 3px}.adventure-welcome{height:220px;margin-bottom:12px;padding:10px}.adventure-welcome h2{font-size:1.2rem}.adventure-welcome .adventure-map{min-height:0}.welcome-wrap>.panel{height:auto;max-height:none}.actions{width:96px}.music-controls{--settings-top:max(218px,calc(18.056vmin + 12px))}.compact-trail{max-height:140px}.adventure-map{max-height:55dvh}}
-@media(max-height:500px) and (orientation:landscape){.adventure-welcome{display:none}.welcome-wrap{display:block;max-width:560px;overflow:auto}.welcome-wrap>.panel{height:auto}.mascot-chase{width:120px;height:120px}}
+@media(max-width:760px),(pointer:coarse){.welcome-wrap{display:block;overflow:auto;height:100%;max-width:560px;padding:0 3px}.welcome-wrap>.panel{height:auto;max-height:none}.actions{width:96px}.music-controls{--settings-top:max(218px,calc(18.056vmin + 12px))}.compact-trail{max-height:140px}.adventure-map{max-height:55dvh}}
+@media(max-height:500px) and (orientation:landscape){.welcome-wrap{display:block;max-width:560px;overflow:auto}.welcome-wrap>.panel{height:auto}.mascot-chase{width:120px;height:120px}}
 @media(prefers-reduced-motion:reduce){.pet-leg,.pet-ear,.mascot-chase use,.trail-node.current>circle,.trail-pets{animation:none}.mascot-chase animateMotion{display:none}}
 
 #engine-progress{width:100%;height:6px;accent-color:var(--moss)}
@@ -102,3 +101,13 @@ input[type=range]{accent-color:var(--moss)}
 @media(prefers-reduced-motion:no-preference){.overlay:not([hidden])>.panel,.overlay:not([hidden])>.welcome-wrap{animation:overlay-appear .22s ease-out}}
 
 @media(prefers-reduced-motion:no-preference){.overlay{opacity:1;transition:opacity .18s,display .18s allow-discrete}.overlay[hidden]{opacity:0}}
+
+#level-selection{z-index:8}.level-selection-panel{width:min(820px,100%);display:flex;flex-direction:column;max-height:100%;overflow:hidden}.level-selection-panel .chat-heading{flex:none}.level-selection-panel .chat-heading h2{font-size:clamp(1.25rem,5vw,1.7rem)}#level-adventure{flex:1;min-height:100px;max-height:none;overflow:auto;touch-action:pan-y}.trail-node.selectable{cursor:pointer}.trail-node.selectable:focus-visible>circle{stroke:#fffaf0;stroke-width:7}.trail-node.locked{opacity:.6}.trail-node.selectable:hover>circle{stroke:#fffaf0;stroke-width:5}
+
+.trail-pets{pointer-events:none}
+
+/* Reference mascots: distinct gallop poses, an orbit, and upright faces. */
+.mascot-chase{position:relative;width:280px;height:280px;max-width:100%;aspect-ratio:1}.chase-ring{position:absolute;inset:13%;border:3px dashed #c7b49e;border-radius:50%;opacity:.55}.chase-orbit{position:absolute;inset:0;animation:mascot-orbit 6s linear infinite}.mascot-run{position:absolute;overflow:visible;transform-origin:center}.mascot-run.pompom{left:-2%;top:0;width:76%;height:64%;animation:pompom-run 6s linear infinite}.mascot-run.pituca{right:-2%;bottom:0;width:82%;height:69%;animation:pituca-run 6s linear infinite}.run-frame{opacity:0;animation:gallop-frame .8s steps(1,end) infinite}.mascot-chase use{transform:none;animation:gallop-frame .8s steps(1,end) infinite}
+@keyframes gallop-frame{0%,12.49%{opacity:1}12.5%,100%{opacity:0}}@keyframes mascot-orbit{to{transform:rotate(360deg)}}@keyframes pompom-run{to{transform:rotate(-360deg)}}@keyframes pituca-run{to{transform:rotate(-360deg)}}
+@media(max-height:500px) and (orientation:landscape){.mascot-chase{width:150px;height:150px}}
+@media(prefers-reduced-motion:reduce){.chase-orbit,.mascot-run,.mascot-chase use{animation:none}.run-frame{opacity:0}.run-frame:first-child{opacity:1}}

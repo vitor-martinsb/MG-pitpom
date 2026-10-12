@@ -1,4 +1,4 @@
-/* Painted vector scenery and independently articulated, original mascots. */
+/* Painted scenery; loading uses reference-based, eight-frame running sprites. */
 (() => {
   const $=id=>document.getElementById(id),t=(key,values)=>GolfI18n.t(key,values);
   const ns='http://www.w3.org/2000/svg';
@@ -37,11 +37,22 @@
       <path d="M15 9 L16 10 M20 12 L21 13 M25 8 L26 9" stroke="#a59c96" stroke-width="3"/>
     </g></symbol>
   </defs>`;document.body.prepend(definitions);
+  /* Explicit clipping rectangles accommodate the artist's spacing without editing the PNG. */
+  const runningBounds=[[36,100,262,220],[348,101,260,219],[655,101,264,222],[967,102,265,218],[34,412,263,218],[346,413,272,220],[655,412,267,213],[969,412,268,217],[38,705,287,223],[344,697,284,226],[661,694,232,233],[961,703,285,207],[45,992,243,216],[355,988,292,207],[665,983,237,219],[971,990,272,205]];
+  runningBounds.forEach(([x,y,w,h],i)=>{
+    const symbol=svg('symbol',{id:`pitpom-running-${i}`,viewBox:`${x+w/2-160} ${y+h/2-125} 320 250`});
+    symbol.innerHTML=`<clipPath id="running-clip-${i}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath><image href="art/loading-run.png" width="1254" height="1254" clip-path="url(#running-clip-${i})"/>`;
+    definitions.querySelector('defs').append(symbol);
+  });
   function chase(){
-    const s=svg('svg',{viewBox:'0 0 300 300',class:'mascot-chase','aria-hidden':'true'});
-    s.innerHTML=`<circle cx="150" cy="150" r="96" fill="none" stroke="#d8c6a8" stroke-dasharray="14 24" stroke-width="3"/>
-      <g transform="translate(150 150)"><g><animateMotion dur="3.6s" repeatCount="indefinite" rotate="auto" path="M 0 -94 A94 94 0 1 1 -.01 -94"/><use href="#pitpom-cat" x="-58" y="-42" width="116" height="84"/></g>
-      <g><animateMotion dur="3.6s" begin="-1.8s" repeatCount="indefinite" rotate="auto" path="M 0 -94 A94 94 0 1 1 -.01 -94"/><use href="#pitpom-dog" x="-58" y="-42" width="116" height="84"/></g></g>`;if(matchMedia('(prefers-reduced-motion:reduce)').matches)s.querySelectorAll('animateMotion').forEach(a=>a.remove());return s;
+    const s=document.createElement('div');s.className='mascot-chase';s.setAttribute('aria-hidden','true');
+    s.innerHTML='<div class="chase-ring"></div><div class="chase-orbit"></div>';
+    for(const [name,start]of [['pompom',0],['pituca',8]]){
+      const pet=svg('svg',{viewBox:'0 0 320 250',class:`mascot-run ${name}`});
+      for(let i=0;i<8;i++)pet.append(svg('use',{href:`#pitpom-running-${start+i}`,width:320,height:250,class:'run-frame',style:`animation-delay:${-.8+i*.1}s`}));
+      s.querySelector('.chase-orbit').append(pet);
+    }
+    return s;
   }
   for(const container of document.querySelectorAll('.real-loading')){container.prepend(chase());}
   const environments=['garden','forest','bridge','mushrooms','village','mountains'];
@@ -53,8 +64,10 @@
     '<path d="M-16 13V-5H16V13Z" fill="#f3dbab"/><path d="M-21-5L0-22L21-5Z" fill="#bd8865"/><path d="M-3 13V2H5V13" fill="#997357"/><path d="M9-2H13V3H9Z" fill="#92babb"/>',
     '<circle cx="12" cy="-13" r="8" fill="#ecc780"/><path d="M-25 13L-9-20L7 13ZM-4 13L11-10L25 13Z" fill="#879b96"/><path d="M-16-7L-9-20L-2-7L-10-10Z" fill="#f6ebda"/>'
   ];
-  function paint(container,order,room){
-    container.replaceChildren();const h=Math.max(600,order.length*65+120),s=svg('svg',{viewBox:`0 0 720 ${h}`,role:'img','aria-label':t('adventureTitle')});
+  function paint(container,order,room,selection){
+    if(!container)return;
+    const narrow=selection&&innerWidth<600,width=narrow?400:720;
+    container.replaceChildren();const h=Math.max(600,order.length*(narrow?82:65)+120),s=svg('svg',{viewBox:`0 0 ${width} ${h}`,role:selection?'group':'img','aria-label':t(selection?'levelSelection':'adventureTitle')});
     s.innerHTML=`<defs><linearGradient id="sky-${container.id}" x2="0" y2="1"><stop stop-color="#cadeda"/><stop offset="1" stop-color="#f2dfb5"/></linearGradient></defs>
       <rect width="720" height="${h}" rx="35" fill="url(#sky-${container.id})"/>
       <path d="M0 140 Q140 40 280 150 T720 90 L720 ${h} L0 ${h}Z" fill="#b7c798"/>
@@ -65,19 +78,27 @@
       g.innerHTML=i%4===0?'<path d="M-16 10 Q0 -26 16 10Z" fill="#db9b66"/><path d="M0 10V26" stroke="#f6eccf" stroke-width="10"/><circle cx="-6" cy="4" r="3" fill="#fff4dd"/>':i%5===0?'<path d="M-20 18V-3L0-22L20-3V18Z" fill="#f0dcae"/><path d="M-25-3L0-27L25-3" fill="#c5916c"/><path d="M-3 18V4H6V18" fill="#927554"/>':'<path d="M0 12V40" stroke="#977657" stroke-width="7"/><ellipse cy="-4" rx="25" ry="33" fill="#668c68"/><ellipse cx="-14" cy="9" rx="18" ry="23" fill="#759d70"/>';
       s.append(g);
     }
-    const points=order.map((_,i)=>[360+Math.sin(i*.95)*160,75+i*(h-140)/Math.max(1,order.length-1)]);
+    const points=order.map((_,i)=>[width/2+Math.sin(i*.95)*(narrow?60:160),75+i*(h-140)/Math.max(1,order.length-1)]);
     const path=points.map((p,i)=>i?`C ${points[i-1][0]} ${(points[i-1][1]+p[1])/2} ${p[0]} ${(points[i-1][1]+p[1])/2} ${p[0]} ${p[1]}`:`M ${p[0]} ${p[1]}`).join(' ');
     s.append(svg('path',{d:path,fill:'none',stroke:'#6e7855','stroke-width':27,opacity:.3}),svg('path',{d:path,fill:'none',stroke:'#ead5a7','stroke-width':20,'stroke-linecap':'round'}));
+    let locked=false;
     order.forEach((map,i)=>{
-      const complete=room&&(i<room.hole||room.completed||i===room.hole&&room.phase==='results'),current=room&&i===Math.min(room.hole,order.length-1)&&!complete;
-      const g=svg('g',{transform:`translate(${points[i][0]} ${points[i][1]})`,class:complete?'trail-node completed':current?'trail-node current':'trail-node next'});
+      const best=selection?.levels[map],isLocked=!!selection&&locked;
+      const complete=selection?best!==null:room&&(i<room.hole||room.completed||i===room.hole&&room.phase==='results'),current=selection?!isLocked&&!complete:room&&i===Math.min(room.hole,order.length-1)&&!complete;
+      const g=svg('g',{transform:`translate(${points[i][0]} ${points[i][1]})`,class:(complete?'trail-node completed':current?'trail-node current':'trail-node next')+(selection?(isLocked?' locked':' selectable'):''),'data-level':map});
       g.append(svg('circle',{r:24,fill:complete?'#607d50':current?'#f5cb74':'#f8edcf',stroke:'#977b54','stroke-width':3}));
-      const number=svg('text',{'text-anchor':'middle',y:7,fill:complete?'#fff7e6':'#405638','font-size':18,'font-weight':700});number.textContent=complete?'✓':String(i+1);g.append(number);
+      const number=svg('text',{'text-anchor':'middle',y:7,fill:complete?'#fff7e6':'#405638','font-size':18,'font-weight':700});number.textContent=isLocked?'🔒':complete?'✓':String(i+1);g.append(number);
       const theme=Math.floor(i*6/order.length)%6,preview=svg('g',{transform:`translate(${i%2?-47:47} -17) scale(.6)`});preview.innerHTML=previews[theme];g.append(preview);
       const label=svg('text',{x:i%2?-35:35,y:10,'text-anchor':i%2?'end':'start','font-size':17,fill:'#354831'});label.textContent=t('courseName',{number:map+1});g.append(label);
-      const subtitle=svg('text',{x:i%2?-35:35,y:29,'text-anchor':i%2?'end':'start','font-size':12,fill:'#526b48'});subtitle.textContent=t('environment.'+environments[theme]);g.append(subtitle);
+      const subtitle=svg('text',{x:i%2?-35:35,y:29,'text-anchor':i%2?'end':'start','font-size':12,fill:'#526b48'});subtitle.textContent=selection?(isLocked?t('levelLocked'):best!==null?t('levelBest',{number:best}):t('environment.'+environments[theme])):t('environment.'+environments[theme]);g.append(subtitle);
+      if(selection){
+        g.setAttribute('role','button');g.setAttribute('aria-label',`${t('courseName',{number:map+1})}, ${subtitle.textContent}`);g.setAttribute('aria-disabled',String(isLocked));
+        g.append(svg('rect',{x:-160,y:-30,width:320,height:65,fill:'transparent'}));
+        if(!isLocked){g.setAttribute('tabindex','0');const choose=()=>{if(Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;$('canvas').focus();}};g.addEventListener('click',choose);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});}
+        if(best===null)locked=true;
+      }
       s.append(g);
-      if(current||!room&&i===0){const pets=svg('g',{transform:`translate(${points[i][0]+(i%2?55:-110)} ${points[i][1]-45})`,class:'trail-pets'});pets.innerHTML='<use href="#pitpom-dog" width="62" height="46"/><use href="#pitpom-cat" x="45" y="-12" width="62" height="46"/>';s.append(pets);}
+      if(current||!room&&!selection&&i===0){const pets=svg('g',{transform:`translate(${points[i][0]+(i%2?55:-110)} ${points[i][1]-45})`,class:'trail-pets'});pets.innerHTML='<use href="#pitpom-dog" width="62" height="46"/><use href="#pitpom-cat" x="45" y="-12" width="62" height="46"/>';s.append(pets);}
     });container.append(s);
     if(room){const active=container.querySelector('.current,.completed:last-child');active?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});}
   }
@@ -85,12 +106,21 @@
   function render(room){
     lastRoom=room;const key=JSON.stringify([room?.sequence,room?.hole,room?.phase,GolfI18n.language]);if(key===signature)return;signature=key;
     const order=room?.sequence?.length?room.sequence:Array.from({length:room?.availableMaps??20},(_,i)=>i);
-    for(const id of ['welcome-adventure','lobby-adventure','match-adventure','results-adventure'])paint($(id),order,room?.sequence?.length?room:null);
+    for(const id of ['lobby-adventure','match-adventure','results-adventure'])paint($(id),order,room?.sequence?.length?room:null);
   }
   $('open-adventure').onclick=()=>{$('adventure-modal').hidden=false;window.GolfOnline?.cancelAim();};
   $('close-adventure').onclick=()=>$('adventure-modal').hidden=true;
-  window.addEventListener('languagechange',()=>{signature='';render(lastRoom);});
-  window.GolfAdventure={render,reset(){signature='';render(undefined);},busy(value){$('engine-loader').hidden=!value;},celebrate(winners){
+  let selectionSignature='',lastSelection;
+  $('close-level-selection').onclick=()=>{Module.ccall('golf_ui_close_level_selection',null,[],[]);$('level-selection').hidden=true;$('canvas').focus();};
+  $('level-selection').addEventListener('keydown',e=>{if(e.key==='Escape')$('close-level-selection').click();});
+  function select(selection){
+    lastSelection=selection;const visible=selection.open&&$('connect').hidden&&!GolfOnline.active();const panel=$('level-selection'),opening=panel.hidden&&visible;panel.hidden=!visible;
+    $('solo-loading').hidden=!selection.loading||!$('connect').hidden||GolfOnline.active();
+    const key=JSON.stringify([selection.levels,GolfI18n.language,innerWidth<600]);if(visible&&(selectionSignature!==key||opening)){selectionSignature=key;paint($('level-adventure'),selection.levels.map((_,i)=>i),null,selection);if(opening)$('level-adventure .current')?.scrollIntoView({block:'center'});}
+    if(opening)$('close-level-selection').focus({preventScroll:true});
+  }
+  window.addEventListener('languagechange',()=>{signature='';render(lastRoom);if(lastSelection)select(lastSelection);});
+  window.GolfAdventure={render,select,reset(){signature='';selectionSignature='';render(undefined);},busy(value){$('engine-loader').hidden=!value;},celebrate(winners){
     $('winner-banner').textContent=t('winners',{names:winners.map(p=>p.nickname).join(', ')});$('winner-banner').hidden=false;
     const layer=$('celebration');layer.replaceChildren();layer.hidden=false;
     if(!matchMedia('(prefers-reduced-motion:reduce)').matches)for(let i=0;i<32;i++){const p=document.createElement('i');p.style.setProperty('--x',`${(i*61)%100}%`);p.style.setProperty('--delay',`${(i%8)*.12}s`);p.style.setProperty('--turn',`${(i%3)*90}deg`);layer.append(p);}

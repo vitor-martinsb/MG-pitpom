@@ -37,6 +37,7 @@
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;
     frame=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
+    GolfAdventure.select(JSON.parse(Module.ccall('golf_ui_level_selection','string',[],[])));
     if(window.GolfAudio&&!GolfAudio.status().network){
       if(frame.active&&!frame.intro&&soloStarted!==frame.level){soloStarted=frame.level;GolfAudio.phase('game');}
       if(frame.slapTime>lastSlap&&frame.slapTime>=0)GolfAudio.play('slap');

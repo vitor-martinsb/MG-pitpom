@@ -12,10 +12,32 @@ try{
   for(const p of [a,b]){p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(/\bERROR\b|failed to compile|INVALID_OPERATION/i.test(m.text()))errors.push(m.text());});}
   await Promise.all([a.goto(url),b.goto(url)]);
   await Promise.all([a,b].map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
-  assert.equal(await a.locator('#welcome-adventure .trail-node').count(),20);
+  assert.equal(await a.locator('#connect .adventure-map').count(),0);
   fs.mkdirSync('../out/evolution-validation',{recursive:true});await a.screenshot({path:'../out/evolution-validation/welcome.png'});
   assert.equal(await a.locator('#loading .mascot-chase').count(),1);
-  assert.equal(await a.evaluate(()=>getComputedStyle(document.querySelector('.pet-leg')).animationName),'pet-gallop');
+  assert.equal(await a.evaluate(()=>getComputedStyle(document.querySelector('.mascot-run.pompom')).animationName),'pompom-run');
+  for(const [page,name]of [[a,'desktop'],[b,'mobile']]){
+    await page.locator('#offline').click();await page.waitForTimeout(500);
+    const viewport=page.viewportSize();await page.mouse.click(viewport.width/2,viewport.height*.75);
+    await page.locator('#level-selection').waitFor({state:'visible'});
+    assert.equal(await page.locator('#level-adventure .trail-node').count(),20);
+    assert.equal(await page.locator('#level-adventure .locked').count(),19);
+    assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[1])),0);
+    assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[-1])),0);
+    assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[20])),0);
+    for(const [lang,title]of [['pt-BR','Escolha de Fase'],['es','Elegir nivel'],['en','Choose a course']]){
+      await page.evaluate(lang=>GolfI18n.setLanguage(lang),lang);assert.equal(await page.locator('#level-selection-title').textContent(),title);
+    }
+    await page.screenshot({path:`../out/evolution-validation/course-selection-${name}.png`});
+    await page.locator('#close-level-selection').click();await page.locator('#level-selection').waitFor({state:'hidden'});
+    await page.mouse.click(viewport.width/2,viewport.height*.75);await page.locator('#level-selection').waitFor({state:'visible'});
+    await page.locator('#level-adventure [data-level="0"]').click();
+    await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();
+    await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&GolfCourse.inspect().frame.level===0);
+    assert.equal(await page.locator('#level-selection').isHidden(),true);
+    assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[0])),0);
+    await page.reload();await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+  }
   await a.locator('#nickname').fill('Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
   const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Guest');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
   for(const id of ['holes','game-mode','add-bot'])assert.equal(await b.locator('#'+id).isDisabled(),true);

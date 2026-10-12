@@ -18,6 +18,9 @@
 #include "golf/game.h"
 #include "golf/golf.h"
 #include "golf/player_labels.h"
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+#include <emscripten.h>
+#endif
 
 static golf_ui_t ui;
 static golf_inputs_t *inputs; 
@@ -76,6 +79,46 @@ static void _golf_ui_start_fade_out(bool to_main_menu, bool to_loading_level, in
     ui.fade_out.level = level;
     ui.fade_out.t = 0;
 }
+
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+/* The browser trail uses the same saved scores and sequential locks as the native grid. */
+EMSCRIPTEN_KEEPALIVE const char *golf_ui_level_selection(void) {
+    static char text[4096];
+    int count = (int)CFG_NUM(game_cfg, "num_levels");
+    bool open = golf->state == GOLF_STATE_MAIN_MENU && ui.main_menu.is_level_select_open
+        && !ui.fade_out.active && !golf_online_active();
+    int used = snprintf(text, sizeof(text), "{\"open\":%s,\"loading\":%s,\"levels\":[",
+        open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false");
+    for (int i = 0; i < count && used < (int)sizeof(text) - 40; i++) {
+        char key[64]; float best;
+        snprintf(key, sizeof(key), "stroke_count_level_%d", i);
+        if (golf_storage_get_num(key, &best))
+            used += snprintf(text + used, sizeof(text) - used, "%s%d", i ? "," : "", (int)best);
+        else used += snprintf(text + used, sizeof(text) - used, "%snull", i ? "," : "");
+    }
+    snprintf(text + used, sizeof(text) - used, "]}");
+    return text;
+}
+
+EMSCRIPTEN_KEEPALIVE int golf_ui_choose_level(int level) {
+    if (golf->state != GOLF_STATE_MAIN_MENU || !ui.main_menu.is_level_select_open
+        || ui.fade_out.active || golf_online_active() || level < 0
+        || level >= (int)CFG_NUM(game_cfg, "num_levels")) return 0;
+    for (int i = 0; i < level; i++) {
+        char key[64]; float best;
+        snprintf(key, sizeof(key), "stroke_count_level_%d", i);
+        if (!golf_storage_get_num(key, &best)) return 0;
+    }
+    golf_audio_start_sound("button_click", "data/audio/drop_003.ogg", 1, false, true);
+    _golf_ui_start_fade_out(false, true, level, false);
+    return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE void golf_ui_close_level_selection(void) {
+    if (golf->state == GOLF_STATE_MAIN_MENU && !ui.fade_out.active)
+        ui.main_menu.is_level_select_open = false;
+}
+#endif
 
 static void _golf_ui_draw_fade(float alpha) {
     golf_texture_t *texture = golf_data_get_texture("data/textures/colors/black.png");
@@ -1033,6 +1076,9 @@ static void _golf_ui_main_menu(float dt) {
         }
     }
     else {
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+        if (!EM_ASM_INT({ return !!window.GolfAdventure; })) {
+#endif
         _golf_ui_pixel_pack_square_name(layout, "level_select_background");
         _golf_ui_text_name(layout, "level_select_text", 1);
         if (_golf_ui_button_name(layout, "level_select_exit_button")) {
@@ -1043,6 +1089,9 @@ static void _golf_ui_main_menu(float dt) {
             golf_audio_start_sound("button_click", "data/audio/drop_003.ogg", 1, false, true);
             _golf_ui_start_fade_out(false, true, clicked_button_num, false);
         }
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+        }
+#endif
     }
 
     float fade_in_length = CFG_NUM(game_cfg, "game_fade_in_length");
