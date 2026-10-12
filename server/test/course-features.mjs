@@ -23,7 +23,7 @@ try{
   await Promise.all([a,b].map(p=>p.locator('#presentation').waitFor({state:'visible'})));
   const before=await a.evaluate(()=>GolfCourse.inspect());assert.ok(before.geometry.triangles.length>10);assert.ok(before.frame.intro);
   const previewFlag=await b.evaluate(()=>GolfCourse.inspect().frame.flagPoint);
-  const distance=(x,y)=>Math.hypot(x[0]-y[0],x[1]-y[1]);
+  const distance=(x,y)=>Math.hypot(...x.map((value,index)=>value-y[index]));
   assert.ok(distance([before.frame.camera[0],before.frame.camera[2]],before.geometry.hole)<distance([before.frame.camera[0],before.frame.camera[2]],before.geometry.start));
   await a.locator('#skip-presentation').click();await a.locator('#presentation').waitFor({state:'hidden'});
   await new Promise(r=>setTimeout(r,150));
@@ -45,7 +45,13 @@ try{
   const flag0=await a.evaluate(()=>GolfCourse.inspect().frame.flagPoint);
   await a.evaluate(()=>GolfOnline.shot([0,0,-1],0));
   await a.waitForFunction(()=>GolfCourse.inspect().frame.players.find(p=>p.id===GolfCourse.inspect().frame.local).firstComplete,{},{timeout:20000});
-  const after=await a.evaluate(()=>GolfCourse.inspect().frame);assert.equal(after.players.filter(p=>p.visible).length,2);
+  // Local course orientation can put the crossing on X or Z. Observe all
+  // three axes across a short window, including a pause at a turning point.
+  const movement=await a.waitForFunction(({cat,flag})=>{
+    const f=GolfCourse.inspect().frame;
+    return Math.hypot(...f.cat.map((v,i)=>v-cat[i]))>.005&&Math.abs(f.flagPoint[0]-flag[0])>.0001?f:false;
+  },{cat:cat0,flag:flag0},{timeout:3000});
+  const after=await movement.jsonValue();await movement.dispose();assert.equal(after.players.filter(p=>p.visible).length,2);
   const guest=await b.evaluate(()=>GolfCourse.inspect().frame);assert.equal(guest.players.filter(p=>p.visible).length,2);assert.equal(guest.players.find(p=>p.id===guest.local).firstComplete,false);
   assert.ok(distance(after.cat,cat0)>.005);
   assert.ok(Math.abs(after.flagPoint[0]-flag0[0])>.0001);assert.ok(after.actorVertices>1000&&after.actorVertices<8192);
@@ -67,5 +73,5 @@ try{
   await a.screenshot({path:'../out/course-validation/desktop-course.png'});await b.screenshot({path:'../out/course-validation/mobile-course.png'});
   assert.deepEqual(errors,[]);
   await Promise.all(contexts.map(c=>c.close()));
-  console.log('Course features: host mode, shared preview readiness, complete drone/skip, first-shot visibility per player, live minimap/mascots, mobile collapse and translation passed.');
+  console.log('Course features: host mode, shared preview readiness, complete drone/skip, visible first-shot protection, live minimap/mascots, mobile collapse and translation passed.');
 }finally{await browser?.close();app?.close();}
