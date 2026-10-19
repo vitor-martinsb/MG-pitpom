@@ -54,7 +54,7 @@ try{
   const after=await movement.jsonValue();await movement.dispose();assert.equal(after.players.filter(p=>p.visible).length,2);
   const guest=await b.evaluate(()=>GolfCourse.inspect().frame);assert.equal(guest.players.filter(p=>p.visible).length,2);assert.equal(guest.players.find(p=>p.id===guest.local).firstComplete,false);
   assert.ok(distance(after.cat,cat0)>.005);
-  assert.ok(Math.abs(after.flagPoint[0]-flag0[0])>.0001);assert.ok(after.actorVertices>1000&&after.actorVertices<16384);
+  assert.ok(Math.abs(after.flagPoint[0]-flag0[0])>.0001);assert.ok(after.actorVertices>1000&&after.actorVertices<24576);
   // Exercise a trusted capture/return snapshot in the renderer. The native
   // tests separately perform real captures for all 50 authoritative balls.
   const capture=await a.evaluate(()=>{

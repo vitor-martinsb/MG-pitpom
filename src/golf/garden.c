@@ -14,7 +14,8 @@
 
 #define WORLD_LIMIT 72000
 #define FX_LIMIT 8192
-#define ACTOR_LIMIT 16384
+// Detailed wildlife plus fifty Impact spawn rings and simultaneous actions.
+#define ACTOR_LIMIT 24576
 typedef struct garden_vertex { vec3 position, normal; vec4 color; } garden_vertex_t;
 typedef struct garden_mesh { garden_vertex_t *vertices; int count, capacity; } garden_mesh_t;
 static struct {
@@ -343,26 +344,49 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
     if(!cat&&awake>.15f){oval(mesh,V3(0,head_y-.12f,.60f),V3(.08f,.04f+awake*.05f,.025f),black,2,7);oval(mesh,V3(.02f,head_y-.15f,.633f),V3(.036f,.043f,.014f),pink,2,6);}
     garden.transform=mat4_identity();
 }
+static void frida_head(garden_mesh_t *mesh,float y,vec4 white,vec4 tabby) {
+    // A tabby cap surrounds a tapered white blaze; the cheeks stay white.
+    // Color the head surface itself so markings follow every viewing angle.
+    for(int ring=0;ring<6;ring++)for(int segment=0;segment<16;segment++) {
+        vec3 points[4];
+        for(int j=0;j<4;j++)points[j]=sphere_point(-MF_PI*.5f+MF_PI*(ring+(j>=2))/6.f,
+            2*MF_PI*(segment+(j==1||j==2))/16.f);
+        int indices[]={0,1,2,0,2,3};
+        for(int j=0;j<6;j++) {
+            vec3 n=points[indices[j]];
+            bool cap=n.y>-.04f&&(n.z<.35f||fabsf(n.x)>.08f+.34f*(1-fmaxf(n.y,0)));
+            float stripe=.83f+.17f*sinf(n.y*24+fabsf(n.x)*9);
+            vec4 color=cap?paint(tabby.x*stripe,tabby.y*stripe,tabby.z*stripe,0):white;
+            emit(mesh,V3(n.x*.225f,y+n.y*.21f,.29f+n.z*.22f),n,color);
+        }
+    }
+}
 static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind,float time,golf_game_t *game) {
     garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
-    vec4 black=paint(.10f,.11f,.13f,0),cream=paint(.97f,.93f,.83f,0),pink=paint(.91f,.58f,.55f,0);
+    vec4 black=paint(.10f,.11f,.13f,0),cream=paint(.97f,.95f,.89f,0),pink=paint(.86f,.52f,.51f,0);
+    vec4 chocolate=paint(.22f,.15f,.13f,0),tabby=paint(.31f,.29f,.26f,0),gray=paint(.52f,.50f,.48f,0);
     float age=time-a->action_time;bool acting=age>=0&&age<1.15f;
     float step=a->walking?sinf(a->clock*(kind==2?5.0f:7.0f)):0;
-    float height=kind==2?.36f:.32f,body=kind==1?.46f:.34f;
-    vec4 coat=kind==2?cream:black;
+    float height=kind==1?.37f:kind==2?.36f:.32f,body=kind==1?.41f:.34f;
+    vec4 coat=kind==2?cream:kind==1?chocolate:black;
     float torso_y=height+fabsf(step)*.015f;
     oval(mesh,V3(0,torso_y,-.04f),V3(.23f,.21f,body),coat,4,9);
     if(kind==0) {
         // A soft crocheted vest, raised alternating stitches, curly black fur.
         oval(mesh,V3(0,torso_y+.01f,-.05f),V3(.25f,.235f,.35f),paint(.62f,.64f,.66f,0),4,12);
-        for(int row=0;row<4;row++)for(int stitch_index=0;stitch_index<10;stitch_index++) {
+        for(int row=0;row<4;row++)for(int stitch_index=0;stitch_index<8;stitch_index++) {
             float y=torso_y-.09f+row*.055f;
             float dy=(y-torso_y-.01f)/.235f,ring=sqrtf(fmaxf(0,1-dy*dy));
-            float a=stitch_index*2*MF_PI/10,b=a+.20f;
-            vec4 stitch=row==1?paint(.28f,.46f,.70f,0):row==2?paint(.74f,.30f,.30f,0):cream;
+            float a=stitch_index*2*MF_PI/8,b=a+.25f;
+            vec4 stitch=row==1?paint(.16f,.23f,.44f,0):row==2?paint(.74f,.30f,.30f,0):cream;
             branch(mesh,V3(cosf(a)*.254f*ring,y,-.05f+sinf(a)*.355f*ring),
                         V3(cosf(b)*.254f*ring,y+.018f,-.05f+sinf(b)*.355f*ring),.012f,.012f,stitch);
         }
+        oval(mesh,V3(0,height+.12f,.17f),V3(.21f,.13f,.16f),paint(.69f,.70f,.71f,0),3,8);
+    }else if(kind==1) {
+        // Luna has a warm dark coat, a small pale chest and a dark collar.
+        oval(mesh,V3(0,height-.035f,.25f),V3(.09f,.13f,.045f),paint(.72f,.68f,.61f,0),3,7);
+        oval(mesh,V3(0,height+.13f,.22f),V3(.19f,.055f,.16f),black,2,8);
     }
     for(int leg=0;leg<4;leg++) {
         float x=(leg%2?1:-1)*.16f,z=leg<2?.23f:-body*.75f;
@@ -372,29 +396,44 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
         branch(mesh,V3(x*.8f,height-.08f,z),V3(x,paw,z+stride),.055f,.04f,coat);
         oval(mesh,V3(x,paw,z+stride),V3(.065f,.05f,.095f),coat,2,6);
     }
-    float head_y=kind==0?.65f:.61f;
+    float head_y=kind==0?.65f:kind==1?.67f:.61f;
     if(acting&&kind==1)head_y+=.045f*sinf(age*10);
-    oval(mesh,V3(0,head_y,.29f),V3(.225f,.21f,.22f),kind==2?cream:black,4,9);
-    if(kind==0)for(int curl=0;curl<14;curl++) {
+    if(kind==2)frida_head(mesh,head_y,cream,tabby);
+    else oval(mesh,V3(0,head_y,.29f),V3(.225f,.21f,.22f),kind==1?paint(.16f,.12f,.11f,0):black,4,9);
+    if(kind==0)for(int curl=0;curl<12;curl++) {
         float theta=curl*2.39996f,r=.16f+.025f*sinf(curl*1.7f);
         oval(mesh,V3(cosf(theta)*r,head_y+.1f+sinf(theta)*.12f,.28f+.04f*cosf(curl)),V3(.075f,.071f,.073f),paint(.14f,.15f,.17f,0),2,6);
     }
     for(int side=-1;side<=1;side+=2) {
         if(kind==2) {
-            triangle(mesh,V3(side*.21f,head_y+.06f,.22f),V3(side*.19f,head_y+.31f,.23f),V3(side*.06f,head_y+.14f,.39f),black);
+            triangle(mesh,V3(side*.21f,head_y+.06f,.22f),V3(side*.19f,head_y+.31f,.23f),V3(side*.06f,head_y+.14f,.39f),tabby);
             triangle(mesh,V3(side*.18f,head_y+.10f,.39f),V3(side*.17f,head_y+.24f,.25f),V3(side*.10f,head_y+.14f,.40f),pink);
-            oval(mesh,V3(side*.125f,head_y+.025f,.43f),V3(.095f,.115f,.055f),black,3,7);
-        }else oval(mesh,V3(side*.23f,head_y-.03f+step*.02f,.21f),V3(kind==0?.12f:.09f,kind==0?.17f:.20f,.11f),black,3,7);
-        oval(mesh,V3(side*.103f,head_y+.035f,.482f),V3(.055f,.065f,.016f),kind==2?paint(.72f,.62f,.30f,0):paint(.49f,.34f,.20f,0),3,7);
-        oval(mesh,V3(side*.103f,head_y+.035f,.497f),V3(.028f,.043f,.009f),black,2,6);
-        oval(mesh,V3(side*.093f,head_y+.054f,.507f),V3(.012f,.015f,.007f),cream,2,5);
+            for(int whisker=0;whisker<2;whisker++)branch(mesh,V3(side*.075f,head_y-.075f,.55f),
+                V3(side*.245f,head_y-.07f+whisker*.04f,.56f),.003f,.0015f,gray);
+        }else if(kind==1) {
+            // Rounded, partly upright ears, rather than long dachshund ears.
+            oval(mesh,V3(side*.23f,head_y+.115f+step*.015f,.23f),V3(.105f,.125f,.075f),chocolate,3,7);
+            oval(mesh,V3(side*.23f,head_y+.12f,.292f),V3(.062f,.075f,.014f),paint(.35f,.23f,.21f,0),2,6);
+        }else {
+            oval(mesh,V3(side*.23f,head_y-.03f+step*.02f,.21f),V3(.12f,.17f,.11f),black,3,7);
+            for(int curl=0;curl<3;curl++)oval(mesh,V3(side*(.25f+.025f*sinf(curl*2)),head_y-.14f+curl*.075f,.29f),
+                V3(.06f,.055f,.045f),paint(.14f,.14f,.16f,0),2,5);
+        }
+        float eye_height=kind==2?.035f:.065f,pupil_height=kind==2?.024f:.043f;
+        oval(mesh,V3(side*.103f,head_y+.035f,.482f),V3(.055f,eye_height,.016f),kind==2?paint(.63f,.66f,.39f,0):paint(.49f,.34f,.20f,0),3,7);
+        oval(mesh,V3(side*.103f,head_y+.035f,.497f),V3(.028f,pupil_height,.009f),black,2,6);
+        oval(mesh,V3(side*.093f,head_y+.046f,.507f),V3(.010f,.011f,.007f),cream,2,5);
     }
-    oval(mesh,V3(0,head_y-.07f,.48f),V3(kind==1?.13f:.12f,.075f,.115f),kind==2?cream:paint(.19f,.18f,.18f,0),3,7);
+    oval(mesh,V3(0,head_y-.07f,.48f),V3(kind==1?.13f:.12f,.075f,.115f),kind==2?cream:kind==1?gray:paint(.35f,.34f,.34f,0),3,7);
     oval(mesh,V3(0,head_y-.04f,.587f),V3(.036f,.026f,.025f),kind==2?pink:black,2,6);
+    if(kind!=2) {
+        oval(mesh,V3(0,head_y-.125f,.54f),V3(.08f,.045f,.045f),black,2,6);
+        oval(mesh,V3(0,head_y-.145f,.567f),V3(.044f,.022f,.018f),kind==0?pink:paint(.69f,.66f,.62f,0),2,5);
+    }
     if(kind==2) {
         branch(mesh,V3(0,height,-body),V3(.12f,.49f,-.65f),.045f,.035f,cream);
-        branch(mesh,V3(.12f,.49f,-.65f),V3(.20f+.07f*sinf(time*2),.67f,-.68f),.035f,.038f,black);
-    }else branch(mesh,V3(0,height,-body),V3(.08f*sinf(time*(acting?10:3)),.55f,-body-.19f),.04f,.025f,black);
+        branch(mesh,V3(.12f,.49f,-.65f),V3(.20f+.07f*sinf(time*2),.67f,-.68f),.035f,.038f,tabby);
+    }else branch(mesh,V3(0,height,-body),V3(.08f*sinf(time*(acting?10:3)),.55f,-body-.19f),.04f,.025f,coat);
     if(acting&&kind==0&&age<.8f)for(int dot=0;dot<6;dot++) {
         float t=fmodf(age*3+dot/6.f,1);
         oval(mesh,V3(-.22f+t*.2f,.30f*(1-t),-.18f+t*.75f),V3(.014f,.018f,.014f),paint(.89f,.79f,.35f,0),2,5);

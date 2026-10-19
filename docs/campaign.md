@@ -38,12 +38,15 @@ worker. Clients render server positions/actions and never select destinations.
 Patrols use reachable floor samples and exclude walls, water, holes, spawn and
 the swept areas of moving obstacles. Short eased walks include pauses.
 
-* **Romeu:** black curly poodle, gray crochet vest with blue/red rows. A playful
+* **Romeu:** black curly poodle with floppy ears, a graying muzzle and a gray
+  crochet vest with navy blue/red rows. A playful
   raised-leg animation applies 3.8 seconds of extra drag and a temporary tint.
   The player's stored color and avatar never change.
-* **Luna:** small black, slightly elongated dog. Carries the ball for 1.15 seconds
+* **Luna:** small, slightly elongated dark chocolate dog with partly upright
+  rounded ears, a gray muzzle and a pale chest patch. Carries the ball for 1.15 seconds
   and releases it at the level's original spawn with the stroke count retained.
-* **Frida:** white cat with black ear/face markings. A brief paw animation hides
+* **Frida:** white cat with a dark tabby cap/ears, a central white blaze and
+  relaxed green eyes. A brief paw animation hides
   the ball for 0.85 seconds, then releases it on reachable clear floor. Selection
   uses the authoritative seed, player identity and contact count.
 
@@ -53,9 +56,9 @@ a short impact grace period. Each ball keeps its own effect state. New sounds
 use the existing effects bus and respect volume/mute preferences. The minimap
 marks these animals R/L/F and localizes effect feedback in EN/PT-BR/ES.
 
-The reference photographs were absent from the supplied attachment. New 3D
-animals follow the written descriptions; Romeu's vest colors follow the user's
-explicit clarification. Pituca remains black/white, Pompom orange/white.
+The three new 3D animals follow the user's photographs in order: Romeu, Luna,
+Frida. Romeu's gray, blue and red crochet vest also follows the user's explicit
+color clarification. Pituca remains black/white, Pompom orange/white.
 
 ## Verification
 
@@ -72,7 +75,11 @@ explicit clarification. Pituca remains black/white, Pompom orange/white.
 * `node server/test/campaign-browser.mjs` (run from `server` as
   `node test/campaign-browser.mjs`) renders all 100 maps in desktop/mobile Chrome
   contexts, checks actor/scenery buffers, translations and matching trusted
-  animal snapshots, and saves world screenshots under ignored `out/`.
+  animal snapshots, including all three animal actions and both carried balls
+  at once, and saves world screenshots under ignored `out/`.
+* `node test/wildlife-render.mjs` additionally renders the final course with
+  fifty Impact players and all three animal actions, checking the desktop and
+  narrow-screen actor budget with both carried balls present.
 * Existing browser checks cover the solo trail, loading art, host/guest flow,
   audio preferences, touch controls, five aiming arrows and reconnection.
 
