@@ -28,7 +28,8 @@ try{
   await host.reload();await host.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:90000});assert.equal(await nativeLanguage(host),'es');assert.ok((await host.locator('#chat-messages').textContent()).includes('Olá! ¡Hola! Hello!'));
   await host.locator('#show-scores').click();assert.equal(await host.locator('#scores-title').textContent(),'Marcador de la partida');await host.locator('#close-scores').click();
   await host.locator('#leave').click();await host.locator('#offline').click();await host.setViewportSize({width:850,height:650});await host.waitForTimeout(500);
-  await host.mouse.click(425,450);await host.waitForTimeout(300);await host.locator('#level-adventure [data-level="0"]').click();
+  const soloViewport=host.viewportSize();await host.mouse.click(soloViewport.width/2,soloViewport.height*.75);
+  await host.locator('#level-selection').waitFor({state:'visible'});await host.locator('#level-adventure [data-level="0"]').click();
   await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===2,{},{timeout:15000});
   assert.equal(await nativeLanguage(host),'es');await host.mouse.click(783,67);await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===7);
   fs.mkdirSync('../out/i18n-validation',{recursive:true});await host.screenshot({path:'../out/i18n-validation/offline-spanish.png'});

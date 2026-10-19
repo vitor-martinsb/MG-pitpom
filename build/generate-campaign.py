@@ -224,7 +224,7 @@ def make_course(world,stage):
     # palette separately for scenery; diffuse-only faces belong to the editor.
     materials.append(dict(name='biome-palette',type='diffuse_color',color=rgb+[1],friction=.3,restitution=.15,vel_scale=1))
     ground_texture=['ground.png']*10
-    ground_texture[6]='colors/dark_gray.png';ground_texture[7]='colors/blue.png';ground_texture[9]='colors/yellow.png'
+    ground_texture[6]='colors/dark_gray.png';ground_texture[7]='colors/dark_gray.png'
     textures={'ground':ground_texture[world],'wall':'wood.jpg','rim':'wood.jpg','stone':'colors/light_gray.png','loop':'colors/light_gray.png','water':'colors/blue.png','hazard':'colors/red.png','metal':'colors/light_gray.png','border':'colors/red.png'}
     for material in materials:
         if material['name'] in textures:
