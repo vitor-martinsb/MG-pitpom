@@ -1,3 +1,4 @@
+#include "golf/progress.h"
 #include "golf/online.h"
 #include "golf/physics.h"
 #include "golf/game.h"
@@ -312,7 +313,7 @@ static void _golf_game_update_state_watching_ball(float dt) {
 
         {
             char storage_key[256];
-            snprintf(storage_key, 256, "stroke_count_level_%d", golf->level_num);
+            golf_progress_key(storage_key,256,game_cfg,golf->level_num);
 
             float storage_stroke_count;
             bool is_key_set = golf_storage_get_num(storage_key, &storage_stroke_count); 

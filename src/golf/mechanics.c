@@ -85,6 +85,7 @@ void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh
            fabsf(a.y-m->cat_center.y)>.12f||fabsf(b.y-m->cat_center.y)>.12f)break;
         m->cat_span=span;
     }
+    golf_wildlife_init(&m->wildlife,level,bvh,&navigation,m->start,m->hole,m->cat,m->dog,moving_zones,moving_zone_count);
 }
 void golf_mechanics_animate(golf_mechanics_t *m,float time) {
     /* Sine easing has a brief, gentle pause at each end of the crossing. */
@@ -106,8 +107,10 @@ void golf_mechanics_tick(golf_mechanics_t *m,golf_player_t *players,int count,fl
         golf_player_t *p=&players[i];golf_ball_t *b=&p->ball;
         if(!p->id||!p->connected)continue;
         if(b->capture_until>0) {
-            if(time>=b->capture_until) {golf_ball_return_before_shot(p);b->dog_cooldown=time+3;}
-            else {b->captured=time>=b->capture_until-.75f;b->is_moving=true;b->vel=V3(0,0,0);}
+            if(!b->capture_kind) {
+                if(time>=b->capture_until) {golf_ball_return_before_shot(p);b->dog_cooldown=time+3;}
+                else {b->captured=time>=b->capture_until-.75f;b->is_moving=true;b->vel=V3(0,0,0);}
+            }
         } else if(m->enabled&&!b->is_in_hole&&p->stroke_count>0) {
             float cat_distance=vec3_distance(b->pos,vec3_add(m->cat,V3(0,b->radius,0)));
             if(cat_distance>m->reach+.18f)b->cat_contact=false;
@@ -126,6 +129,7 @@ void golf_mechanics_tick(golf_mechanics_t *m,golf_player_t *players,int count,fl
         if(p->stroke_count>0&&!b->is_moving&&!b->capture_until&&!b->first_shot_complete){b->first_shot_complete=true;b->collision_grace=.25f;}
         b->collision_grace=fmaxf(0,b->collision_grace-1.f/120);
     }
+    golf_wildlife_tick(&m->wildlife,players,count,time,m->seed,m->enabled);
     if(m->impact)golf_mechanics_impacts(players,count);
 }
 static bool eligible(golf_player_t *p) {

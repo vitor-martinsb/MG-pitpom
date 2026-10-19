@@ -17,6 +17,7 @@ jobs:
         run: |
           python3 build/verify-gameplay-assets.py
           python3 build/generate-visual-shaders.py --check
+          python3 build/generate-campaign.py --check
       - name: Compile Linux physics, WebAssembly and Node container
         run: docker build -t pitpom:ci .
       - name: Validate languages and protocol in the built container
@@ -40,6 +41,7 @@ jobs:
           node test/mascot-art.mjs --url http://localhost:3000
           node test/course-features.mjs --url http://localhost:3000
           node test/evolution-browser.mjs --url http://localhost:3000
+          node test/campaign-browser.mjs
       - name: Container logs
         if: always()
         run: docker logs pitpom || true

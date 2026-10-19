@@ -111,3 +111,7 @@ input[type=range]{accent-color:var(--moss)}
 @keyframes gallop-frame{0%,12.49%{opacity:1}12.5%,100%{opacity:0}}@keyframes mascot-orbit{to{transform:rotate(360deg)}}@keyframes pompom-run{to{transform:rotate(-360deg)}}@keyframes pituca-run{to{transform:rotate(-360deg)}}
 @media(max-height:500px) and (orientation:landscape){.mascot-chase{width:150px;height:150px}}
 @media(prefers-reduced-motion:reduce){.chase-orbit,.mascot-run,.mascot-chase use{animation:none}.run-frame{opacity:0}.run-frame:first-child{opacity:1}}
+/* Match-only biome and temporary animal feedback. */
+#campaign-world,#wildlife-effect{display:block;max-width:240px;line-height:1.35;margin-top:5px;overflow-wrap:anywhere}
+#wildlife-effect:empty,#campaign-world:empty{display:none}
+#wildlife-effect{color:#704d29;font-weight:700}

@@ -3,6 +3,7 @@
 #include "common/bvh.h"
 #include "golf/player.h"
 #include "golf/navigation.h"
+#include "golf/wildlife.h"
 
 /* Shared, allocation-free state: native authority and the offline game. */
 typedef struct golf_mechanics {
@@ -12,6 +13,7 @@ typedef struct golf_mechanics {
     vec3 start, hole, direction, across, cat_center, cat, dog;
     vec3 bounds_min, bounds_max;
     float cat_span, cat_slap_time, dog_wake_time;
+    golf_wildlife_t wildlife;
 } golf_mechanics_t;
 void golf_mechanics_init(golf_mechanics_t *, golf_level_t *, golf_bvh_t *);
 void golf_mechanics_animate(golf_mechanics_t *, float time);

@@ -67,7 +67,8 @@
   function paint(container,order,room,selection){
     if(!container)return;
     const narrow=selection&&innerWidth<600,width=narrow?400:720;
-    container.replaceChildren();const h=Math.max(600,order.length*(narrow?82:65)+120),s=svg('svg',{viewBox:`0 0 ${width} ${h}`,role:selection?'group':'img','aria-label':t(selection?'levelSelection':'adventureTitle')});
+    const grouped=!!selection&&order.length===100,rowHeight=narrow?82:65;
+    container.replaceChildren();const h=Math.max(600,order.length*rowHeight+120+(grouped?700:0)),s=svg('svg',{viewBox:`0 0 ${width} ${h}`,role:selection?'group':'img','aria-label':t(selection?'levelSelection':'adventureTitle')});
     s.innerHTML=`<defs><linearGradient id="sky-${container.id}" x2="0" y2="1"><stop stop-color="#cadeda"/><stop offset="1" stop-color="#f2dfb5"/></linearGradient></defs>
       <rect width="720" height="${h}" rx="35" fill="url(#sky-${container.id})"/>
       <path d="M0 140 Q140 40 280 150 T720 90 L720 ${h} L0 ${h}Z" fill="#b7c798"/>
@@ -78,7 +79,13 @@
       g.innerHTML=i%4===0?'<path d="M-16 10 Q0 -26 16 10Z" fill="#db9b66"/><path d="M0 10V26" stroke="#f6eccf" stroke-width="10"/><circle cx="-6" cy="4" r="3" fill="#fff4dd"/>':i%5===0?'<path d="M-20 18V-3L0-22L20-3V18Z" fill="#f0dcae"/><path d="M-25-3L0-27L25-3" fill="#c5916c"/><path d="M-3 18V4H6V18" fill="#927554"/>':'<path d="M0 12V40" stroke="#977657" stroke-width="7"/><ellipse cy="-4" rx="25" ry="33" fill="#668c68"/><ellipse cx="-14" cy="9" rx="18" ry="23" fill="#759d70"/>';
       s.append(g);
     }
-    const points=order.map((_,i)=>[width/2+Math.sin(i*.95)*(narrow?60:160),75+i*(h-140)/Math.max(1,order.length-1)]);
+    const points=order.map((_,i)=>[width/2+Math.sin(i*.95)*(narrow?60:160),grouped?110+i*rowHeight+Math.floor(i/10)*70:75+i*(h-140)/Math.max(1,order.length-1)]);
+    if(grouped)for(let i=0;i<10;i++) {
+      const world=GOLF_CAMPAIGN.worlds[i],y=points[i*10][1];
+      s.append(svg('rect',{x:8,y:y-85,width:width-16,height:rowHeight*9+145,rx:24,fill:world.color,opacity:.25}));
+      const title=svg('text',{x:width/2,y:y-55,'text-anchor':'middle','font-size':narrow?19:25,'font-weight':700,fill:'#354831',class:'world-title'});title.textContent=world.names[GolfI18n.language]??world.names.en;s.append(title);
+      const range=svg('text',{x:width/2,y:y-32,'text-anchor':'middle','font-size':13,fill:'#526b48'});range.textContent=t('worldRange',{world:i+1,from:world.first,to:world.last});s.append(range);
+    }
     const path=points.map((p,i)=>i?`C ${points[i-1][0]} ${(points[i-1][1]+p[1])/2} ${p[0]} ${(points[i-1][1]+p[1])/2} ${p[0]} ${p[1]}`:`M ${p[0]} ${p[1]}`).join(' ');
     s.append(svg('path',{d:path,fill:'none',stroke:'#6e7855','stroke-width':27,opacity:.3}),svg('path',{d:path,fill:'none',stroke:'#ead5a7','stroke-width':20,'stroke-linecap':'round'}));
     let locked=false;
@@ -88,9 +95,11 @@
       const g=svg('g',{transform:`translate(${points[i][0]} ${points[i][1]})`,class:(complete?'trail-node completed':current?'trail-node current':'trail-node next')+(selection?(isLocked?' locked':' selectable'):''),'data-level':map});
       g.append(svg('circle',{r:24,fill:complete?'#607d50':current?'#f5cb74':'#f8edcf',stroke:'#977b54','stroke-width':3}));
       const number=svg('text',{'text-anchor':'middle',y:7,fill:complete?'#fff7e6':'#405638','font-size':18,'font-weight':700});number.textContent=isLocked?'🔒':complete?'✓':String(i+1);g.append(number);
-      const theme=Math.floor(i*6/order.length)%6,preview=svg('g',{transform:`translate(${i%2?-47:47} -17) scale(.6)`});preview.innerHTML=previews[theme];g.append(preview);
+      const course=window.GOLF_CAMPAIGN?.courses[map],world=course&&GOLF_CAMPAIGN.worlds[course.world-1];
+      const theme=world?([0,2,2,5,1,3,5,5,4,0][course.world-1]):Math.floor(i*6/order.length)%6,preview=svg('g',{transform:`translate(${i%2?-47:47} -17) scale(.6)`});preview.innerHTML=previews[theme];g.append(preview);
       const label=svg('text',{x:i%2?-35:35,y:10,'text-anchor':i%2?'end':'start','font-size':17,fill:'#354831'});label.textContent=t('courseName',{number:map+1});g.append(label);
-      const subtitle=svg('text',{x:i%2?-35:35,y:29,'text-anchor':i%2?'end':'start','font-size':12,fill:'#526b48'});subtitle.textContent=selection?(isLocked?t('levelLocked'):best!==null?t('levelBest',{number:best}):t('environment.'+environments[theme])):t('environment.'+environments[theme]);g.append(subtitle);
+      const environment=world?(world.names[GolfI18n.language]??world.names.en):t('environment.'+environments[theme]);
+      const subtitle=svg('text',{x:i%2?-35:35,y:29,'text-anchor':i%2?'end':'start','font-size':12,fill:'#526b48'});subtitle.textContent=selection?(isLocked?t('levelLocked'):best!==null?t('levelBest',{number:best}):t('stageNumber',{number:course?.stage??map+1})):environment;g.append(subtitle);
       if(selection){
         g.setAttribute('role','button');g.setAttribute('aria-label',`${t('courseName',{number:map+1})}, ${subtitle.textContent}`);g.setAttribute('aria-disabled',String(isLocked));
         g.append(svg('rect',{x:-160,y:-30,width:320,height:65,fill:'transparent'}));

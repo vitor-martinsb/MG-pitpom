@@ -169,7 +169,14 @@
     "levelSelectionHint": "Follow the trail. Finish a course to unlock the next one.",
     "back": "Back",
     "levelLocked": "Locked",
-    "levelBest": "Best: {number}"
+    "levelBest": "Best: {number}",
+    "worldRange": "World {world} · {from}–{to}",
+    "stageNumber": "Stage {number}",
+    "animalLegend": "Romeu slows · Luna returns · Frida teleports",
+    "effect.romeu": "Romeu’s prank: temporarily slower!",
+    "effect.luna": "Luna took your ball back to the start!",
+    "effect.frida": "Frida chose a new spot for your ball!",
+    "effect.portal": "Travelling through the portal…"
   },
   "pt-BR": {
     "settings": "Configurações",
@@ -341,7 +348,14 @@
     "levelSelectionHint": "Siga a trilha. Conclua uma fase para liberar a próxima.",
     "back": "Voltar",
     "levelLocked": "Bloqueada",
-    "levelBest": "Melhor: {number}"
+    "levelBest": "Melhor: {number}",
+    "worldRange": "Mundo {world} · {from}–{to}",
+    "stageNumber": "Fase {number}",
+    "animalLegend": "Romeu desacelera · Luna devolve · Frida teleporta",
+    "effect.romeu": "Travessura do Romeu: lentidão temporária!",
+    "effect.luna": "Luna levou sua bolinha de volta ao início!",
+    "effect.frida": "Frida escolheu outro lugar para sua bolinha!",
+    "effect.portal": "Viajando pelo portal…"
   },
   "es": {
     "settings": "Ajustes",
@@ -513,6 +527,13 @@
     "levelSelectionHint": "Sigue el camino. Completa un nivel para desbloquear el siguiente.",
     "back": "Volver",
     "levelLocked": "Bloqueado",
-    "levelBest": "Mejor: {number}"
+    "levelBest": "Mejor: {number}",
+    "worldRange": "Mundo {world} · {from}–{to}",
+    "stageNumber": "Nivel {number}",
+    "animalLegend": "Romeu ralentiza · Luna devuelve · Frida teletransporta",
+    "effect.romeu": "¡Travesura de Romeu: lentitud temporal!",
+    "effect.luna": "¡Luna llevó tu pelota al inicio!",
+    "effect.frida": "¡Frida eligió otro sitio para tu pelota!",
+    "effect.portal": "Viajando por el portal…"
   }
 }

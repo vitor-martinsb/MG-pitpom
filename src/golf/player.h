@@ -20,6 +20,12 @@ typedef struct golf_ball {
     float capture_until, cat_cooldown, dog_cooldown, collision_grace;
     uint32_t cat_hits;
     int dog_stroke;
+    /* Temporary effects are per ball; cosmetics remain in golf_player.color. */
+    float slow_until,wildlife_protection,wildlife_cooldown[3],portal_cooldown;
+    uint32_t wildlife_hits[3],wildlife_contact,effect_serial;
+    int capture_kind,effect_kind;
+    float effect_time;
+    vec3 capture_target;
 } golf_ball_t;
 
 typedef struct golf_player {

@@ -23,6 +23,8 @@ static golf_game_t *game = NULL;
 static golf_t *golf = NULL;
 static golf_graphics_t *graphics = NULL;
 static golf_ui_t *ui = NULL;
+static unsigned surface_groups;
+unsigned golf_draw_surface_groups(void){return surface_groups;}
 
 static void _draw_player_balls(const char *pipeline_name) {
     golf_shader_t *shader = golf_data_get_shader("data/shaders/ball.glsl");
@@ -52,6 +54,7 @@ static void _draw_player_balls(const char *pipeline_name) {
                 UNIFORM_MAT4("model_mat", mat4_transpose(model_mat)));
         sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range){ vs->data, vs->size });
         vec4 color=player->color;
+        if(player->ball.slow_until>game->t)color=V4(color.x*.67f+.33f,color.y*.67f+.27f,color.z*.67f+.04f,color.w);
         if(game->mechanics.impact&&!player->ball.first_shot_complete)color=V4(.65f*color.x+.35f,.65f*color.y+.35f,.65f*color.z+.35f,.72f);
         golf_shader_uniform_t *fs = golf_shader_fs_uniform_setup(shader, "ball_fs_params", 1,
                 UNIFORM_VEC4("color", color));
@@ -61,18 +64,20 @@ static void _draw_player_balls(const char *pipeline_name) {
 }
 
 static void _draw_game(void) {
+    surface_groups=0;
     golf_player_t *player = golf_game_get_local_player();
     golf_level_t *level = golf->level;
+    golf_garden_prepare(level, golf->level_num);
+    vec4 sky=golf_garden_sky_color();
 
     {
         sg_pass_action action = {
             .colors[0] = {
                 .action = SG_ACTION_CLEAR,
-                .value = { 0.659f, 0.847f, 0.910f, 1.0f },
+                .value = { sky.x, sky.y, sky.z, sky.w },
             },
         };
         sg_begin_pass(draw.game_draw_pass, &action);
-        golf_garden_prepare(level, golf->level_num);
         golf_garden_draw_world(game->t);
 
         // Draw environment
@@ -173,7 +178,7 @@ static void _draw_game(void) {
                     };
                     sg_apply_bindings(&bindings);
 
-                    sg_draw(group.start_vertex, group.vertex_count, 1);
+                    sg_draw(group.start_vertex, group.vertex_count, 1);surface_groups++;
                 }
             }
         }

@@ -7,13 +7,21 @@ static bool ground(const golf_bvh_face_t *f) {
     if(!f->entity||f->vel_scale<=.1f||f->entity->type==WATER_ENTITY)return false;
     if(f->entity->parent_idx>=0||(f->entity->type==GEO_ENTITY&&f->entity->geo.geo.is_water))return false;
     if(f->entity->type==MODEL_ENTITY&&strstr(f->entity->model.model_path,"/platform_"))return false;
+    if(f->entity->type==GEO_ENTITY&&!strcmp(f->entity->name,"quiet-tunnel"))return false;
+    if(f->entity->type==GEO_ENTITY&&!strcmp(f->entity->name,"campaign-fairway")&&f->vel_scale<.999f)return false;
     vec3 n=vec3_normalize(vec3_cross(vec3_sub(f->b,f->a),vec3_sub(f->c,f->a)));
     return n.y>.65f;
 }
 bool golf_nav_floor(golf_bvh_t *bvh,vec3 p,vec3 *floor,float clearance) {
-    float t=FLT_MAX;int idx;golf_bvh_face_t f;
-    if(!golf_bvh_ray_test(bvh,vec3_add(p,V3(0,2,0)),V3(0,-1,0),&t,&idx,&f)||!ground(&f))return false;
-    *floor=vec3_add(p,V3(0,2-t,0));
+    float t;int idx;golf_bvh_face_t f;vec3 origin=vec3_add(p,V3(0,2,0));bool found=false;
+    /* A tunnel's roof is solid, but is not the floor for the passage below it. */
+    for(int layer=0;layer<8;layer++) {
+        t=FLT_MAX;if(!golf_bvh_ray_test(bvh,origin,V3(0,-1,0),&t,&idx,&f))return false;
+        vec3 hit=vec3_add(origin,V3(0,-t,0));
+        if(f.entity&&f.entity->type==GEO_ENTITY&&!strcmp(f.entity->name,"quiet-tunnel")){origin=vec3_sub(hit,V3(0,.01f,0));continue;}
+        if(!ground(&f))return false;*floor=hit;found=true;break;
+    }
+    if(!found)return false;
     if(clearance>0){
         golf_ball_contact_t contacts[16];int count=0;
         golf_bvh_ball_test(bvh,vec3_add(*floor,V3(0,clearance+.03f,0)),clearance,V3(0,0,0),contacts,&count,16);
@@ -43,9 +51,11 @@ static int nearest(const golf_navigation_t *nav,vec3 p,bool reachable) {
 }
 void golf_nav_build(golf_navigation_t *nav,golf_bvh_t *bvh,vec3 start,vec3 hole) {
     memset(nav,0,sizeof(*nav));memset(nav->cells,-1,sizeof(nav->cells));nav->hole=hole;
+    nav->floor=bvh;
     nav->min=V3(FLT_MAX,FLT_MAX,FLT_MAX);nav->max=V3(-FLT_MAX,-FLT_MAX,-FLT_MAX);
     for(int i=0;i<bvh->faces.length;i++)if(ground(&bvh->faces.data[i])){
         golf_bvh_face_t *f=&bvh->faces.data[i];vec3 v[]={f->a,f->b,f->c};
+        if(f->entity->type==GEO_ENTITY&&!strcmp(f->entity->name,"campaign-fairway"))nav->campaign=true;
         for(int j=0;j<3;j++){nav->min=V3(fminf(nav->min.x,v[j].x),fminf(nav->min.y,v[j].y),fminf(nav->min.z,v[j].z));nav->max=V3(fmaxf(nav->max.x,v[j].x),fmaxf(nav->max.y,v[j].y),fmaxf(nav->max.z,v[j].z));}
     }
     if(nav->min.x==FLT_MAX)return;
@@ -86,6 +96,6 @@ float golf_nav_cost(const golf_navigation_t *nav,vec3 p) {
 vec3 golf_nav_target(const golf_navigation_t *nav,vec3 p) {
     int i=nearest(nav,p,true);if(i<0)return nav->hole;
     vec3 target=nav->nodes[i].pos;float cost=nav->nodes[i].cost;
-    for(int j=0;j<nav->count;j++)if(nav->nodes[j].reachable&&nav->nodes[j].cost<cost&&vec3_distance(p,nav->nodes[j].pos)<2.0f){target=nav->nodes[j].pos;cost=nav->nodes[j].cost;}
-    return vec3_distance(p,nav->hole)<2?nav->hole:target;
+    for(int j=0;j<nav->count;j++)if(nav->nodes[j].reachable&&nav->nodes[j].cost<cost&&vec3_distance(p,nav->nodes[j].pos)<2.0f&&(!nav->campaign||golf_nav_segment(nav->floor,p,nav->nodes[j].pos,.14f))){target=nav->nodes[j].pos;cost=nav->nodes[j].cost;}
+    return vec3_distance(p,nav->hole)<2&&(!nav->campaign||golf_nav_segment(nav->floor,p,nav->hole,.14f))?nav->hole:target;
 }

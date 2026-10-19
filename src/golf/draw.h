@@ -3,5 +3,6 @@
 
 void golf_draw_init(void);
 void golf_draw(void);
+unsigned golf_draw_surface_groups(void);
 
 #endif

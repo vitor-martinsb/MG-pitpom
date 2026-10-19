@@ -7,6 +7,8 @@ typedef struct golf_nav_node { vec3 pos; float cost; int cell; unsigned char edg
 typedef struct golf_navigation {
     golf_nav_node_t nodes[GOLF_NAV_NODES]; short cells[GOLF_NAV_CELLS];
     int count,width,height; float step; vec3 min,max,hole;
+    golf_bvh_t *floor;
+    bool campaign;
 } golf_navigation_t;
 bool golf_nav_floor(golf_bvh_t *,vec3,vec3 *,float clearance);
 bool golf_nav_segment(golf_bvh_t *,vec3,vec3,float clearance);

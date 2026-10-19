@@ -59,6 +59,15 @@ visible protection in Impact, articulated loading mascots, independent audio
 controls and final celebration extend the existing game.
 See [game evolution and validation](docs/game-evolution.md).
 
+The campaign contains **100 courses across ten worlds**. Solo **Choose a course**
+shows the sequential trail and saves campaign progress separately from the
+original twenty courses. Multiplayer hosts can draw 1–100 distinct courses.
+Romeu (a black poodle in a gray, blue and red crochet vest) briefly slows a ball;
+Luna returns it to the course start; Frida sends it to a safe location. These
+animals appear only during play, alongside Pituca and Pompom. Wind, portals,
+physical loops, ramps and timed gates arrive progressively.
+See [campaign rules, generation and validation](docs/campaign.md).
+
 With this workspace's builds already generated:
 
 ```sh

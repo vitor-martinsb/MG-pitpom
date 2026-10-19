@@ -117,7 +117,14 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             game->mechanics.cat_valid=json_object_has_value(mascots,"catActive")?json_object_get_boolean(mascots,"catActive")==1:true;
             game->mechanics.dog_valid=json_object_has_value(mascots,"dogActive")?json_object_get_boolean(mascots,"dogActive")==1:true;
             game->mechanics.cat=golf_json_object_get_vec3(mascots,"cat");game->mechanics.dog=golf_json_object_get_vec3(mascots,"dog");
-            game->mechanics.cat_slap_time=(float)json_object_get_number(mascots,"slapTime");game->mechanics.dog_wake_time=(float)json_object_get_number(mascots,"wakeTime");}
+            game->mechanics.cat_slap_time=(float)json_object_get_number(mascots,"slapTime");game->mechanics.dog_wake_time=(float)json_object_get_number(mascots,"wakeTime");
+            JSON_Array *animals=json_object_get_array(mascots,"wildlife");
+            for(int k=0;k<3;k++) {
+                golf_wild_animal_t *a=&game->mechanics.wildlife.animals[k];
+                JSON_Object *o=json_array_get_object(animals,k);a->active=o&&json_object_get_boolean(o,"active")==1;
+                if(a->active){a->pos=golf_json_object_get_vec3(o,"pos");a->forward=golf_json_object_get_vec3(o,"forward");a->walking=json_object_get_boolean(o,"walking")==1;a->clock=(float)json_object_get_number(o,"clock");a->action=(int)json_object_get_number(o,"action");a->action_time=(float)json_object_get_number(o,"actionTime");}
+            }
+        }
         for(size_t i=0;i<json_array_get_count(balls);i++) {
             JSON_Object *b=json_array_get_object(balls,i); golf_player_t *p=golf_game_get_player((uint32_t)json_object_get_number(b,"id")); if(!p)continue;
             int index=(int)(p-game->players);
@@ -132,6 +139,12 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             p->ball.first_shot_complete=json_object_get_boolean(b,"firstComplete")==1;
             p->ball.captured=json_object_get_boolean(b,"captured")==1;
             p->ball.capture_until=(float)json_object_get_number(b,"captureUntil");
+            p->ball.slow_until=(float)json_object_get_number(b,"slowUntil");
+            p->ball.capture_kind=(int)json_object_get_number(b,"captureKind");
+            p->ball.effect_kind=(int)json_object_get_number(b,"effectKind");
+            p->ball.effect_time=(float)json_object_get_number(b,"effectTime");
+            p->ball.effect_serial=(uint32_t)json_object_get_number(b,"effectSerial");
+            p->ball.wildlife_protection=(float)json_object_get_number(b,"wildlifeProtection");
             if(was_capturing&&!p->ball.capture_until){
                 p->ball.orientation=QUAT(0,0,0,1);p->ball.rot_vel=0;p->ball.rot_vec=V3(0,0,0);
                 p->ball.draw_pos=pos;online.from[index]=online.target[index]=pos;

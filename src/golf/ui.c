@@ -1,3 +1,4 @@
+#include "golf/progress.h"
 #include "golf/i18n.h"
 #include "golf/online.h"
 #include "golf/ui.h"
@@ -91,7 +92,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_ui_level_selection(void) {
         open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false");
     for (int i = 0; i < count && used < (int)sizeof(text) - 40; i++) {
         char key[64]; float best;
-        snprintf(key, sizeof(key), "stroke_count_level_%d", i);
+        golf_progress_key(key,sizeof(key),game_cfg,i);
         if (golf_storage_get_num(key, &best))
             used += snprintf(text + used, sizeof(text) - used, "%s%d", i ? "," : "", (int)best);
         else used += snprintf(text + used, sizeof(text) - used, "%snull", i ? "," : "");
@@ -106,7 +107,7 @@ EMSCRIPTEN_KEEPALIVE int golf_ui_choose_level(int level) {
         || level >= (int)CFG_NUM(game_cfg, "num_levels")) return 0;
     for (int i = 0; i < level; i++) {
         char key[64]; float best;
-        snprintf(key, sizeof(key), "stroke_count_level_%d", i);
+        golf_progress_key(key,sizeof(key),game_cfg,i);
         if (!golf_storage_get_num(key, &best)) return 0;
     }
     golf_audio_start_sound("button_click", "data/audio/drop_003.ogg", 1, false, true);
@@ -929,7 +930,7 @@ static int _golf_ui_level_select_scroll_box_name(golf_ui_layout_t *layout, const
             bool next_should_be_locked = false;
             {
                 char storage_key[256];
-                snprintf(storage_key, 256, "stroke_count_level_%d", button_num);
+                golf_progress_key(storage_key,256,game_cfg,button_num);
 
                 char text_buf[256];
                 float stroke_count;
