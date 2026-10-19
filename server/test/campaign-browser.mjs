@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
+import {freezePhysics} from './room-fixture.mjs';
 
 const app=createServer();let browser;
 try{
@@ -38,14 +39,13 @@ try{
     assert.ok((await b.locator('#campaign-world').textContent()).includes('Fase'));
   }
   // Both renderers consume the very same trusted server animal frame.
-  const frame=await room.physics.step(0),trusted=JSON.stringify({type:'snapshot',hole:room.hole,time:frame.time,mascots:frame.mascots,players:frame.players});
+  const frame=await freezePhysics(room),trusted=JSON.stringify({type:'snapshot',hole:room.hole,time:frame.time,mascots:frame.mascots,players:frame.players});
   const states=await Promise.all(pages.map(p=>p.evaluate(snapshot=>{Module.ccall('golf_online_receive',null,['string'],[snapshot]);return JSON.parse(Module.ccall('golf_course_frame','string',[],[])).wildlife;},trusted)));
   assert.deepEqual(states[0],states[1]);
   // Trusted renderer fixtures: labels, capture visibility and cosmetics; native
   // tests separately trigger these interactions using physical contact.
   await b.evaluate(()=>GolfI18n.setLanguage('es'));
   assert.ok((await b.locator('#campaign-world').textContent()).includes('Nivel'));
-  room.busy=true;
   // All three detailed animals can animate together, including both carried
   // balls and Romeu's droplets, without exhausting the mobile actor buffer.
   const animated=structuredClone(frame);

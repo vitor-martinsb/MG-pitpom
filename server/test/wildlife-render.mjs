@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {chromium} from '@playwright/test';
 import {WebSocket} from 'ws';
 import {createServer} from '../dist/index.js';
+import {freezePhysics} from './room-fixture.mjs';
 
 const app=createServer(),clients=[],errors=[];let browser;
 try{
@@ -28,8 +29,9 @@ try{
   await page.waitForFunction(()=>GolfCourse.inspect().frame?.course===100&&GolfCourse.inspect().frame.intro,{},{timeout:30000});
   await page.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]));
   await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden);
-  room.busy=true;const snapshot=await room.physics.step(0);
+  const snapshot=await freezePhysics(room);
   assert.equal(snapshot.players.length,50);assert.equal(snapshot.mascots.wildlife.filter(a=>a.active).length,3);
+  snapshot.time+=10;
   // Include both original mascots even if their safe-spawn search omitted one.
   snapshot.mascots.catActive=snapshot.mascots.dogActive=true;
   for(const animal of snapshot.mascots.wildlife){animal.actionTime=snapshot.time-.2;animal.walking=true;}
@@ -39,12 +41,22 @@ try{
   fs.mkdirSync('../out/campaign-validation',{recursive:true});
   for(const [name,width,height] of [['desktop',1200,900],['mobile',390,844]]){
     await page.setViewportSize({width,height});
-    const frame=await page.evaluate(async snapshot=>{
-      Module.ccall('golf_online_receive',null,['string'],[JSON.stringify({...snapshot,type:'snapshot',hole:0})]);
+    // Use the ordered server transport: a pending real snapshot must arrive
+    // before this fixture, rather than overwriting a direct C bridge call.
+    room.send([...room.members.values()][0],{...snapshot,type:'snapshot',hole:0});
+    // The WebAssembly renderer may trail the received state. Wait until its
+    // actor buffer actually contains the action geometry before measuring it.
+    await page.waitForFunction(time=>{
+      const f=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
+      return f.time>=time&&f.actorVertices>16384&&f.players[1].captureKind===2&&f.players[2].captureKind===3&&
+        f.players[1].captured&&f.players[2].captured&&f.wildlife.every(a=>Math.abs(a.actionTime-(time-.2))<.001);
+    },snapshot.time);
+    const frame=await page.evaluate(async()=>{
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       return JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
-    },snapshot);
+    });
     assert.equal(frame.mode,'impact');assert.equal(frame.players.length,50);
+    assert.equal(room.busy,true,'the room stays frozen throughout the renderer fixture');
     assert.ok(frame.actorVertices>16384&&frame.actorVertices<24576,`${name} complete actors exceed the old buffer and fit the new capacity: ${frame.actorVertices}`);
     await page.screenshot({path:`../out/campaign-validation/wildlife-fifty-${name}.png`});
     console.log(`${name}: 50 Impact players and simultaneous wildlife actions: ${frame.actorVertices}/24576 vertices.`);

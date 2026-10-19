@@ -14,7 +14,7 @@
 
 #define WORLD_LIMIT 72000
 #define FX_LIMIT 8192
-// Detailed wildlife plus fifty Impact spawn rings and simultaneous actions.
+// Detailed wildlife and the original mascots, including simultaneous actions.
 #define ACTOR_LIMIT 24576
 typedef struct garden_vertex { vec3 position, normal; vec4 color; } garden_vertex_t;
 typedef struct garden_mesh { garden_vertex_t *vertices; int count, capacity; } garden_mesh_t;
