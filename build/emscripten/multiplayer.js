@@ -22,10 +22,18 @@
   let socket, identity, room, phase='lobby', sequence=0, initialized=false, online=false, loading=true;
   let retryTimer, connected=false, deadline=0, lastBalls=new Map(), reconnectStart=0, toastTimer,epoch=0;
   let lastChatId=0, unreadChat=0, chatCooldown;
-  let celebrated=false;
+  let celebrated=false,playbackSpeed=1;
   const avatars=['⛳','🏌️','⭐','🌙','🍀','🔥','🌊','🎯'];
   const send=m=>{if(socket?.readyState===WebSocket.OPEN) socket.send(JSON.stringify(m));};
-  const call=m=>{if(initialized) Module.ccall('golf_online_receive',null,['string'],[JSON.stringify(m)]);};
+  const call=m=>{if(initialized) Module.ccall('golf_online_receive',null,['string'],[JSON.stringify(m.type==='room'?{...m,players:m.players.map(p=>p.bot?{...p,nickname:'[BOT] '+p.nickname}:p)}:m)]);};
+  const speedLabel=document.createElement('small');speedLabel.id='bot-speed';speedLabel.hidden=true;speedLabel.setAttribute('role','status');$('hud').append(speedLabel);
+  function syncClock(m){playbackSpeed=m.simulationSpeed??1;if(Number.isFinite(m.remaining))deadline=performance.now()+m.remaining/playbackSpeed;}
+  function botControls(){
+    if(!room)return;const host=room.host===identity?.id&&phase==='lobby',bots=room.players.filter(p=>p.bot),max=50-room.players.filter(p=>!p.bot).length;
+    $('bot-count').max=String(max);if(document.activeElement!==$('bot-count'))$('bot-count').value=String(bots.length);
+    for(const id of ['bot-count','bot-difficulty-all','apply-bot-count'])$(id).disabled=!host;
+    $('bot-capacity').textContent=t('botCapacity',{max});
+  }
   function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5000);}
   function profile(){return {nickname:$('nickname').value.trim(),color:$('color').value,avatar:Number($('avatar').value)};}
   function text(tag,value){const e=document.createElement(tag);e.textContent=value;return e;}
@@ -36,7 +44,7 @@
     const controls=document.createElement('div');controls.className='bot-controls';
     const name=document.createElement('input');name.value=p.nickname;name.maxLength=24;name.setAttribute('aria-label',t('botName'));
     const difficulty=document.createElement('select');difficulty.setAttribute('aria-label',t('botDifficulty'));
-    for(const level of ['easy','medium','hard']){const option=text('option',t('difficulty.'+level));option.value=level;difficulty.append(option);}difficulty.value=p.bot;
+    for(const level of ['easy','medium','hard','expert']){const option=text('option',t('difficulty.'+level));option.value=level;difficulty.append(option);}difficulty.value=p.bot;
     const color=document.createElement('input');color.type='color';color.value=p.color;color.setAttribute('aria-label',t('ballColor'));
     const apply=text('button',t('applyBot'));apply.onclick=()=>send({type:'bot',action:'update',id:p.id,settings:{nickname:name.value,color:color.value,difficulty:difficulty.value}});
     const remove=text('button',t('removeBot'));remove.className='secondary';remove.onclick=()=>send({type:'bot',action:'remove',id:p.id});
@@ -78,13 +86,14 @@
       } else if(m.type==='chat'){
         appendChat(m);
       } else if(m.type==='room'){
-        const previous=phase;room=m;phase=m.phase;deadline=performance.now()+m.remaining;call(m);
+        const previous=phase;room=m;phase=m.phase;syncClock(m);call(m);
         $('lobby').hidden=phase!=='lobby';$('hud').hidden=phase==='lobby';$('help').hidden=phase==='lobby';
         $('room-code').textContent=m.code;$('count').textContent=t('players',{count:m.players.filter(p=>p.connected).length});
         $('members').replaceChildren(...m.players.map(lobbyRow));$('start').hidden=m.host!==identity?.id;$('start').disabled=m.host!==identity?.id;
         $('holes').disabled=m.host!==identity?.id;$('holes').value=String(m.holes);$('game-mode').value=m.mode;
         for(const option of $('holes').options)option.disabled=Number(option.value)>m.availableMaps;
         $('add-bot').disabled=m.host!==identity?.id||m.players.length>=50;
+        botControls();
         document.querySelector('[data-i18n="mapPolicy"]').textContent=t('mapPolicy',{count:m.availableMaps});
         GolfAdventure.render(m);
         $('host-note').textContent=t(m.host===identity?.id?'hostYou':'hostWait');
@@ -107,7 +116,7 @@
       } else if(m.type==='snapshot'){
         if(!room||m.hole!==room.hole)return;
         if(m.full)lastBalls.clear();for(const b of m.players)lastBalls.set(b.id,b);
-        deadline=performance.now()+m.remaining;call(m);GolfAudio?.events(m.events??[],m.hole);renderSummary();renderSpectators();
+        syncClock(m);room.simulationSpeed=m.simulationSpeed??1;call(m);GolfAudio?.events(m.events??[],m.hole);renderSummary();renderSpectators();
       } else if(m.type==='shot'){call(m);
       } else if(m.type==='error'){
         if(m.scope!=='chat')call(m);toast(GolfI18n.error(m));
@@ -137,7 +146,7 @@
     for(const id of ['lobby','hud','actions','help','scores','loading','adventure-modal','celebration'])$(id).hidden=true;$('connect').hidden=false;$('create').disabled=false;$('join').disabled=false;GolfAdventure.reset();GolfAdventure.busy(false);GolfAudio?.phase('menu');}
   function sorted(){return room?[...room.players].sort((a,b)=>a.total-b.total||a.id-b.id):[];}
   function renderSummary(){
-    if(!room)return;const list=sorted();let visible=list.slice(0,5);const local=list.find(p=>p.id===identity?.id);if(local&&!visible.includes(local))visible.push(local);
+    if(!room)return;speedLabel.hidden=(room.simulationSpeed??1)<2||!['playing','settling'].includes(phase);speedLabel.textContent=t('botSpeed');const list=sorted();let visible=list.slice(0,5);const local=list.find(p=>p.id===identity?.id);if(local&&!visible.includes(local))visible.push(local);
     $('summary').replaceChildren(...visible.map(p=>{const row=playerRow(p),b=lastBalls.get(p.id);row.append(text('span',`${t('points',{count:p.total})} · ${b?.hole?'✓':t((b?.strokes??0)===1?'strokes.one':'strokes.other',{count:b?.strokes??0})}`));return row;}));
     const ball=lastBalls.get(identity?.id);
     $('help').textContent=ball?.hole?t('helpDone'):phase==='playing'
@@ -177,6 +186,7 @@
     if(!room)return;
     $('count').textContent=t('players',{count:room.players.filter(p=>p.connected).length});
     $('members').replaceChildren(...room.players.map(lobbyRow));
+    botControls();
     document.querySelector('[data-i18n="mapPolicy"]').textContent=t('mapPolicy',{count:room.availableMaps});
     $('host-note').textContent=t(room.host===identity?.id?'hostYou':'hostWait');
     $('hole').textContent=t('hole',{current:Math.min(room.hole+1,room.holes),total:room.holes});
@@ -187,7 +197,8 @@
   });
   $('create').onclick=()=>join(true);$('join').onclick=()=>join(false);$('start').onclick=()=>send({type:'start',holes:Number($('holes').value),mode:$('game-mode').value});
   $('holes').onchange=$('game-mode').onchange=()=>send({type:'configure',holes:Number($('holes').value),mode:$('game-mode').value});
-  $('add-bot').onclick=()=>send({type:'bot',action:'add'});
+  $('add-bot').onclick=()=>send({type:'bot',action:'add',settings:{difficulty:$('bot-difficulty-all').value}});
+  $('apply-bot-count').onclick=()=>send({type:'bot',action:'count',settings:{count:Number($('bot-count').value),difficulty:$('bot-difficulty-all').value}});
   $('play-again').onclick=()=>send({type:'rematch'});
   $('leave').onclick=leave;$('finish-exit').onclick=leave;$('show-scores').onclick=()=>showScores();$('close-scores').onclick=()=>$('scores').hidden=true;
   $('spectate').onchange=()=>call({type:'spectate',id:Number($('spectate').value)});
@@ -203,6 +214,6 @@
   document.addEventListener('keydown',e=>{if(e.key==='Tab'&&online){e.preventDefault();showScores(phase==='results'||phase==='finished');}});
   document.addEventListener('keyup',e=>{if(e.key==='Tab'&&online&&!['results','finished'].includes(phase))$('scores').hidden=true;});
   let lastCountdown;
-  setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));$('timer').textContent=phase==='finished'?t('final'):seconds+'s';if(phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
+  setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())*playbackSpeed/1000));$('timer').textContent=phase==='finished'?t('final'):seconds+'s';if(phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
   try{const p=JSON.parse(localStorage.getItem('golf-profile'));if(p){$('nickname').value=p.nickname;$('color').value=p.color;$('avatar').value=String(p.avatar);}}catch{}
 })();

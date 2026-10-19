@@ -65,13 +65,13 @@ test('loading waits, deadline rejects shots, grace simulates and DNF accumulates
     now=1101;await assert.rejects(room.shot(other,{sequence:2,direction:[0,0,-1],power:.2}),/indisponível/);
     await room.tick();assert.equal(room.phase,'settling');const before=host.ball!.pos[2]!;
     now=1400;await room.tick();assert.notEqual(host.ball!.pos[2],before);
-    now=1601;await room.tick();assert.equal(room.phase,'results');assert.deepEqual(host.scores,[12]);assert.deepEqual(host.dnf,[true]);
+    now=1601;await room.tick();assert.equal(room.phase,'results');assert.deepEqual(host.scores,[13]);assert.deepEqual(host.dnf,[true]);
     for(let hole=1;hole<3;hole++){
       now+=11;await room.tick();assert.equal(room.phase,'loading');assert.equal(room.hole,hole);
       room.ready(host,hole);room.ready(other,hole);assert.equal(room.phase,'playing');assert.equal(host.ball!.strokes,0);
       now+=1501;await room.tick();assert.equal(room.phase,'results');
     }
-    now+=11;await room.tick();assert.equal(room.phase,'finished');assert.deepEqual(host.scores,[12,12,12]);
+    now+=11;await room.tick();assert.equal(room.phase,'finished');assert.deepEqual(host.scores,[13,12,12]);
   }finally{room.close();}
 });
 

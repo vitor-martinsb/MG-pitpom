@@ -43,6 +43,7 @@ static size_t rss_bytes(void) {
 }
 
 static golf_player_t players[GOLF_MAX_PLAYERS];
+static golf_bot_memory_t bot_memory[GOLF_MAX_PLAYERS];
 static golf_level_t level;
 static golf_config_t config;
 static golf_bvh_t static_bvh, dynamic_bvh;
@@ -103,15 +104,15 @@ int main(int argc, char **argv) {
             float probability=(float)json_object_get_number(o,"forwardProbability");
             mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;ok=true;
         } else if(cmd&&!strcmp(cmd,"plan")&&slot>=0&&slot<GOLF_MAX_PLAYERS){
-            const char *difficulty=json_object_get_string(o,"difficulty");int d=difficulty&&!strcmp(difficulty,"hard")?2:difficulty&&!strcmp(difficulty,"medium")?1:0;
+            const char *difficulty=json_object_get_string(o,"difficulty");int d=difficulty&&!strcmp(difficulty,"expert")?3:difficulty&&!strcmp(difficulty,"hard")?2:difficulty&&!strcmp(difficulty,"medium")?1:0;
             golf_player_t *p=&players[slot];bool available=p->id&&p->connected&&!p->ball.is_moving&&!p->ball.is_in_hole&&!p->ball.capture_until;
-            golf_bot_plan_t plan={0};if(available)plan=golf_bot_plan(&world,&mechanics,navigation,p,d);
-            printf("{\"request\":%d,\"ok\":%s,\"direction\":[%.9g,0,%.9g],\"power\":%.9g,\"candidates\":%d}\n",request,available?"true":"false",plan.direction.x,plan.direction.z,plan.power,plan.candidates);
+            golf_bot_plan_t plan={0};if(available){golf_bot_observe(&bot_memory[slot],p,navigation);plan=golf_bot_plan_adaptive(&world,&mechanics,navigation,p,d,&bot_memory[slot]);}
+            printf("{\"request\":%d,\"ok\":%s,\"direction\":[%.9g,0,%.9g],\"power\":%.9g,\"candidates\":%d,\"lookahead\":%d,\"safe\":%s,\"landing\":[%.9g,%.9g,%.9g],\"peak\":%.9g,\"launchSpeed\":%.9g,\"stalled\":%d}\n",request,available?"true":"false",plan.direction.x,plan.direction.z,plan.power,plan.candidates,plan.lookahead,plan.safe?"true":"false",plan.landing.x,plan.landing.y,plan.landing.z,plan.peak,plan.launch_speed,bot_memory[slot].stalled);
             fflush(stdout);json_value_free(value);continue;
         } else if (cmd && !strcmp(cmd,"add") && slot>=0 && slot<GOLF_MAX_PLAYERS) {
-            golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn); ok=true;
+            golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn);memset(&bot_memory[slot],0,sizeof(bot_memory[slot]));ok=true;
         } else if (cmd && !strcmp(cmd,"connected") && slot>=0 && slot<GOLF_MAX_PLAYERS) { players[slot].connected=json_object_get_boolean(o,"connected")==1; ok=true;
-        } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { ok=golf_physics_shoot(&world,&players[slot],golf_json_object_get_vec3(o,"direction"),(float)json_object_get_number(o,"power"));if(ok)event("shot",&players[slot],(float)json_object_get_number(o,"power"));
+        } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { vec3 direction=golf_json_object_get_vec3(o,"direction");float power=(float)json_object_get_number(o,"power");ok=golf_physics_shoot(&world,&players[slot],direction,power);if(ok){golf_bot_record(&bot_memory[slot],&players[slot],direction,power);event("shot",&players[slot],power);}
         } else if (cmd && !strcmp(cmd,"step")) {
             int ticks=(int)json_object_get_number(o,"ticks"); if (ticks<0 || ticks>1200) ticks=0;
             for (int t=0;t<ticks;t++) {

@@ -86,7 +86,6 @@ input[type=range]{accent-color:var(--moss)}
 .pet-definitions{position:absolute;width:0;height:0;overflow:hidden}.mascot-chase{width:210px;max-width:100%;height:210px;display:block;margin:auto}.real-loading{text-align:center}.real-loading.compact{display:flex;align-items:center;justify-content:center;gap:14px}.compact .mascot-chase{width:94px;height:94px;margin:0}
 .pet-leg{transform-box:fill-box;transform-origin:top center;animation:pet-gallop .64s linear infinite}.pet-leg.opposite{animation-delay:-.32s}.pet-leg.rear{animation-delay:-.16s}.pet-ear{transform-box:fill-box;transform-origin:right center;animation:pet-ears .64s ease-in-out infinite}.pet-ear.opposite{animation-delay:-.32s}
 @keyframes pet-gallop{0%,100%{transform:rotate(-28deg) translateY(-2px)}12.5%{transform:rotate(-12deg)}25%{transform:rotate(10deg) translateY(2px)}37.5%{transform:rotate(30deg)}50%{transform:rotate(35deg) translateY(-2px)}62.5%{transform:rotate(18deg)}75%{transform:rotate(-8deg) translateY(2px)}87.5%{transform:rotate(-22deg)}}
-.mascot-chase use{animation:pet-hop .64s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes pet-hop{25%,75%{transform:translateY(-3px) rotate(-2deg)}50%{transform:translateY(2px) rotate(2deg)}}
 @keyframes pet-ears{50%{transform:rotate(12deg) translateY(-2px)}}@keyframes pet-breathe{50%{opacity:.9}}@keyframes trail-glow{50%{stroke:#fff6dc;stroke-width:7}}
 .bot-row{display:grid;grid-template-columns:1fr 100px;gap:6px}.bot-row .player{grid-column:1/-1}.bot-controls{display:grid;grid-template-columns:minmax(90px,1fr) 100px 44px;gap:6px;grid-column:1/-1}.bot-controls input,.bot-controls select{margin:0;min-width:0;font-size:13px;padding:5px}.bot-controls input[type=color]{width:44px}.bot-row button{font-size:13px;padding:6px}.bot-badge{font-size:.7rem;border-radius:6px;background:#d9b97644;padding:2px 5px;color:#526b48}
 #ready-progress{width:100%;accent-color:#526b48}#winner-banner{background:#efd39b;border-radius:14px;padding:12px;font-weight:700}tr.winner{background:#efd39b55}#adventure-modal{z-index:8}
@@ -106,12 +105,16 @@ input[type=range]{accent-color:var(--moss)}
 
 .trail-pets{pointer-events:none}
 
-/* Reference mascots: distinct gallop poses, an orbit, and upright faces. */
-.mascot-chase{position:relative;width:280px;height:280px;max-width:100%;aspect-ratio:1}.chase-ring{position:absolute;inset:13%;border:3px dashed #c7b49e;border-radius:50%;opacity:.55}.chase-orbit{position:absolute;inset:0;animation:mascot-orbit 6s linear infinite}.mascot-run{position:absolute;overflow:visible;transform-origin:center}.mascot-run.pompom{left:-2%;top:0;width:76%;height:64%;animation:pompom-run 6s linear infinite}.mascot-run.pituca{right:-2%;bottom:0;width:82%;height:69%;animation:pituca-run 6s linear infinite}.run-frame{opacity:0;animation:gallop-frame .8s steps(1,end) infinite}.mascot-chase use{transform:none;animation:gallop-frame .8s steps(1,end) infinite}
-@keyframes gallop-frame{0%,12.49%{opacity:1}12.5%,100%{opacity:0}}@keyframes mascot-orbit{to{transform:rotate(360deg)}}@keyframes pompom-run{to{transform:rotate(-360deg)}}@keyframes pituca-run{to{transform:rotate(-360deg)}}
 @media(max-height:500px) and (orientation:landscape){.mascot-chase{width:150px;height:150px}}
-@media(prefers-reduced-motion:reduce){.chase-orbit,.mascot-run,.mascot-chase use{animation:none}.run-frame{opacity:0}.run-frame:first-child{opacity:1}}
 /* Match-only biome and temporary animal feedback. */
 #campaign-world,#wildlife-effect{display:block;max-width:240px;line-height:1.35;margin-top:5px;overflow-wrap:anywhere}
 #wildlife-effect:empty,#campaign-world:empty{display:none}
 #wildlife-effect{color:#704d29;font-weight:700}
+
+/* A single responsive orbit; sprites keep independent frames and safe spacing. */
+.mascot-chase{position:relative;width:280px;height:auto;max-width:100%;aspect-ratio:1;isolation:isolate}
+.mascot-run{position:absolute;left:50%;top:50%;width:42%;height:auto;aspect-ratio:320/250;overflow:visible;transform-origin:center;animation:none}
+.mascot-run .run-frame{opacity:1;animation:none;transform:none}
+.bot-setup{border:1px solid #96724d55;border-radius:12px;padding:12px;margin:14px 0}.bot-setup legend{font-weight:650}.bot-setup button{margin:4px 5px 0 0}
+#bot-speed{display:block;max-width:220px;font-size:.78rem;color:var(--moss);margin-top:6px}
+@media(max-height:500px) and (orientation:landscape){.mascot-chase{width:150px;height:150px}}

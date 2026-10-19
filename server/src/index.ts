@@ -19,7 +19,7 @@ export function createServer() {
     loadingTimeout:bounded(settings.loadingTimeoutSeconds,1,60)*1000+8000,
     resultsDuration:bounded(settings.resultsSeconds,0,30)*1000,
     reconnectTTL:bounded(settings.reconnectSeconds,1,300)*1000,
-    penalty:bounded(settings.dnfPenalty,1,100),snapshotHz:bounded(settings.snapshotHz,10,20),
+    penalty:12,snapshotHz:bounded(settings.snapshotHz,10,20),
     catForwardProbability:bounded(Number(process.env.GOLF_CAT_FORWARD_PROBABILITY ?? settings.catForwardProbability ?? .5),0,1)};
   const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
   const levels=Array.from({length:config.num_levels},(_,i)=>config[`level${i+1}`]);

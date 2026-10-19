@@ -16,7 +16,8 @@ try{
   assert.equal(await a.locator('#connect .adventure-map').count(),0);
   fs.mkdirSync('../out/evolution-validation',{recursive:true});await a.screenshot({path:'../out/evolution-validation/welcome.png'});
   assert.equal(await a.locator('#loading .mascot-chase').count(),1);
-  assert.equal(await a.evaluate(()=>getComputedStyle(document.querySelector('.mascot-run.pompom')).animationName),'pompom-run');
+  assert.equal(await a.locator('#loading .mascot-run .run-frame').count(),2);
+  assert.equal(await a.locator('#loading .chase-ring').count(),0);
   for(const [page,name]of [[a,'desktop'],[b,'mobile']]){
     await page.locator('#offline').click();await page.waitForTimeout(500);
     const viewport=page.viewportSize();await canvasClick(page,viewport.width/2,viewport.height*.75);

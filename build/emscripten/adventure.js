@@ -44,17 +44,40 @@
     symbol.innerHTML=`<clipPath id="running-clip-${i}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath><image href="art/loading-run.png" width="1254" height="1254" clip-path="url(#running-clip-${i})"/>`;
     definitions.querySelector('defs').append(symbol);
   });
+  const chasers=[];
   function chase(){
     const s=document.createElement('div');s.className='mascot-chase';s.setAttribute('aria-hidden','true');
-    s.innerHTML='<div class="chase-ring"></div><div class="chase-orbit"></div>';
-    for(const [name,start]of [['pompom',0],['pituca',8]]){
+    const pets=[];
+    for(const [name,start]of [['pituca',8],['pompom',0]]){
       const pet=svg('svg',{viewBox:'0 0 320 250',class:`mascot-run ${name}`});
-      for(let i=0;i<8;i++)pet.append(svg('use',{href:`#pitpom-running-${start+i}`,width:320,height:250,class:'run-frame',style:`animation-delay:${-.8+i*.1}s`}));
-      s.querySelector('.chase-orbit').append(pet);
+      const frame=svg('use',{href:`#pitpom-running-${start}`,width:320,height:250,class:'run-frame'});
+      pet.append(frame);s.append(pet);pets.push({pet,frame,name,start,index:-1});
     }
+    chasers.push({element:s,pets});
     return s;
   }
   for(const container of document.querySelectorAll('.real-loading')){container.prepend(chase());}
+  // One visible sprite per animal. Shared absolute time preserves the chase
+  // through resizes and loading screens; percentage positions keep it responsive.
+  const reduced=matchMedia('(prefers-reduced-motion:reduce)');let chaseFrame=0;
+  function animateChase(now){
+    chaseFrame=0;let visible=false;
+    for(const {element,pets}of chasers){
+      if(document.hidden||!element.getClientRects().length)continue;visible=true;
+      for(const p of pets){
+        const angle=(reduced.matches?.4:now*2*Math.PI/6500)-(p.name==='pompom'?Math.PI:0);
+        const right=-Math.sin(angle)>0,flip=p.name==='pituca'?(right?-1:1):(right?1:-1);
+        p.pet.style.left=`${50+31*Math.cos(angle)}%`;p.pet.style.top=`${50+29*Math.sin(angle)}%`;
+        p.pet.style.transform=`translate(-50%,-50%) scaleX(${flip})`;
+        const index=reduced.matches?0:(Math.floor(now/100)+(p.name==='pituca'?2:0))%8;
+        if(index!==p.index){p.frame.setAttribute('href',`#pitpom-running-${p.start+index}`);p.index=index;}
+      }
+    }
+    if(visible&&!reduced.matches)chaseFrame=requestAnimationFrame(animateChase);
+  }
+  function wakeChase(){if(!chaseFrame)chaseFrame=requestAnimationFrame(animateChase);}
+  new MutationObserver(wakeChase).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden']});
+  window.addEventListener('resize',wakeChase);document.addEventListener('visibilitychange',wakeChase);reduced.addEventListener('change',wakeChase);wakeChase();
   const environments=['garden','forest','bridge','mushrooms','village','mountains'];
   const previews=[
     '<path d="M0 12V-3M-10 13V3M10 13V3" stroke="#638657" stroke-width="3"/><g fill="#dfad92"><circle cy="-8" r="7"/><circle cx="-11" r="5"/><circle cx="11" r="5"/></g><circle cy="-8" r="3" fill="#e8c56c"/>',

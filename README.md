@@ -53,7 +53,7 @@ colors/nicknames, authoritative C physics, timed holes, scoring and reconnect.
 The desktop game retains its offline flow and five-player debug fixtures.
 See [execution instructions and architecture](docs/multiplayer-architecture.md).
 
-The human host chooses the mode, course count and bots with three difficulties.
+The human host chooses the mode, course count and exact bot count, with four difficulties.
 Each match draws a fixed course sequence without repeats. The illustrated journey,
 visible protection in Impact, articulated loading mascots, independent audio
 controls and final celebration extend the existing game.
@@ -98,11 +98,20 @@ send messages to the players in your room, in the lobby or during the match.
 The last 50 messages remain available when you reconnect. Messages accept
 up to 240 characters, with a one-second interval between sends.
 
-The browser plays an original, mellow lo-fi instrumental at 62 BPM after your
-first click or touch. Open **Settings** to adjust the volume or mute it; your
+The browser plays ten original instrumental lo-fi scores, one per world, with
+smooth crossfades and continuous playback across courses in the same world.
+The menu has a separate 62 BPM theme. Music starts after your first click or touch.
+Open **Settings** to adjust the volume or mute it; your
 preference is saved on that browser. Audio pauses while the tab is hidden.
 `npm run test:social-music` in `server` checks chat between mobile and desktop,
 reconnection, five arrows at different strengths and the audio controls.
+
+DNF adds **12 to the strokes already played**, for humans and bots. Bots use
+real C physics to plan jumps and safe landings, remember failed attempts and
+have unique AI-inspired names. Once every human has finished, remaining bots
+run at **5x simulation speed**, using the same fixed physics step. Loading keeps
+Pituca ahead of Pompom, with independent frames and no dotted trails.
+See [bot, scoring, audio and loading rules and tests](docs/bots-audio-loading.md).
 
 To rebuild, install Python 3, CMake, Ninja, a C/C++ compiler, Node.js 22+ and an
 activated Emscripten SDK (`EMSDK`), then run:

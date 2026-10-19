@@ -7,6 +7,7 @@ export type WildAnimal={kind:number;active:boolean;pos:number[];forward:number[]
 export type Ball = { id: number; pos: number[]; vel: number[]; moving: boolean; hole: boolean; water: boolean; strokes: number; firstComplete: boolean; captured: boolean; captureUntil: number; slowUntil?:number; captureKind?:number; effectKind?:number; effectTime?:number; effectSerial?:number; wildlifeProtection?:number };
 export type Mascots = { enabled: boolean; cat: number[]; dog: number[]; slapTime: number; wakeTime: number; world?:number; stage?:number; course?:number; wildlife?:WildAnimal[] };
 export type SoundEvent={id:number;player:number;kind:string;strength:number};
+export type BotDifficulty='easy'|'medium'|'hard'|'expert';
 export type Frame = { time: number; players: Ball[]; mascots: Mascots; events:SoundEvent[]; cpuMs: number; rssBytes: number; memoryBytes: number };
 export class Physics {
   private child: ChildProcessWithoutNullStreams;
@@ -57,6 +58,6 @@ export class Physics {
   connected(slot: number, connected: boolean) { return this.command({ cmd: 'connected', slot, connected }); }
   async shot(slot: number, direction: number[], power: number): Promise<boolean> { return (await this.command({ cmd: 'shot', slot, direction, power })).ok; }
   async step(ticks: number): Promise<Frame> { return this.command({ cmd: 'step', ticks }); }
-  plan(slot:number,difficulty:'easy'|'medium'|'hard'){return this.command({cmd:'plan',slot,difficulty});}
+  plan(slot:number,difficulty:BotDifficulty){return this.command({cmd:'plan',slot,difficulty});}
   close() { this.child.kill(); }
 }

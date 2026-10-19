@@ -27,6 +27,7 @@ try{
     await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden&&document.getElementById('status').textContent===GolfI18n.t('phase.playing'))));
     const f=await a.evaluate(()=>GolfCourse.inspect().frame),g=await b.evaluate(()=>GolfCourse.inspect().frame);
     assert.equal(f.world,Math.floor(index/10)+1);assert.equal(f.stage,index%10+1);assert.equal(g.course,f.course);
+    for(const page of pages)assert.equal(await page.evaluate(()=>GolfMusic.status().world),f.world,`music follows world ${f.world}`);
     assert.ok(f.surfaceGroups>=3,`actual terrain draw calls, map ${index+1}`);
     assert.ok(f.landscapeGap>=9.9&&g.landscapeGap>=9.9,`landscape and camera clearance, map ${index+1}: ${f.landscapeGap}`);
     const metadata=await a.evaluate(i=>GOLF_CAMPAIGN.courses[i],index);

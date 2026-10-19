@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {WebSocket} from 'ws';
-import {Room,defaults} from '../src/room.js';
+import {Room,defaults,BOT_STROKE_LIMIT} from '../src/room.js';
 import {Physics} from '../src/physics.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
@@ -49,11 +49,11 @@ test('draw uses all valid unique maps, stays fixed across transitions and reconn
   }finally{room.close();}
 });
 test('native candidate planning cannot mutate real balls; all difficulties use real shots and make progress',async()=>{
-  for(const difficulty of ['easy','medium','hard'] as const){
+  for(const difficulty of ['easy','medium','hard','expert'] as const){
     const p=new Physics(root,'data/levels/level-3.level');
     try{
       await p.add(0,1);await p.step(120);const before=(await p.step(0)).players[0]!;
-      const plan=await p.plan(0,difficulty);assert.equal(plan.ok,true);assert.ok(plan.candidates>=1&&plan.candidates<=64);
+      const plan=await p.plan(0,difficulty);assert.equal(plan.ok,true);assert.ok(plan.candidates>=1&&plan.candidates<=144);
       assert.deepEqual((await p.step(0)).players[0],before);
       assert.deepEqual((await p.step(0)).events,[],'planning produces no real sound events');
       assert.ok(plan.direction.every(Number.isFinite));assert.ok(plan.power>=0&&plan.power<=1);
@@ -67,7 +67,7 @@ test('native candidate planning cannot mutate real balls; all difficulties use r
         const next=await p.plan(0,difficulty);await p.shot(0,next.direction,next.power);frame=await p.step(1200);
         assert.ok(frame.players[0]!.pos.every(Number.isFinite));assert.ok(frame.players[0]!.strokes<=12);
       }
-      if(difficulty==='hard')assert.equal(frame.players[0]!.hole,true,'hard planner completes the straight real course');
+      if(difficulty==='hard'||difficulty==='expert')assert.equal(frame.players[0]!.hole,true,'hard planner completes the straight real course');
     }finally{p.close();}
   }
 });
@@ -111,6 +111,6 @@ test('49 server bots share one physics world and no sockets, respect readiness, 
     for(let i=0;i<180;i++){now+=100;await room.tick();}
     const bots=[...room.members.values()].filter(m=>m.bot);assert.equal(bots.length,49);
     assert.ok(bots.every(b=>!b.socket&&b.ball&&b.ball.pos.every(Number.isFinite)&&b.ball.strokes>0));
-    assert.ok(bots.every(b=>b.ball!.strokes<=room.options.penalty));assert.equal(host.ball!.strokes,0);
+    assert.ok(bots.every(b=>b.ball!.strokes<=BOT_STROKE_LIMIT));assert.equal(host.ball!.strokes,0);
   }finally{room.close();}
 });
