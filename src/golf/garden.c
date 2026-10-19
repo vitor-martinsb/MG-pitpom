@@ -350,14 +350,18 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
     float step=a->walking?sinf(a->clock*(kind==2?5.0f:7.0f)):0;
     float height=kind==2?.36f:.32f,body=kind==1?.46f:.34f;
     vec4 coat=kind==2?cream:black;
-    oval(mesh,V3(0,height+fabsf(step)*.015f,-.04f),V3(.23f,.21f,body),coat,4,9);
+    float torso_y=height+fabsf(step)*.015f;
+    oval(mesh,V3(0,torso_y,-.04f),V3(.23f,.21f,body),coat,4,9);
     if(kind==0) {
         // A soft crocheted vest, raised alternating stitches, curly black fur.
-        oval(mesh,V3(0,height+.015f,-.07f),V3(.244f,.222f,.29f),paint(.62f,.64f,.66f,0),3,9);
-        for(int row=0;row<4;row++)for(int side=-1;side<=1;side+=2)for(int col=0;col<3;col++) {
-            float y=.23f+row*.055f,z=-.25f+col*.16f;
+        oval(mesh,V3(0,torso_y+.01f,-.05f),V3(.25f,.235f,.35f),paint(.62f,.64f,.66f,0),4,12);
+        for(int row=0;row<4;row++)for(int stitch_index=0;stitch_index<10;stitch_index++) {
+            float y=torso_y-.09f+row*.055f;
+            float dy=(y-torso_y-.01f)/.235f,ring=sqrtf(fmaxf(0,1-dy*dy));
+            float a=stitch_index*2*MF_PI/10,b=a+.20f;
             vec4 stitch=row==1?paint(.28f,.46f,.70f,0):row==2?paint(.74f,.30f,.30f,0):cream;
-            branch(mesh,V3(side*.234f,y,z),V3(side*.247f,y+.03f,z+.035f),.016f,.016f,stitch);
+            branch(mesh,V3(cosf(a)*.254f*ring,y,-.05f+sinf(a)*.355f*ring),
+                        V3(cosf(b)*.254f*ring,y+.018f,-.05f+sinf(b)*.355f*ring),.012f,.012f,stitch);
         }
     }
     for(int leg=0;leg<4;leg++) {
