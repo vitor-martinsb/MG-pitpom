@@ -11,7 +11,7 @@ recebem essa função. Configurações e sequência são restauradas na reconex�
 
 Cada partida sorteia uma única sequência, sem repetição, entre os mapas válidos
 do catálogo existente. Arquivos repetidos ou sem início/buraco são excluídos.
-O limite atual é **20 pistas**; pedidos acima do catálogo são rejeitados, sem
+O limite atual é **100 pistas**; pedidos acima do catálogo são rejeitados, sem
 repetir mapas silenciosamente. A trilha e todos os clientes usam essa mesma
 ordem. Após os resultados finais, **Jogar novamente** devolve a sala ao lobby;
 a partida seguinte recebe novo sorteio e placares limpos.
@@ -28,17 +28,18 @@ força e aplica uma tacada pelo mesmo caminho validado dos humanos.
 O custo até o buraco orienta a escolha de trajetos; candidatos simulados na
 física original permitem avaliar desvios, ricochetes e perigo de captura.
 Cada previsão usa uma cópia da bola e das mecânicas; não altera a partida nem
-emite sons reais. A busca considera até 12/32/64 candidatos, conforme dificuldade,
-com até quatro segundos de simulação por candidato e orçamento de aproximadamente
-45 ms por decisão após os oito candidatos iniciais. O servidor planeja para
-um bot por atualização, com intervalo entre decisões.
+emite sons reais. A busca considera até 24/48/96/144 candidatos, conforme
+dificuldade, com previsão de 8/10/12/12 segundos. Difícil e Especialista também
+avaliam uma segunda tacada, com largura limitada. O grafo do planejador inclui
+ligações de salto e portal; posições futuras dos obstáculos móveis são simuladas.
 
-Fácil tem maiores erros de direção/força; médio reduz esses erros; difícil
-explora também direções ao redor da bola e faz ajustes mais precisos. A geometria
-dinâmica usa sua posição atual durante a previsão curta: o planejamento não
-garante completar todos os mapas complexos. Bots obedecem prontidão, cronômetro,
-capturas e pontuação. Ao atingir a penalidade configurada de tacadas, param de
-jogar e podem terminar como DNF, sem travar a rodada.
+Fácil tem maiores erros de direção/força; Médio reduz esses erros; Difícil e
+Especialista ampliam a busca e a precisão. Tentativas malsucedidas são lembradas
+durante o mapa. Bots obedecem prontidão, cronômetro, capturas e pontuação, com um
+limite de segurança independente de 48 tacadas. DNF soma 12 às tacadas realizadas.
+Quando todos os humanos terminam, a simulação dos bots passa a 5x com o mesmo
+passo físico de 1/120 s. A próxima pista volta a 1x.
+Veja [regras e testes atuais](bots-audio-loading.md).
 
 ## Bolas e mascotes
 
@@ -69,15 +70,16 @@ sequência real e os estados concluído/atual/próximo. Não cria bloqueios perm
 O botão **Jornada** abre a trilha sem perder a partida; celular usa painéis com
 rolagem. As funções anteriores de solo, chat, placar e configurações permanecem.
 
-O carregamento utiliza mascotes SVG originais inspiradas na referência fornecida:
-perseguição circular com patas e orelhas articuladas em ciclo de oito poses.
+O carregamento utiliza o atlas PNG original em referências SVG independentes:
+Pituca corre à frente de Pompom, cada uma com oito poses, sem linhas pontilhadas.
 A animação acompanha espera real pelo motor/sala. O progresso só mostra bytes
 informados pelo Emscripten ou jogadores efetivamente prontos; espera sem medida
 usa indicador indeterminado. Movimento reduzido respeita a preferência do sistema.
 
-A trilha instrumental original é sintetizada localmente a 62 BPM, com piano,
-melodia suave de sopro e acordes de cordas. Menu, partida e resultados têm
-transições de volume. Efeitos respondem às tacadas reais e à força, madeira/pedra,
+As dez trilhas instrumentais originais são sintetizadas localmente, uma por
+mundo, entre 58 e 72 BPM. O menu mantém seu tema de 62 BPM. Mudanças de mundo
+usam transição de 1,8 segundo; mapas do mesmo mundo mantêm a reprodução.
+Efeitos respondem às tacadas reais e à força, madeira/pedra,
 buraco, tapa, captura, colisão entre bolas, contagem final e início da pista.
 O worker identifica e transmite eventos; clientes eliminam duplicatas e limitam
 a reprodução por atualização. Efeitos tonais têm limite de 24 vozes, com variação

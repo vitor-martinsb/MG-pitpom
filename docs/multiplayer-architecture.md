@@ -111,7 +111,7 @@ ripples locais. Deltas vazios preservam a posição final da interpolação.
 - Cada mapa dura 120 segundos. O deadline bloqueia novas tacadas; bolas em
   movimento recebem até cinco segundos adicionais. Todos os conectados
   concluídos antecipam o resultado. A pausa de um cliente não pausa a sala.
-- DNF recebe 12 pontos, configuráveis, sem limitar o número de tacadas.
+- DNF soma exatamente 12 às tacadas válidas já realizadas, uma vez por mapa.
   Jogadores desconectados e ainda não concluídos também recebem DNF.
   Resultados ficam visíveis por cinco segundos. Menor soma vence.
 - Reconexão usa token aleatório, preservando ID, perfil, bola, tacadas,
@@ -129,7 +129,8 @@ ripples locais. Deltas vazios preservam a posição final da interpolação.
   JSON inválido e origens incompatíveis são rejeitados. Heartbeat remove
   conexões mortas; clientes com fila de envio acima de 1 MiB são desconectados.
 
-Tempos, DNF e frequência ficam em `server/config.json`. `GOLF_HOLE_SECONDS` e
+Tempos e frequência ficam em `server/config.json`; o acréscimo de DNF é fixo em 12.
+O campo legado `dnfPenalty` não altera essa regra. `GOLF_HOLE_SECONDS` e
 `GOLF_GRACE_SECONDS` permitem reduzir tempos em testes. O funil fica em
 `data/config/game.cfg`: raio 0.65, força 0.12, captura 0.18 e velocidade máxima 2.
 A atração gradual leva a bola ao centro e à descida; não teleporta a posição.
