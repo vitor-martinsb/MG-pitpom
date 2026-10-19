@@ -27,12 +27,13 @@ try{
     const f=await a.evaluate(()=>GolfCourse.inspect().frame),g=await b.evaluate(()=>GolfCourse.inspect().frame);
     assert.equal(f.world,Math.floor(index/10)+1);assert.equal(f.stage,index%10+1);assert.equal(g.course,f.course);
     assert.ok(f.surfaceGroups>=3,`actual terrain draw calls, map ${index+1}`);
+    assert.ok(f.landscapeGap>=9.9&&g.landscapeGap>=9.9,`landscape and camera clearance, map ${index+1}: ${f.landscapeGap}`);
     const metadata=await a.evaluate(i=>GOLF_CAMPAIGN.courses[i],index);
     assert.equal(f.wildlife.filter(a=>a.active).length,metadata.animals.length);
     for(const animal of f.wildlife.filter(a=>a.active))assert.ok(animal.pos.every(Number.isFinite));
     assert.ok(f.actorVertices>0&&f.actorVertices<16384,`actor capacity, map ${index+1}: ${f.actorVertices}`);
     const vertices=await a.evaluate(()=>Module.ccall('golf_garden_vertex_count','number',[],[]));assert.ok(vertices>0&&vertices<72000);
-    budgets.push({course:index+1,vertices,actors:f.actorVertices});
+    budgets.push({course:index+1,vertices,actors:f.actorVertices,landscapeGap:f.landscapeGap});
     if(index%10===9){await a.waitForTimeout(500);await a.screenshot({path:`../out/campaign-validation/world-${f.world}.png`});await b.screenshot({path:`../out/campaign-validation/world-${f.world}-mobile.png`});console.log(`World ${f.world}: 10 courses rendered on desktop and mobile.`);}
     assert.ok((await b.locator('#campaign-world').textContent()).includes('Fase'));
   }

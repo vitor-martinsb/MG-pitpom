@@ -45,7 +45,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->action_time,a->action);
     }
     vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time());
-    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"surfaceGroups\":%u",golf_draw_surface_groups());
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"surfaceGroups\":%u,\"landscapeGap\":%.5g",golf_draw_surface_groups(),golf_garden_landscape_gap());
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
     for(int i=0;i<g->physics.dynamic_bvh.node_infos.length&&i<32;i++) {
         golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;

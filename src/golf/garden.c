@@ -26,7 +26,7 @@ static struct {
     bool replaced[1024];
     mat4 transform;
     vec3 center;
-    float radius;
+    float radius,landscape_gap;
     int biome;
     vec4 biome_color;
 } garden;
@@ -259,13 +259,17 @@ void golf_garden_prepare(golf_level_t *level, int level_number) {
     }
     garden.transform=mat4_identity();
     // A distant landscape ring gives the small courses a larger painted world.
-    float radius=fminf(65,fmaxf(36,garden.radius+8));garden.radius=radius;
+    float radius=garden.biome?fmaxf(36,garden.radius+16):fminf(65,fmaxf(36,garden.radius+8));garden.radius=radius;
+    vec3 landscape_center=garden.biome?V3(garden.center.x,start.y,garden.center.z):start;
+    float reach=hypotf(fmaxf(fabsf(course_min.x-landscape_center.x),fabsf(course_max.x-landscape_center.x)),
+                       fmaxf(fabsf(course_min.z-landscape_center.z),fabsf(course_max.z-landscape_center.z)));
+    garden.landscape_gap=radius-reach-16;
     for(int i=0;i<10;i++) {
-        float a=2*MF_PI*i/10;vec3 p=vec3_add(start,V3(cosf(a)*radius,-6,sinf(a)*radius));
+        float a=2*MF_PI*i/10;vec3 p=vec3_add(landscape_center,V3(cosf(a)*radius,-6,sinf(a)*radius));
         vec4 hill=garden.biome?paint(garden.biome_color.x*.75f,garden.biome_color.y*.80f,garden.biome_color.z*.75f,0):paint(.48f,.64f,.48f,0);
         if(garden.biome==8)hill=paint(.28f,.33f,.49f,0);
         oval(&mesh,p,V3(16,8+variation(i)*8,14),hill,4,10);
-        vec3 cloud=vec3_add(start,V3(cosf(a)*radius*.8f,18+variation(i+3)*6,sinf(a)*radius*.8f));
+        vec3 cloud=vec3_add(landscape_center,V3(cosf(a)*radius*.8f,18+variation(i+3)*6,sinf(a)*radius*.8f));
         for(int j=0;j<3;j++)oval(&mesh,vec3_add(cloud,V3((j-1)*3,variation(j+i),0)),V3(4.3f,1.5f+variation(i+j),2.2f),paint(.96f,.95f,.87f,2),4,9);
     }
     garden.world=sg_make_buffer(&(sg_buffer_desc){.data={mesh.vertices,(size_t)mesh.count*sizeof(garden_vertex_t)}});
@@ -541,3 +545,4 @@ EMSCRIPTEN_KEEPALIVE
 #endif
 unsigned golf_garden_vertex_count(void){return garden.vertex_count;}
 unsigned golf_garden_actor_vertex_count(void){return garden.actor_count;}
+float golf_garden_landscape_gap(void){return garden.landscape_gap;}

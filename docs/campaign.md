@@ -23,7 +23,9 @@ Ten route grammars, circular corner fillets, different widths/elevations and
 mechanical combinations produce 100 distinct collision meshes. The loop's
 connected green offers a slower route. Portals offer optional shortcuts. A missed
 shot uses the established recovery rules. Course-specific camera zones use the
-original camera implementation and face down the track.
+original camera implementation and face down the track. Campaign landscape
+mountains surround the course centre with at least ten metres of clearance from
+the main fairway bounds, leaving room for side routes and the playable camera.
 
 `python build/generate-campaign.py` regenerates levels, the detailed manifest and
 the browser's small metadata table. `--check` checks reproducibility and unique
