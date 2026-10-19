@@ -46,6 +46,15 @@ def entity(kind, name, p=(0,0,0), scale=(1,1,1), **kw):
 
 def distance(a,b): return math.dist(a,b)
 def lerp(a,b,t): return tuple(x+(y-x)*t for x,y in zip(a,b))
+def canonical(value):
+    # libm differs in its last bits between Windows and Linux. Persist only
+    # micrometre precision and normalize signed zero in generated JSON.
+    if isinstance(value,float):
+        rounded=round(value,6)
+        return 0.0 if rounded==0 else rounded
+    if isinstance(value,(list,tuple)):return [canonical(v)for v in value]
+    if isinstance(value,dict):return {k:canonical(v)for k,v in value.items()}
+    return value
 
 def smooth_route(points):
     """Fillet each bend; every generated strip has an unbroken walkable center."""
@@ -223,6 +232,8 @@ def make_course(world,stage):
     light=base64.b64encode((ROOT/'data/textures/colors/white.png').read_bytes()).decode()
     level=dict(data_dependencies=[],materials=materials,lightmap_images=[dict(name='campaign',resolution=1,time_length=0,repeats=False,datas=[light])],entities=entities)
     record=dict(number=number,world=world+1,stage=stage+1,path=f'data/campaign/course-{number:03d}.level',width=round(width,3),length=round(lengths[-1],3),features=feature_names,animals=animals,route=[[round(v,4)for v in p]for p in path],spawn=start,hole=hole,difficulty=number,geometryHash=hashlib.sha256(json.dumps([e.get('geo')for e in entities if 'geo'in e],sort_keys=True).encode()).hexdigest())
+    level=canonical(level);record=canonical(record)
+    record['geometryHash']=hashlib.sha256(json.dumps([e.get('geo')for e in level['entities']if 'geo'in e],sort_keys=True).encode()).hexdigest()
     return level,record
 
 def generate(check=False):

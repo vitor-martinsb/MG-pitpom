@@ -39,6 +39,15 @@
       if(p.id===frame.local){ctx.strokeStyle='#fffaf0';ctx.lineWidth=2;ctx.stroke();}
     }
   }
+  function matchLabels(){
+    if(!frame)return;
+    const world=window.GOLF_CAMPAIGN?.worlds[frame.world-1];
+    worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.t('stageNumber',{number:frame.stage})}`:'';
+    const local=frame.players.find(p=>p.id===frame.local);
+    const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
+    effectLabel.textContent=effect?GolfI18n.t('effect.'+effectNames[effect]):'';
+    $('minimap-legend').textContent=t('minimapLegend')+((frame.wildlife??[]).some(a=>a.active)?' · '+t('animalLegend'):'');
+  }
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;
     frame=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
@@ -53,19 +62,14 @@
     lastSlap=frame.slapTime;lastWake=frame.wakeTime;
     $('minimap').hidden=!frame.active;$('presentation').hidden=!frame.active||!frame.intro;
     if(!frame.active)return;
-    const world=window.GOLF_CAMPAIGN?.worlds[frame.world-1];
-    worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.t('stageNumber',{number:frame.stage})}`:'';
-    const local=frame.players.find(p=>p.id===frame.local);
-    const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
-    effectLabel.textContent=effect?GolfI18n.t('effect.'+effectNames[effect]):'';
-    $('minimap-legend').textContent=t('minimapLegend')+((frame.wildlife??[]).some(a=>a.active)?' · '+t('animalLegend'):'');
+    matchLabels();
     $('presentation-progress').value=Math.min(1,frame.progress);
     if(level!==frame.level||!geometry){level=frame.level;geometry=JSON.parse(Module.ccall('golf_course_geometry','string',[],[]));background();}
     if(!collapsed)draw();
   }
   $('skip-presentation').onclick=()=>Module.ccall('golf_course_skip',null,[],[]);
   $('toggle-minimap').onclick=()=>{collapsed=!collapsed;canvas.hidden=collapsed;$('minimap-legend').hidden=collapsed;$('toggle-minimap').setAttribute('aria-expanded',String(!collapsed));};
-  function language(){canvas.setAttribute('aria-label',t('minimapLabel'));$('minimap-legend').textContent=t('minimapLegend');}
+  function language(){canvas.setAttribute('aria-label',t('minimapLabel'));$('minimap-legend').textContent=t('minimapLegend');matchLabels();}
   window.addEventListener('languagechange',language);language();
   window.GolfCourse={initialized:false,inspect:()=>({frame,geometry,collapsed})};requestAnimationFrame(update);
 })();

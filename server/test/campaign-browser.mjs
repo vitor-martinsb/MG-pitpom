@@ -44,6 +44,21 @@ try{
   // tests separately trigger these interactions using physical contact.
   await b.evaluate(()=>GolfI18n.setLanguage('es'));
   assert.ok((await b.locator('#campaign-world').textContent()).includes('Nivel'));
+  room.busy=true;
+  for(const kind of [1,2,3,4]){
+    await b.evaluate(({snapshot,kind})=>{
+      const f=GolfCourse.inspect().frame,ball=snapshot.players.find(p=>p.id===f.local);
+      ball.slowUntil=kind===1?f.time+10:0;ball.captureKind=kind===1?0:kind;
+      ball.captured=kind>1;ball.captureUntil=kind>1?f.time+10:0;
+      ball.effectKind=kind;ball.effectSerial=kind;
+      Module.ccall('golf_online_receive',null,['string'],[JSON.stringify({...snapshot,type:'snapshot',hole:99})]);
+    },{snapshot:frame,kind});
+    await b.waitForFunction(kind=>document.getElementById('wildlife-effect').textContent===GolfI18n.t('effect.'+['','romeu','luna','frida','portal'][kind]),kind);
+    for(const language of ['en','pt-BR','es']){
+      const text=await b.evaluate(({language,kind})=>{GolfI18n.setLanguage(language);return [document.getElementById('wildlife-effect').textContent,GolfI18n.t('effect.'+['','romeu','luna','frida','portal'][kind])];},{language,kind});
+      assert.equal(text[0],text[1]);
+    }
+  }
   assert.deepEqual(errors,[]);fs.writeFileSync('../out/campaign-validation/budgets.json',JSON.stringify(budgets,null,2));
   await Promise.all(contexts.map(c=>c.close()));
   console.log('100 WebAssembly maps: desktop/mobile rendering, biome HUD, animal counts, buffers, EN/PT/ES and shared authority passed.');
