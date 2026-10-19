@@ -29,8 +29,10 @@ jobs:
           done
           mkdir -p out/server-native
           docker cp pitpom:/app/out/server-native/golf_physics_worker out/server-native/
+          docker cp pitpom:/app/out/web out/web
           cd server
           npm ci
+          npm run build
           npm test
           npm run test:deployment -- --url http://localhost:3000
       - name: Validate compiled visual shaders in WebGL2

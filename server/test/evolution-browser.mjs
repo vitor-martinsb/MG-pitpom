@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
+import {canvasClick} from './canvas-input.mjs';
 const external=process.argv.includes('--url'),app=external?null:(await import('../dist/index.js')).createServer();
 let browser;
 try{
@@ -18,7 +19,7 @@ try{
   assert.equal(await a.evaluate(()=>getComputedStyle(document.querySelector('.mascot-run.pompom')).animationName),'pompom-run');
   for(const [page,name]of [[a,'desktop'],[b,'mobile']]){
     await page.locator('#offline').click();await page.waitForTimeout(500);
-    const viewport=page.viewportSize();await page.mouse.click(viewport.width/2,viewport.height*.75);
+    const viewport=page.viewportSize();await canvasClick(page,viewport.width/2,viewport.height*.75);
     await page.locator('#level-selection').waitFor({state:'visible'});
     assert.equal(await page.locator('#level-adventure .trail-node').count(),100);
     assert.equal(await page.locator('#level-adventure .locked').count(),99);
@@ -31,7 +32,7 @@ try{
     }
     await page.screenshot({path:`../out/evolution-validation/course-selection-${name}.png`});
     await page.locator('#close-level-selection').click();await page.locator('#level-selection').waitFor({state:'hidden'});
-    await page.mouse.click(viewport.width/2,viewport.height*.75);await page.locator('#level-selection').waitFor({state:'visible'});
+    await canvasClick(page,viewport.width/2,viewport.height*.75);await page.locator('#level-selection').waitFor({state:'visible'});
     await page.locator('#level-adventure [data-level="0"]').click();
     await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();
     await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&GolfCourse.inspect().frame.level===0);
