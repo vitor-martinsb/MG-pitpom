@@ -6,6 +6,17 @@ spec=importlib.util.spec_from_file_location('evolution_mesh',Path(__file__).with
 mesh=importlib.util.module_from_spec(spec);spec.loader.exec_module(mesh)
 ORDER=[3,2,4,1,*range(5,21)]
 
+def canonical(value):
+    """Keep generated JSON stable across Python/libm versions and platforms."""
+    if isinstance(value,float):
+        # Nine significant digits retain the float32 geometry read by C,
+        # including tiny coordinates imported from the original editor.
+        rounded=float(format(value,'.9g'))
+        return 0.0 if rounded==0 else rounded
+    if isinstance(value,list):return [canonical(item)for item in value]
+    if isinstance(value,dict):return {key:canonical(item)for key,item in value.items()}
+    return value
+
 # Each row is an authored operation, applied to the immediately preceding stage.
 # W: corridor deformation (axis, centre, radius, cross-axis, shift, narrowing, pivot).
 # R: irregular natural deflector (x,z,floor,rx,rz,height,yaw).
@@ -76,7 +87,7 @@ def make_family(family,check=False):
         start=next(e for e in output['entities']if e['type']=='ball-start')['transform']['position']
         hole=next(e for e in output['entities']if e['type']=='hole')['transform']['position']
         for kind in range(3):output['entities'].append(mesh.group(f'animal:{kind}',[a+(b-a)*(.25+kind*.25)for a,b in zip(start,hole)]))
-        text=json.dumps(output,separators=(',',':'))+'\n';path=ROOT/f'data/campaign/family-{family:02d}-{revision}.level'
+        text=json.dumps(canonical(output),separators=(',',':'))+'\n';path=ROOT/f'data/campaign/family-{family:02d}-{revision}.level'
         if check:
             assert path.read_text()==text,f'Stale evolution {family}.{revision}'
         else:path.write_text(text)
