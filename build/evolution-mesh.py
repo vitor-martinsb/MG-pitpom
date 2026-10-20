@@ -53,6 +53,10 @@ def store(level,index,faces):
 
 def warp(level,axis,center,radius,cross,shift=0,narrow=0,pivot=0,indices=None):
     """Bend/narrow a specific corridor, inserting shared boundary vertices first."""
+    def deform(p):
+        p=list(p);u=abs(p[axis]-center)/radius;weight=(.5+.5*math.cos(math.pi*u))if u<1 else 0
+        p[cross]=pivot+(p[cross]-pivot)*(1-narrow*weight)+shift*weight
+        return tuple(p)
     for index,e in enumerate(level['entities']):
         if 'geo'not in e or e.get('movement',{}).get('type','none')!='none':continue
         if indices is not None and index not in indices:continue
@@ -69,10 +73,33 @@ def warp(level,axis,center,radius,cross,shift=0,narrow=0,pivot=0,indices=None):
             for piece in pieces:
                 changed=[]
                 for p in piece:
-                    p=list(p);u=abs(p[axis]-center)/radius;weight=(.5+.5*math.cos(math.pi*u))if u<1 else 0
-                    p[cross]=pivot+(p[cross]-pivot)*(1-narrow*weight)+shift*weight;changed.append(tuple(p))
+                    changed.append(deform(p))
                 faces.append((copy.deepcopy(face),changed))
         store(level,index,faces)
+    # Keep the visual bed and banks on the same subdivided curve as the water.
+    # These markers have no collision geometry and never affect the originals.
+    for index,e in list(enumerate(level['entities'])):
+        if e['type']!='group'or e['name']!='evolution-river-bank':continue
+        t=e['transform'];length=t['scale'][2];width=t['scale'][0]
+        a=tuple(t['position'][k]+rotate((0,0,-length*.5),t['rotation'])[k]for k in range(3))
+        b=tuple(t['position'][k]+rotate((0,0,length*.5),t['rotation'])[k]for k in range(3))
+        if max(a[axis],b[axis])<=center-radius or min(a[axis],b[axis])>=center+radius:continue
+        cuts=[0,1]
+        if abs(b[axis]-a[axis])>1e-8:
+            for plane in [center-radius,center-radius*.5,center,center+radius*.5,center+radius]:
+                cut=(plane-a[axis])/(b[axis]-a[axis])
+                if 1e-8<cut<1-1e-8:cuts.append(cut)
+        cuts=sorted(cuts)
+        for part,(start,end)in enumerate(zip(cuts,cuts[1:])):
+            original_mid=tuple(a[k]+(b[k]-a[k])*(start+end)*.5 for k in range(3))
+            A=deform(tuple(a[k]+(b[k]-a[k])*start for k in range(3)));B=deform(tuple(a[k]+(b[k]-a[k])*end for k in range(3)))
+            side=rotate((width*.5,0,0),t['rotation'])
+            left=deform(tuple(original_mid[k]-side[k]for k in range(3)));right=deform(tuple(original_mid[k]+side[k]for k in range(3)))
+            bank=group('evolution-river-bank',tuple((A[k]+B[k])*.5 for k in range(3)))
+            angle=math.atan2(B[0]-A[0],B[2]-A[2]);bank['transform']['rotation']=[0,math.sin(angle*.5),0,math.cos(angle*.5)]
+            bank['transform']['scale']=[math.hypot(right[0]-left[0],right[2]-left[2]),1,math.hypot(B[0]-A[0],B[2]-A[2])]
+            if part==0:level['entities'][index]=bank
+            else:level['entities'].append(bank)
 
 def floor_at(level,x,z,hint):
     best=None
