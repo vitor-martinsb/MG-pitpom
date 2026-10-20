@@ -700,7 +700,7 @@ void golf_game_hit_ball(vec2 aim_delta) {
 
     game.cam.auto_rotate = true;
 
-    player->ball.vel = vec3_scale(aim_direction, start_speed);
+    player->ball.vel = vec3_scale(aim_direction, start_speed*(player->ball.slow_shots>0?.65f:1));
     player->ball.is_moving = true;
     player->ball.start_pos = player->ball.pos;
     player->ball.time_going_slow=0;

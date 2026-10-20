@@ -46,7 +46,26 @@ int main(void){
  // A later completed stroke cannot replace the pending third global stroke.
  p[1].stroke_count++;golf_wildlife_shot(&w,&p[1]);settle(&w,p,3,2102);assert(w.puddles[0].remaining==1);
  p[2].ball.is_moving=false;settle(&w,p,3,2103);assert(!w.puddles[0].active);
- for(int i=0;i<3;i++)assert(p[i].ball.slow_until==0);
+ // The visual puddle can expire while a player's debuff remains.
+ assert(p[0].ball.slow_shots==2);assert(p[0].ball.slow_until>2103);
+ for(int i=0;i<3;i++)p[i].ball.pos=vec3_add(w.spawn,V3(0,GOLF_BALL_RADIUS,0));
+ settle(&w,p,3,9999);assert(p[0].ball.slow_shots==2&&p[0].ball.slow_until>9999);
+ // Only this player's valid completed strokes consume the remaining effect.
+ for(int remaining=1;remaining>=0;remaining--){
+  p[0].stroke_count++;golf_wildlife_shot(&w,&p[0]);golf_wildlife_shot(&w,&p[0]);
+  p[0].ball.is_moving=true;settle(&w,p,3,10000+remaining);
+  assert(p[0].ball.slow_shots==remaining+1);
+  p[0].ball.is_moving=false;settle(&w,p,3,10002+remaining);
+  assert(p[0].ball.slow_shots==remaining);
+ }
+ assert(p[0].ball.slow_until==0);
+ golf_config_t config={0};world.config=&config;
+ assert(golf_physics_shoot(&world,&p[0],V3(1,0,0),.2f));float normal=vec3_length(p[0].ball.vel);
+ p[0].ball.is_moving=false;p[0].ball.slow_shots=3;
+ assert(!golf_physics_shoot(&world,&p[0],V3(1,0,0),-1));assert(p[0].ball.slow_shots==3);
+ assert(golf_physics_shoot(&world,&p[0],V3(1,0,0),.2f));assert(fabsf(vec3_length(p[0].ball.vel)-normal*.65f)<.001f);
+ p[0].ball.is_moving=false;p[0].ball.slow_shots=0;
+
  // Two independent puddles, with different creation sequences.
  w.puddles[0]=(golf_puddle_t){spot,100,w.accepted_shots,3,true};
  p[0].stroke_count++;golf_wildlife_shot(&w,&p[0]);settle(&w,p,3,2104);assert(w.puddles[0].remaining==2);

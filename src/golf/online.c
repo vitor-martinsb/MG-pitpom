@@ -148,6 +148,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             p->ball.captured=json_object_get_boolean(b,"captured")==1;
             p->ball.capture_until=(float)json_object_get_number(b,"captureUntil");
             p->ball.slow_until=(float)json_object_get_number(b,"slowUntil");
+            p->ball.slow_shots=(int)json_object_get_number(b,"slowShots");
             p->ball.capture_kind=(int)json_object_get_number(b,"captureKind");
             p->ball.effect_kind=(int)json_object_get_number(b,"effectKind");
             p->ball.effect_time=(float)json_object_get_number(b,"effectTime");

@@ -60,8 +60,10 @@ the current sequence at creation and counts completion of the next three
 accepted strokes. The triggering stroke is excluded. Concurrent strokes may
 finish in a different order; removal waits for those three to finish. Duplicate
 registration/completion is idempotent. Each puddle has its own counter. There is
-no lifetime timer. Its drag region and feedback disappear in the same simulation
-tick as the third completion. All puddles clear on loading the next map.
+no lifetime timer. The visible puddle disappears on the third global completion.
+Slowness now belongs to each affected ball and lasts three of that player's next
+completed valid strokes, even outside the puddle; see [current rules](romeu-slowness.md).
+All puddles and per-ball effects clear on loading the next map.
 
 Creation, counter and removal travel in authoritative snapshots, including
 reconnect. The same state and rules run offline. Candidate bot simulations copy

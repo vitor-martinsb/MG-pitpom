@@ -22,6 +22,8 @@ typedef struct golf_ball {
     int dog_stroke;
     /* Temporary effects are per ball; cosmetics remain in golf_player.color. */
     float slow_until,wildlife_protection,wildlife_cooldown[3],portal_cooldown;
+    int slow_shots,slow_born_stroke;
+    bool puddle_contact;
     uint32_t wildlife_hits[3],wildlife_contact,effect_serial;
     int capture_kind,effect_kind;
     float effect_time;

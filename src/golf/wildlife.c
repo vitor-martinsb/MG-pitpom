@@ -114,6 +114,9 @@ static void finish_shots(golf_wildlife_t *w,golf_player_t *players,int count){
             golf_wild_shot_t *s=&w->shots[j];
             if(s->player!=p->id||!s->pending||(!p->ball.is_in_hole&&(p->ball.is_moving||p->ball.capture_until)))continue;
             s->pending=false;
+            if(p->ball.slow_shots>0&&s->stroke>p->ball.slow_born_stroke){
+                if(--p->ball.slow_shots==0)p->ball.slow_until=0;
+            }
             for(int k=0;k<GOLF_PUDDLES;k++){
                 golf_puddle_t *q=&w->puddles[k];
                 if(q->active&&s->sequence>q->born&&s->sequence<=q->born+3&&--q->remaining==0)q->active=false;
@@ -161,10 +164,16 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             if(time>=b->capture_until)release(b,time);
             continue;
         }
-        bool wet=false;
+        bool wet=false,slow_applied=false;
         if(enabled)for(int j=0;j<GOLF_PUDDLES;j++)if(w->puddles[j].active&&vec3_distance(b->pos,vec3_add(w->puddles[j].pos,V3(0,b->radius,0)))<.62f)wet=true;
-        b->slow_until=wet?time+2.f/120:0;
-        if(wet&&b->is_moving) {
+        if(wet&&!b->puddle_contact&&!b->slow_shots){
+            b->slow_shots=3;b->slow_born_stroke=p->stroke_count;
+            b->effect_kind=1;b->effect_time=time;b->effect_serial++;
+            slow_applied=true;
+        }
+        b->puddle_contact=wet;
+        b->slow_until=b->slow_shots>0?time+1:0;
+        if(enabled&&b->slow_shots>0&&b->is_moving) {
             b->vel.x*=.996f;b->vel.z*=.996f;
         }
         if(!enabled||b->capture_until>0||b->is_in_water||b->is_out_of_bounds||!p->stroke_count||time<b->wildlife_protection)continue;
@@ -177,8 +186,9 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             a->action=kind+1;a->action_time=time;
             vec3 facing=vec3_sub(b->pos,a->pos);facing.y=0;if(vec3_length(facing)>.01f)a->forward=vec3_normalize(facing);
             if(kind==0) {
-                puddle(w,a->pos);b->slow_until=time+2.f/120;b->vel=vec3_scale(b->vel,.55f);
-                b->effect_kind=1;b->effect_time=time;b->effect_serial++;
+                puddle(w,a->pos);b->slow_shots=3;b->slow_born_stroke=p->stroke_count;
+                b->slow_until=time+1;b->vel=vec3_scale(b->vel,.55f);
+                if(!slow_applied){b->effect_kind=1;b->effect_time=time;b->effect_serial++;}
             }else if(kind==1)capture(b,2,vec3_add(w->spawn,V3(0,b->radius,0)),time,1.15f);
             else capture(b,3,random_destination(w,p,seed),time,.85f);
             b->wildlife_protection=time+.4f;break;
@@ -199,9 +209,5 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
         }
     }
     finish_shots(w,players,count);
-    // Expiration and its friction indicator disappear in the same authoritative tick.
-    for(int i=0;i<count;i++)if(players[i].ball.slow_until>0){
-        bool wet=false;for(int j=0;j<GOLF_PUDDLES;j++)if(w->puddles[j].active&&vec3_distance(players[i].ball.pos,vec3_add(w->puddles[j].pos,V3(0,players[i].ball.radius,0)))<.62f)wet=true;
-        if(!wet)players[i].ball.slow_until=0;
-    }
+    // The puddle's lifetime is independent of each player's three-shot debuff.
 }

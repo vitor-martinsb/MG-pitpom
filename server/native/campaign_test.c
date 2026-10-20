@@ -37,7 +37,7 @@ static void validate_effect(golf_wildlife_t original,int kind,golf_physics_world
         assert(p[0].ball.effect_serial==1);
         p[0].ball.is_moving=false;world->time=25;
         assert(golf_physics_shoot(world,&p[0],V3(1,0,0),.2f));
-        assert(fabsf(vec3_length(p[0].ball.vel)-5)<.001f);
+        assert(fabsf(vec3_length(p[0].ball.vel)-3.25f)<.001f);
     }else {
         assert(p[0].ball.captured&&p[0].ball.capture_until>20);
         assert(!golf_physics_shoot(world,&p[0],V3(1,0,0),.2f));
