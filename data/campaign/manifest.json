@@ -1792,7 +1792,7 @@
       "world": 4,
       "stage": 3,
       "path": "data/campaign/family-07-2.level",
-      "geometryHash": "058524a76d1840eff26a7c038b96be93ee9e532ab942884096f8f5902c5cbce7",
+      "geometryHash": "36fa7cf2d26d645c889375c115f3798d558990ae71ce655f4bc9b1d3ec409ee4",
       "baselineHash": "0051251e9a7226c74fc98a7a0bb226b8cf13d2b11bb8c86f519a4152813e6ba2",
       "animals": [
         0,
@@ -1866,7 +1866,7 @@
       "world": 4,
       "stage": 4,
       "path": "data/campaign/family-07-3.level",
-      "geometryHash": "bfbc76642375961cf2ccaca1850b8c0e5636c6d1116efb3011bdf4e443b330de",
+      "geometryHash": "dae55e452e1674dc2a62108e996776df28ade7a4566672b0c11255c7d3a4ffec",
       "baselineHash": "0051251e9a7226c74fc98a7a0bb226b8cf13d2b11bb8c86f519a4152813e6ba2",
       "animals": [
         0,

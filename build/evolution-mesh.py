@@ -238,14 +238,21 @@ def rock(level,name,x,z,hint,rx,rz,height,yaw=0):
 
 def deck(level,x,z,y,width,length):
     """A low arched wooden crossing with collision ramps at both ends."""
+    # The scenery's "wood" material has vel_scale=0 and stops a ball on
+    # contact. Keep its texture, but give the playable deck ground physics.
+    material='evolution-bridge-surface'
+    if not any(m['name']==material for m in level['materials']):
+        surface=copy.deepcopy(next(m for m in level['materials'] if m['name']=='ground'))
+        surface.update(name=material,texture=next(m['texture'] for m in level['materials'] if m['name']=='wood'))
+        level['materials'].append(surface)
     sections=[(-length/2,y+.015),(-length*.3,y+.14),(length*.3,y+.14),(length/2,y+.015)]
     faces=[]
     for (a,ha),(b,hb) in zip(sections,sections[1:]):
-        faces.append(face([(x-width/2,ha,z+a),(x-width/2,hb,z+b),(x+width/2,hb,z+b),(x+width/2,ha,z+a)],'wood'))
+        faces.append(face([(x-width/2,ha,z+a),(x-width/2,hb,z+b),(x+width/2,hb,z+b),(x+width/2,ha,z+a)],material))
         for side in [-1,1]:
             xx=x+side*width/2
             poly=[(xx,y-.12,z+a),(xx,ha,z+a),(xx,hb,z+b),(xx,y-.12,z+b)]
-            faces.append(face(poly if side<0 else list(reversed(poly)),'wood'))
+            faces.append(face(poly if side<0 else list(reversed(poly)),material))
     level['entities'].append(geo_entity('evolution-bridge',faces))
 
 def subtract_strip(poly,quad):

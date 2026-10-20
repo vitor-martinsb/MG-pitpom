@@ -15,6 +15,32 @@ static void player(golf_player_t *p,int id,vec3 position) {
     golf_player_init(p,id,"Campaign",V4(.2f,.35f,.7f,1),0);
     golf_player_start_level(p,position);p->stroke_count=1;
 }
+static void validate_bridge(golf_physics_world_t *world){
+    int samples=0;
+    for(int i=0;i<world->static_bvh->faces.length;i++){
+        golf_bvh_face_t *f=&world->static_bvh->faces.data[i];
+        if(!f->entity||strcmp(f->entity->name,"evolution-bridge"))continue;
+        vec3 normal=vec3_normalize(vec3_cross(vec3_sub(f->b,f->a),vec3_sub(f->c,f->a)));
+        if(normal.y<.7f)continue;
+        vec3 center=vec3_scale(vec3_add(vec3_add(f->a,f->b),f->c),1.f/3);
+        for(int side=-1;side<=1;side+=2){
+            golf_player_t p;golf_player_init(&p,91,"Bridge",V4(1,1,1,1),0);
+            golf_player_start_level(&p,vec3_add(center,V3(0,GOLF_BALL_RADIUS+.005f,0)));
+            golf_physics_world_t w=*world;w.time=0;
+            vec3 start=p.ball.pos;
+            assert(golf_physics_shoot(&w,&p,V3(0,0,(float)side),.18f));
+            for(int tick=0;tick<12;tick++){
+                w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);
+                assert(isfinite(p.ball.pos.x)&&isfinite(p.ball.pos.y)&&isfinite(p.ball.pos.z));
+            }
+            if((p.ball.pos.z-start.z)*side<.08f)fprintf(stderr,"Bridge stops ball at %.3f %.3f %.3f, side %d, velocity scale %.3f\n",center.x,center.y,center.z,side,f->vel_scale);
+            assert((p.ball.pos.z-start.z)*side>.08f);
+            assert(p.stroke_count==1&&!p.ball.is_out_of_bounds);
+            samples++;
+        }
+    }
+    if(samples)printf("Bridge: %d ramp/deck rolling samples in both directions passed.\n",samples);
+}
 static void validate_effect(golf_wildlife_t original,int kind,golf_physics_world_t *world) {
     golf_wildlife_t w=original;
     for(int i=0;i<3;i++)w.animals[i].active=w.animals[i].present=i==kind;
@@ -62,6 +88,7 @@ int main(int argc,char **argv) {
     golf_physics_world_t world={0};world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;world.multiplayer=true;
     world.funnel_radius=CFG_NUM(&config,"multiplayer_funnel_radius");world.funnel_force=CFG_NUM(&config,"multiplayer_funnel_force");world.capture_radius=CFG_NUM(&config,"multiplayer_capture_radius");world.capture_max_speed=CFG_NUM(&config,"multiplayer_capture_max_speed");
     golf_physics_build_world(&world,false);golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
+    validate_bridge(&world);
     // All three members are present from loading through long idle periods.
     // Repeated seeding here represents separate fields, never a live respawn.
     assert(m.cat_valid&&m.dog_valid);
