@@ -36,8 +36,15 @@ try{
   async function advance(ms=100){while(room.busy)await delay(1);clock+=ms;await room.tick();await delay(1);}
   // Real human intents and real C simulation; no score, hole or ball-position
   // injection. One bot makes three valid short strokes and then times out.
+  // Prepare those strokes while both humans are unfinished. Their completion
+  // time varies with the pet roster and cannot serve as a three-shot clock.
+  for(let tick=0;tick<300&&(bots[0].ball.strokes<3||bots[0].ball.moving||bots[0].ball.captureUntil);tick++){
+    const bot=bots[0];
+    if(!bot.ball.moving&&!bot.ball.captureUntil&&bot.ball.strokes<3)await room.shot(bot,{sequence:bot.lastSequence+1,direction:[1,0,0],power:0});
+    assert.equal(room.simulationSpeed,1);await advance();
+  }
+  assert.equal(bots[0].ball.strokes,3);
   for(let tick=0;tick<700&&!humans.every(m=>m.ball?.hole);tick++){
-    const bot=bots[0];if(bot.ball&&!bot.ball.moving&&!bot.ball.captureUntil&&bot.ball.strokes<3)await room.shot(bot,{sequence:bot.lastSequence+1,direction:[1,0,0],power:0});
     for(const human of humans)if(human.ball&&!human.ball.moving&&!human.ball.hole&&!human.ball.captureUntil){const plan=await room.physics.plan(human.slot,'expert');await room.shot(human,{sequence:human.lastSequence+1,direction:plan.direction,power:plan.power});}
     assert.equal(room.simulationSpeed,1,'no acceleration before every human finishes');await advance();
   }
