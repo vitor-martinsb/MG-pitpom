@@ -118,10 +118,18 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             game->mechanics.dog_valid=json_object_has_value(mascots,"dogActive")?json_object_get_boolean(mascots,"dogActive")==1:true;
             game->mechanics.cat=golf_json_object_get_vec3(mascots,"cat");game->mechanics.dog=golf_json_object_get_vec3(mascots,"dog");
             game->mechanics.cat_slap_time=(float)json_object_get_number(mascots,"slapTime");game->mechanics.dog_wake_time=(float)json_object_get_number(mascots,"wakeTime");
+            game->mechanics.cat_present=json_object_has_value(mascots,"catVisible")?json_object_get_boolean(mascots,"catVisible")==1:game->mechanics.cat_valid;
+            game->mechanics.dog_present=json_object_has_value(mascots,"dogVisible")?json_object_get_boolean(mascots,"dogVisible")==1:game->mechanics.dog_valid;
+            game->mechanics.cat_presence=json_object_has_value(mascots,"catPresence")?(float)json_object_get_number(mascots,"catPresence"):1;
+            game->mechanics.dog_presence=json_object_has_value(mascots,"dogPresence")?(float)json_object_get_number(mascots,"dogPresence"):1;
+            game->mechanics.cat_phase=(float)json_object_get_number(mascots,"catPhase");
+            game->mechanics.third_kind=(int)json_object_get_number(mascots,"thirdKind");
             JSON_Array *animals=json_object_get_array(mascots,"wildlife");
             for(int k=0;k<3;k++) {
                 golf_wild_animal_t *a=&game->mechanics.wildlife.animals[k];
                 JSON_Object *o=json_array_get_object(animals,k);a->active=o&&json_object_get_boolean(o,"active")==1;
+                a->present=a->active&&(!json_object_has_value(o,"visible")||json_object_get_boolean(o,"visible")==1);
+                a->presence=json_object_has_value(o,"presence")?(float)json_object_get_number(o,"presence"):1;
                 if(a->active){a->pos=golf_json_object_get_vec3(o,"pos");a->forward=golf_json_object_get_vec3(o,"forward");a->walking=json_object_get_boolean(o,"walking")==1;a->clock=(float)json_object_get_number(o,"clock");a->stride=(float)json_object_get_number(o,"stride");a->speed=(float)json_object_get_number(o,"speed");a->gait=(float)json_object_get_number(o,"gait");a->action=(int)json_object_get_number(o,"action");a->action_time=(float)json_object_get_number(o,"actionTime");}
             }
         }

@@ -30,11 +30,14 @@ try{
   await page.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]));
   await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden);
   const snapshot=await freezePhysics(room);
-  assert.equal(snapshot.players.length,50);assert.equal(snapshot.mascots.wildlife.filter(a=>a.active).length,3);
+  assert.equal(snapshot.players.length,50);assert.equal(snapshot.mascots.wildlife.filter(a=>a.active).length,1);
   snapshot.time+=10;
   // Include both original mascots even if their safe-spawn search omitted one.
   snapshot.mascots.catActive=snapshot.mascots.dogActive=true;
-  for(const animal of snapshot.mascots.wildlife){animal.actionTime=snapshot.time-.2;animal.walking=true;}
+  snapshot.mascots.catVisible=snapshot.mascots.dogVisible=true;
+  snapshot.mascots.catPresence=snapshot.mascots.dogPresence=1;
+  // Deliberately overpopulate only this trusted renderer capacity fixture.
+  for(const animal of snapshot.mascots.wildlife){animal.active=animal.visible=true;animal.presence=1;animal.actionTime=snapshot.time-.2;animal.walking=true;}
   // Two carried balls leave forty-eight spawn rings visible in Impact mode.
   snapshot.players[1].captureKind=2;snapshot.players[2].captureKind=3;
   for(const ball of snapshot.players.slice(1,3)){ball.captured=true;ball.captureUntil=snapshot.time+10;}

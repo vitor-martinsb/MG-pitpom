@@ -7,9 +7,9 @@
 #define GOLF_PORTALS 8
 #define GOLF_PUDDLES 128
 typedef struct golf_wild_animal {
-    bool active, walking;
+    bool active, walking, present;
     vec3 a,b,pos,forward;
-    float clock,action_time,stride,speed,gait;
+    float clock,action_time,stride,speed,gait,presence;
     int action;
 } golf_wild_animal_t;
 typedef struct golf_wind_zone { vec3 pos,size; float strength; } golf_wind_zone_t;

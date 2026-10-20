@@ -63,9 +63,9 @@
     "id": 6,
     "key": "illusions",
     "names": {
-      "pt-BR": "Vale das Ilusões",
-      "en": "Valley of Illusions",
-      "es": "Valle de las Ilusiones"
+      "en": "Misty Valley",
+      "pt-BR": "Vale da Neblina",
+      "es": "Valle de la Niebla"
     },
     "color": "#bba6ce",
     "first": 11,
@@ -75,9 +75,9 @@
     "id": 7,
     "key": "volcano",
     "names": {
-      "pt-BR": "Vulcão da Paciência",
-      "en": "Volcano of Patience",
-      "es": "Volcán de la Paciencia"
+      "en": "Hills of Patience",
+      "pt-BR": "Colinas da Paciência",
+      "es": "Colinas de la Paciencia"
     },
     "color": "#c98369",
     "first": 13,
@@ -87,9 +87,9 @@
     "id": 8,
     "key": "stars",
     "names": {
-      "pt-BR": "Labirinto das Estrelas",
-      "en": "Star Labyrinth",
-      "es": "Laberinto de las Estrellas"
+      "en": "Starry Trail",
+      "pt-BR": "Trilha das Estrelas",
+      "es": "Ruta de las Estrellas"
     },
     "color": "#889ac6",
     "first": 15,
@@ -99,9 +99,9 @@
     "id": 9,
     "key": "harmony",
     "names": {
-      "pt-BR": "Caos da Harmonia",
-      "en": "Harmonious Chaos",
-      "es": "Caos de la Armonía"
+      "en": "Grove of Harmony",
+      "pt-BR": "Bosque da Harmonia",
+      "es": "Bosque de la Armonía"
     },
     "color": "#c5b67c",
     "first": 17,

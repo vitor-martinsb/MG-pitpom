@@ -32,7 +32,7 @@ try{
   const f=await p.evaluate(()=>GolfCourse.inspect().frame);assert.ok(f.actorVertices>0&&f.actorVertices<24576);
   await p.screenshot({path:`../out/visual-refresh/forest-${name}.png`});
  }
- const frame=await freezePhysics(room),romeu=frame.mascots.wildlife[0];assert.equal(romeu.active,true);
+ const frame=await freezePhysics(room),romeu=frame.mascots.wildlife[0];assert.equal(frame.mascots.wildlife.filter(a=>a.active).length,1);assert.ok(romeu.pos.every(Number.isFinite));
  // Renderer fixture only: trusted snapshots are used to check replication of
  // every puddle state. Native tests exercise creation and real shot counting.
  for(const remaining of [3,2,1,0]){
@@ -54,7 +54,7 @@ try{
  // Close-up of the same geometry used in play, without changing the animal's
  // physical location. Move only the trusted renderer's observed local ball.
  const closeup=structuredClone(frame);closeup.mascots.catActive=closeup.mascots.dogActive=false;
- closeup.mascots.wildlife.slice(1).forEach(x=>x.active=false);romeu.forward=[0,0,1];
+ closeup.mascots.thirdKind=0;closeup.mascots.wildlife.forEach((x,i)=>{x.active=x.visible=i===0;x.presence=1;});romeu.forward=[0,0,1];
  closeup.mascots.wildlife[0].forward=[0,0,1];closeup.players[0].pos=[romeu.pos[0]+.4,romeu.pos[1]+.12,romeu.pos[2]+1];
  closeup.players[0].moving=false;closeup.players[0].firstComplete=true;
  room.send([...room.members.values()][0],{...closeup,type:'snapshot',full:true,hole:0});await a.waitForTimeout(600);
@@ -65,9 +65,9 @@ try{
  }
  for(const [kind,name]of [[1,'luna'],[2,'frida']]){
   const pose=structuredClone(frame),animal=pose.mascots.wildlife[kind];
-  assert.ok(animal.active,`${name} has a safe patrol`);
+  assert.ok(animal.pos.every(Number.isFinite),`${name} has a candidate patrol`);
   pose.mascots.catActive=pose.mascots.dogActive=false;
-  pose.mascots.wildlife.forEach((x,i)=>{x.active=i===kind;x.forward=[0,0,1];});
+  pose.mascots.thirdKind=kind;pose.mascots.wildlife.forEach((x,i)=>{x.active=x.visible=i===kind;x.presence=1;x.forward=[0,0,1];});
   pose.players[0].pos=[animal.pos[0]+.4,animal.pos[1]+.12,animal.pos[2]+1];
   pose.players[0].moving=false;pose.players[0].firstComplete=true;
   room.send([...room.members.values()][0],{...pose,type:'snapshot',full:true,hole:0});await a.waitForTimeout(600);

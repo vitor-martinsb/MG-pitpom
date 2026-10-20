@@ -36,11 +36,15 @@ try{
     await page.locator('#solo-progression').check();
     await page.waitForFunction(()=>document.querySelectorAll('#level-adventure .locked').length===79);
     assert.equal(await page.locator('#level-adventure .family-title').count(),20);
+    assert.equal(await page.locator('#level-adventure .world-navigation button').count(),10);
+    assert.equal(await page.locator('#level-adventure .world-navigation [aria-current=location]').count(),1);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[1])),0);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[-1])),0);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[80])),0);
     for(const [lang,title]of [['pt-BR','Escolha de Fase'],['es','Elegir nivel'],['en','Choose a course']]){
       await page.evaluate(lang=>GolfI18n.setLanguage(lang),lang);assert.equal(await page.locator('#level-selection-title').textContent(),title);
+      assert.equal(await page.locator('#level-adventure .family-title').first().textContent(),await page.evaluate(()=>GolfI18n.familyName(1)));
+      assert.equal(await page.locator('#level-adventure [data-level="3"]').getAttribute('aria-label'),await page.evaluate(()=>`${GolfI18n.courseName(GOLF_CAMPAIGN.courses[3])}, ${GolfI18n.t('levelLocked')}`));
     }
     await page.screenshot({path:`../out/evolution-validation/course-selection-${name}.png`});
     await page.locator('#close-level-selection').click();await page.locator('#level-selection').waitFor({state:'hidden'});

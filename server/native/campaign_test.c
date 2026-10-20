@@ -17,9 +17,9 @@ static void player(golf_player_t *p,int id,vec3 position) {
 }
 static void validate_effect(golf_wildlife_t original,int kind,golf_physics_world_t *world) {
     golf_wildlife_t w=original;
-    for(int i=0;i<3;i++)w.animals[i].active=i==kind;
+    for(int i=0;i<3;i++)w.animals[i].active=w.animals[i].present=i==kind;
     w.wind_count=w.portal_count=0;w.time=20;
-    golf_wild_animal_t *a=&w.animals[kind];a->action_time=20;
+    golf_wild_animal_t *a=&w.animals[kind];a->action_time=20;a->presence=1;
     golf_player_t p[2];player(&p[0],1,vec3_add(a->pos,V3(0,GOLF_BALL_RADIUS,0)));
     player(&p[1],2,vec3_add(w.spawn,V3(0,GOLF_BALL_RADIUS,0)));
     p[0].ball.vel=V3(4,0,0);p[0].ball.is_moving=true;
@@ -62,6 +62,27 @@ int main(int argc,char **argv) {
     golf_physics_world_t world={0};world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;world.multiplayer=true;
     world.funnel_radius=CFG_NUM(&config,"multiplayer_funnel_radius");world.funnel_force=CFG_NUM(&config,"multiplayer_funnel_force");world.capture_radius=CFG_NUM(&config,"multiplayer_capture_radius");world.capture_max_speed=CFG_NUM(&config,"multiplayer_capture_max_speed");
     golf_physics_build_world(&world,false);golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
+    // Exactly three roster members on every field; candidate geometry remains
+    // available for isolated effects below. Visits are deterministic and staggered.
+    assert(m.cat_valid&&m.dog_valid);
+    for(int kind=0;kind<3;kind++)assert(m.wildlife.animals[kind].active);
+    golf_mechanics_t scheduled=m;
+    bool chosen[3]={false};
+    for(uint32_t seed=1;seed<=32;seed++){
+        scheduled=m;golf_mechanics_seed(&scheduled,seed);int seen[3]={0};
+        assert(golf_wildlife_safe(&scheduled.wildlife,scheduled.dog,.72f));
+        for(int t=0;t<100;t++){
+            golf_mechanics_animate(&scheduled,(float)t);chosen[scheduled.third_kind]=true;
+            int visible=scheduled.cat_present+scheduled.dog_present;
+            seen[0]+=scheduled.cat_present;seen[1]+=scheduled.dog_present;
+            for(int k=0;k<3;k++)if(scheduled.wildlife.animals[k].present){assert(k==scheduled.third_kind);visible++;seen[2]++;}
+            assert(visible<=1);
+            golf_mechanics_t replay=scheduled;golf_mechanics_animate(&replay,(float)t);
+            assert(replay.third_kind==scheduled.third_kind&&replay.cat_present==scheduled.cat_present&&replay.dog_present==scheduled.dog_present);
+        }
+        for(int k=0;k<3;k++)assert(seen[k]>0&&seen[k]<70);
+    }
+    assert(chosen[0]&&chosen[1]&&chosen[2]);
     // Existing twenty-course records must survive the interleaved catalogue.
     JSON_Value *saved=json_parse_string("{\"stroke_count_level_0\":2,\"stroke_count_level_1\":3,\"stroke_count_level_19\":7,\"pitpom100_best_1\":1}");
     const int old_courses[]={0,4,76},old_scores[]={2,3,7};char key[64];
@@ -107,8 +128,8 @@ int main(int argc,char **argv) {
     // Fifty balls receive independent state, including simultaneous captures.
     for(int kind=0;kind<3;kind++)if(m.wildlife.animals[kind].active) {
         golf_wildlife_t w=m.wildlife;w.wind_count=w.portal_count=0;w.time=30;
-        for(int j=0;j<3;j++)w.animals[j].active=j==kind;
-        w.animals[kind].action_time=30;
+        for(int j=0;j<3;j++)w.animals[j].active=w.animals[j].present=j==kind;
+        w.animals[kind].action_time=30;w.animals[kind].presence=1;
         golf_wildlife_t replay=w;
         golf_player_t balls[50];
         for(int j=0;j<50;j++)player(&balls[j],j+1,vec3_add(w.animals[kind].pos,V3(0,GOLF_BALL_RADIUS,0)));

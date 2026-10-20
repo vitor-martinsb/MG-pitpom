@@ -32,13 +32,15 @@ try{
     assert.ok(f.surfaceGroups>=3,`actual terrain draw calls, map ${index+1}`);
     assert.ok(f.landscapeGap>=9.9&&g.landscapeGap>=9.9,`landscape and camera clearance, map ${index+1}: ${f.landscapeGap}`);
     const metadata=await a.evaluate(i=>GOLF_CAMPAIGN.courses[i],index);
-    assert.ok(f.wildlife.filter(a=>a.active).length<=metadata.animals.length);
+    assert.equal(f.wildlife.filter(a=>a.active).length,1);
+    assert.equal(f.catActive,true);assert.equal(f.dogActive,true);
+    assert.equal(f.wildlife.find(a=>a.active).kind,f.thirdKind);
     for(const animal of f.wildlife.filter(a=>a.active))assert.ok(animal.pos.every(Number.isFinite));
     assert.ok(f.actorVertices>0&&f.actorVertices<24576,`actor capacity, map ${index+1}: ${f.actorVertices}`);
     const vertices=await a.evaluate(()=>Module.ccall('golf_garden_vertex_count','number',[],[]));assert.ok(vertices>0&&vertices<72000);
     budgets.push({course:index+1,vertices,actors:f.actorVertices,landscapeGap:f.landscapeGap});
     if(index%8===7){await a.waitForTimeout(500);await a.screenshot({path:`../out/campaign-validation/world-${f.world}.png`});await b.screenshot({path:`../out/campaign-validation/world-${f.world}-mobile.png`});console.log(`World ${f.world}: 8 family courses rendered on desktop and mobile.`);}
-    await b.waitForFunction(label=>document.getElementById('campaign-world').textContent.includes(GolfI18n.t('courseName',{number:label})),metadata.label);
+    await b.waitForFunction(index=>document.getElementById('campaign-world').textContent.includes(GolfI18n.courseName(GOLF_CAMPAIGN.courses[index])),index);
   }
   // Both renderers consume the very same trusted server animal frame.
   const frame=await freezePhysics(room),trusted=JSON.stringify({type:'snapshot',hole:room.hole,time:frame.time,mascots:frame.mascots,players:frame.players});
@@ -47,7 +49,7 @@ try{
   // Trusted renderer fixtures: labels, capture visibility and cosmetics; native
   // tests separately trigger these interactions using physical contact.
   await b.evaluate(()=>GolfI18n.setLanguage('es'));
-  await b.waitForFunction(()=>document.getElementById('campaign-world').textContent.includes(GolfI18n.t('courseName',{number:'20.3'})));
+  await b.waitForFunction(()=>document.getElementById('campaign-world').textContent.includes(GolfI18n.courseName(GOLF_CAMPAIGN.courses[79])));
   // All three detailed animals can animate together, including both carried
   // balls and Romeu's droplets, without exhausting the mobile actor buffer.
   const animated=structuredClone(frame);

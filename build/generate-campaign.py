@@ -30,12 +30,13 @@ def outputs(check=False):
             data=(ROOT/path).read_bytes().replace(b'\r\n',b'\n')
             operations=[op for row in evolved[:revision]for op in row['operations']]
             courses.append(dict(number=number,family=index+1,revision=revision,
+                familyNameKey=f'family.{index+1}',displayNumber=revision+1,
                 label=str(index+1)+(f'.{revision}'if revision else''),
                 original=original,parent=None if revision==0 else (str(index+1)+(f'.{revision-1}'if revision>1 else'')),
                 world=index//2+1,stage=index%2*4+revision+1,path=path,
                 geometryHash=hashlib.sha256(data).hexdigest(),baselineHash=hashlib.sha256(raw).hexdigest(),
                 animals=[0,1,2],features=[op[0]for op in operations],hasNewWater=any(op[0]=='S'for op in operations),operations=operations))
-    manifest=dict(version=4,reference=REFERENCE,worlds=worlds,courses=courses)
+    manifest=dict(version=5,reference=REFERENCE,worlds=worlds,courses=courses,petRoster=dict(fixed=['pituca','pompom'],thirdCandidates=['romeu','luna','frida'],count=3))
     return {
         'data/campaign/manifest.json':json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',
         'build/emscripten/campaign-data.js':'window.GOLF_CAMPAIGN='+json.dumps(manifest,ensure_ascii=False,separators=(',',':'))+';\n',

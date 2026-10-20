@@ -90,8 +90,8 @@ EMSCRIPTEN_KEEPALIVE const char *golf_ui_level_selection(void) {
     int count = (int)CFG_NUM(game_cfg, "num_levels");
     bool open = golf->state == GOLF_STATE_MAIN_MENU && ui.main_menu.is_level_select_open
         && !ui.fade_out.active && !golf_online_active();
-    int used = snprintf(text, sizeof(text), "{\"open\":%s,\"loading\":%s,\"progression\":%s,\"levels\":[",
-        open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false",solo_progression?"true":"false");
+    int used = snprintf(text, sizeof(text), "{\"open\":%s,\"loading\":%s,\"progression\":%s,\"current\":%d,\"levels\":[",
+        open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false",solo_progression?"true":"false",golf->level_num);
     for (int i = 0; i < count && used < (int)sizeof(text) - 40; i++) {
         char key[64]; float best;
         golf_progress_key(key,sizeof(key),game_cfg,i);
@@ -1422,7 +1422,7 @@ static void _golf_ui_in_game(float dt) {
                 alpha = 1 - (golf->in_game.t - time_to_show_level_num) / fade_in_length;
             }
             entity->text.text.len = 0;
-            char label[24];golf_course_label(label,sizeof(label),game_cfg,golf->level_num);
+            char label[160];golf_course_label(label,sizeof(label),game_cfg,golf->level_num);
             golf_string_appendf(&entity->text.text, golf_i18n_t("c.level"), label);
             _golf_ui_text(layout, *entity, alpha);
         }

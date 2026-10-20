@@ -376,6 +376,8 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
     }
 
     player->ball.is_in_water = false;
+    vec3 current=V3(0,0,0);
+    int water_contacts=0;
     for (int i = 0; i < num_contacts; i++) {
         golf_ball_contact_t *contact = &contacts[i];
         if (contact->is_ignored) {
@@ -385,10 +387,20 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
             continue;
         }
 
-        vec3 water_dir = contact->water_dir;
-        vec3 water_vel = vec3_scale(water_dir, CFG_NUM(world->config, "physics_water_max_speed"));
-        bv = vec3_add(bv, vec3_scale(vec3_sub(water_vel, bv), CFG_NUM(world->config, "physics_water_speed") * dt));
+        /* Directions are transformed with the water mesh. Normalize away entity
+           scale, then blend the local flow at bends before applying ONE force.
+           Triangle seams must not multiply acceleration or damp gravity. */
+        vec3 direction=contact->water_dir;direction.y=0;
+        float length=vec3_length(direction);
+        if(length>.00001f)current=vec3_add(current,vec3_scale(direction,1/length));
+        water_contacts++;
         player->ball.is_in_water = true;
+    }
+    if(water_contacts){
+        float length=vec3_length(current);
+        if(length>.00001f)current=vec3_scale(current,CFG_NUM(world->config,"physics_water_max_speed")/length);
+        float blend=1-expf(-fmaxf(0,CFG_NUM(world->config,"physics_water_speed"))*dt);
+        bv.x+=(current.x-bv.x)*blend;bv.z+=(current.z-bv.z)*blend;
     }
 
     if (player->ball.is_moving && num_contacts > 0 && world->contacts) {

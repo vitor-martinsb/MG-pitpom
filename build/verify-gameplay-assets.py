@@ -7,11 +7,11 @@ root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'tests/fixtures/gameplay-before-garden.json').read_text(encoding='utf-8'))
 updates = root / 'tests/fixtures/gameplay-mechanics-baseline.json'
 if updates.exists():
-    # The mechanics request intentionally changes these five source files.
+    # Reviewed mechanics and their physical regression test may change here.
     # Original map/model hashes retain their original, immutable baseline.
     overrides = json.loads(updates.read_text(encoding='utf-8'))
     allowed = {'server/native/worker.c', 'src/golf/physics.c', 'src/golf/game.c',
-               'src/golf/online.c', 'server/src/room.ts'}
+               'src/golf/online.c', 'server/src/room.ts','server/native/physics_test.c'}
     if set(overrides) != allowed:
         raise SystemExit('Unexpected mechanics baseline scope')
     manifest.update(overrides)

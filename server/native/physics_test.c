@@ -6,8 +6,41 @@
 
 void headless_config_load(void);
 bool headless_level_load(golf_level_t *,const char *);
+static vec3 water_velocity(vec3 direction,int triangles,int steps,float dt) {
+    golf_level_t empty={0};golf_entity_t water={0};water.type=WATER_ENTITY;water.parent_idx=-1;
+    golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);
+    golf_bvh_aabb_t box={V3(-10,5,-10),V3(10,5,10)};
+    for(int i=0;i<triangles;i++){
+        golf_bvh_face_t face={0};face.level=&empty;face.entity=&water;
+        face.a=V3(-10,5,-10);face.b=V3(0,5,10);face.c=V3(10,5,-10);face.water_dir=direction;
+        vec_push(&fixed.faces,face);
+    }
+    golf_bvh_node_t leaf={0};leaf.is_leaf=true;leaf.aabb=box;leaf.leaf_node_info.face_count=triangles;
+    vec_push(&fixed.nodes,leaf);fixed.parent=0;
+    golf_config_t config={0};golf_physics_world_t world={0};world.level=&empty;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;world.multiplayer=true;
+    golf_player_t p;golf_player_init(&p,1,"Current",V4(1,1,1,1),0);golf_player_start_level(&p,V3(0,5.06f,0));p.ball.is_moving=true;
+    for(int i=0;i<steps;i++){
+        // Keep the probe immersed to compare equal contact durations.
+        p.ball.pos=V3(0,5.06f,0);p.ball.vel.y=0;
+        golf_physics_tick_player(&world,&p,dt);assert(p.ball.is_in_water);
+        assert(fabsf(p.ball.vel.y+9.8f*dt)<.00001f);
+    }
+    vec3 result=p.ball.vel;vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);return result;
+}
+static void currents(void){
+    vec3 one=water_velocity(V3(1,0,0),1,120,1.f/120);
+    vec3 seam=water_velocity(V3(1,0,0),2,120,1.f/120);
+    vec3 scaled=water_velocity(V3(8,0,0),3,120,1.f/120);
+    vec3 finer=water_velocity(V3(1,0,0),1,240,1.f/240);
+    assert(one.x>3&&one.x<4);assert(fabsf(one.x-seam.x)<.0001f);
+    assert(fabsf(one.x-scaled.x)<.0001f&&fabsf(one.x-finer.x)<.0001f);
+    // A bend changes the local push; rotated flow must rotate acceleration.
+    vec3 bend=water_velocity(V3(0,0,-3),2,120,1.f/120);
+    assert(fabsf(bend.x)<.0001f&&fabsf(bend.z+one.x)<.0001f);
+}
 int main(int argc,char **argv) {
     headless_config_load();
+    currents();
     golf_level_t level={0}; assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
     golf_config_t config={0}; golf_bvh_t fixed,moving; golf_bvh_init(&fixed); golf_bvh_init(&moving);
     golf_physics_world_t world={0}; world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;

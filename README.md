@@ -174,3 +174,7 @@ Lifecycle, projection and label tests are independent of the renderer:
 - [xatlas](https://github.com/jpcy/xatlas)
 
 As mascotes interativas, o Modo Impacto, a apresentação dos mapas, o minimapa e a bandeira animada estão documentados em [Novas mecânicas](docs/new-mechanics.md).
+
+### Temas, correnteza e animais
+
+Os 80 campos aparecem como tema + Campo 1 a 4, com uma trilha navegavel entre os dez mundos. Pituca e Pompom fazem parte de cada campo junto com um terceiro animal sorteado, em visitas alternadas. [Detalhes da atualizacao](docs/nature-update.md).

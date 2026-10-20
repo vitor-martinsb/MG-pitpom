@@ -32,7 +32,7 @@ static void rocks(void){
 int main(void){
  headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,"data/levels/level-11.level"));
  golf_bvh_t fixed;golf_bvh_init(&fixed);golf_physics_world_t world={.level=&level,.static_bvh=&fixed};golf_physics_build_world(&world,false);
- golf_mechanics_t mechanics;golf_mechanics_init(&mechanics,&level,&fixed);golf_wildlife_t w=mechanics.wildlife;
+ golf_mechanics_t mechanics;golf_mechanics_init(&mechanics,&level,&fixed);mechanics.schedule=false;golf_mechanics_animate(&mechanics,0);golf_wildlife_t w=mechanics.wildlife;
  assert(w.animals[0].active);w.animals[1].active=w.animals[2].active=false;w.portal_count=w.wind_count=0;
  vec3 spot=w.animals[0].pos;w.animals[0].a=w.animals[0].b=spot;
  golf_player_t p[3];for(int i=0;i<3;i++){golf_player_init(&p[i],i+1,"Puddle",V4(1,1,1,1),0);golf_player_start_level(&p[i],vec3_add(spot,V3(0,.12f,0)));}

@@ -103,35 +103,53 @@
       s.append(g);
     }
     const points=order.map((_,i)=>[width/2+Math.sin(i*.95)*(narrow?60:160),grouped?110+i*rowHeight+Math.floor(i/4)*70:75+i*(h-140)/Math.max(1,order.length-1)]);
+    const familyHeadings=[];
     if(grouped)for(let i=0;i<20;i++) {
       const world=GOLF_CAMPAIGN.worlds[Math.floor(i/2)],y=points[i*4][1];
       s.append(svg('rect',{x:8,y:y-85,width:width-16,height:rowHeight*3+145,rx:24,fill:world.color,opacity:.25}));
-      const title=svg('text',{x:width/2,y:y-55,'text-anchor':'middle','font-size':narrow?19:25,'font-weight':700,fill:'#354831',class:'family-title'});title.textContent=t('familyTitle',{number:i+1});s.append(title);
-      const range=svg('text',{x:width/2,y:y-32,'text-anchor':'middle','font-size':13,fill:'#526b48'});range.textContent=world.names[GolfI18n.language]??world.names.en;s.append(range);
+      const sign=svg('rect',{x:width*.08,y:y-81,width:width*.84,height:62,rx:14,fill:'#f5e8c9',stroke:'#b2956a','stroke-width':2});
+      const title=svg('text',{x:width/2,y:y-55,'text-anchor':'middle','font-size':narrow?18:25,'font-weight':700,fill:'#354831',class:'family-title'});title.textContent=GolfI18n.familyName(i+1);
+      const range=svg('text',{x:width/2,y:y-32,'text-anchor':'middle','font-size':13,fill:'#526b48'});range.textContent=`${world.id} · ${world.names[GolfI18n.language]??world.names.en}`;familyHeadings.push(sign,title,range);
     }
     const path=points.map((p,i)=>i?`C ${points[i-1][0]} ${(points[i-1][1]+p[1])/2} ${p[0]} ${(points[i-1][1]+p[1])/2} ${p[0]} ${p[1]}`:`M ${p[0]} ${p[1]}`).join(' ');
     s.append(svg('path',{d:path,fill:'none',stroke:'#6e7855','stroke-width':27,opacity:.3}),svg('path',{d:path,fill:'none',stroke:'#ead5a7','stroke-width':20,'stroke-linecap':'round'}));
+    s.append(...familyHeadings);
+    for(let i=1;i<points.length;i++){
+      const [x,y]=points[i],previous=points[i-1];
+      if(i%8===0){const bridge=svg('g',{transform:`translate(${(x+previous[0])/2} ${(y+previous[1])/2})`, 'aria-hidden':'true'});bridge.innerHTML='<path d="M-19-18V18M19-18V18" stroke="#795c40" stroke-width="4"/><path d="M-18-12H18M-18-4H18M-18 4H18M-18 12H18" stroke="#b98d60" stroke-width="6"/>';s.append(bridge);}
+      else s.append(svg('ellipse',{cx:(x+previous[0])/2+5,cy:(y+previous[1])/2,rx:4,ry:2.5,fill:'#bba888',opacity:.8}));
+    }
     let locked=false;
     order.forEach((map,i)=>{
       const course=window.GOLF_CAMPAIGN?.courses[map],world=course&&GOLF_CAMPAIGN.worlds[course.world-1];
       const best=selection?.levels[map],isLocked=!!selection&&!!selection.progression&&locked;
-      const complete=selection?best!==null:room&&(i<room.hole||room.completed||i===room.hole&&room.phase==='results'),current=selection?(selection.progression?!isLocked&&!complete:map===0):room&&i===Math.min(room.hole,order.length-1)&&!complete;
-      const g=svg('g',{transform:`translate(${points[i][0]} ${points[i][1]})`,class:(complete?'trail-node completed':current?'trail-node current':'trail-node next')+(selection?(isLocked?' locked':' selectable'):''),'data-level':map});
+      const complete=selection?best!==null:room&&(i<room.hole||room.completed||i===room.hole&&room.phase==='results'),current=selection?(selection.progression?!isLocked&&!complete:map===Math.max(0,selection.current??0)):room&&i===Math.min(room.hole,order.length-1)&&!complete;
+      const g=svg('g',{transform:`translate(${points[i][0]} ${points[i][1]})`,class:(current?'trail-node current':complete?'trail-node completed':'trail-node next')+(selection?(isLocked?' locked':' selectable'):''),'data-level':map});
       g.append(svg('circle',{r:24,fill:complete?'#607d50':current?'#f5cb74':'#f8edcf',stroke:'#977b54','stroke-width':3}));
-      const number=svg('text',{'text-anchor':'middle',y:7,fill:complete?'#fff7e6':'#405638','font-size':18,'font-weight':700});number.textContent=isLocked?'🔒':complete?'✓':String(course?.label??map+1);g.append(number);
+      const number=svg('text',{'text-anchor':'middle',y:7,fill:complete?'#fff7e6':'#405638','font-size':18,'font-weight':700});number.textContent=isLocked?'🔒':complete?'✓':String((course?.revision??0)+1);g.append(number);
       const theme=world?([0,2,2,5,1,3,5,5,4,0][course.world-1]):Math.floor(i*6/order.length)%6,preview=svg('g',{transform:`translate(${i%2?-47:47} -17) scale(.6)`});preview.innerHTML=previews[theme];g.append(preview);
-      const label=svg('text',{x:i%2?-35:35,y:10,'text-anchor':i%2?'end':'start','font-size':17,fill:'#354831'});label.textContent=t('courseName',{number:course?.label??map+1});g.append(label);
+      const label=svg('text',{x:i%2?-35:35,y:10,'text-anchor':i%2?'end':'start','font-size':grouped?17:13,fill:'#354831'});label.textContent=grouped?t('courseName',{number:course.revision+1}):GolfI18n.courseName(course);g.append(label);
       const environment=world?(world.names[GolfI18n.language]??world.names.en):t('environment.'+environments[theme]);
       const subtitle=svg('text',{x:i%2?-35:35,y:29,'text-anchor':i%2?'end':'start','font-size':12,fill:'#526b48'});subtitle.textContent=selection?(isLocked?t('levelLocked'):best!==null?t('levelBest',{number:best}):course?.revision?t('evolutionStage',{number:course.revision}):t('originalStage')):environment;g.append(subtitle);
       if(selection){
-        g.setAttribute('role','button');g.setAttribute('aria-label',`${t('courseName',{number:course?.label??map+1})}, ${subtitle.textContent}`);g.setAttribute('aria-disabled',String(isLocked));
+        g.setAttribute('role','button');g.setAttribute('aria-label',`${GolfI18n.courseName(course)}, ${subtitle.textContent}`);g.setAttribute('aria-disabled',String(isLocked));
         g.append(svg('rect',{x:-160,y:-30,width:320,height:65,fill:'transparent'}));
         if(!isLocked){g.setAttribute('tabindex','0');const choose=()=>{if(Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;$('canvas').focus();}};g.addEventListener('click',choose);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});}
         if(selection.progression&&best===null)locked=true;
       }
       s.append(g);
-      if(current||!room&&!selection&&i===0){const pets=svg('g',{transform:`translate(${points[i][0]+(i%2?55:-110)} ${points[i][1]-45})`,class:'trail-pets'});pets.innerHTML='<use href="#pitpom-dog" width="62" height="46"/><use href="#pitpom-cat" x="45" y="-12" width="62" height="46"/>';s.append(pets);}
+      if(current||!room&&!selection&&i===0){const pets=svg('g',{transform:`translate(${points[i][0]+(i%2?34:-122)} ${points[i][1]-22})`,class:'trail-pets'});pets.innerHTML='<use href="#pitpom-dog" width="54" height="40"/><use href="#pitpom-cat" x="36" y="-8" width="54" height="40"/>';s.append(pets);}
     });container.append(s);
+    // A compact, connected world index links directly to the course trail.
+    const navigation=document.createElement('nav');navigation.className='world-navigation';navigation.setAttribute('aria-label',t('worldNavigation'));
+    const currentNode=s.querySelector('.current'),currentMap=Number(currentNode?.dataset.level??order[0]),currentWorld=GOLF_CAMPAIGN.courses[currentMap]?.world;
+    for(const world of GOLF_CAMPAIGN.worlds){
+      const first=order.find(map=>GOLF_CAMPAIGN.courses[map]?.world===world.id);if(first===undefined)continue;
+      const button=document.createElement('button');button.type='button';button.textContent=world.names[GolfI18n.language]??world.names.en;button.style.setProperty('--world-color',world.color);
+      if(world.id===currentWorld){button.setAttribute('aria-current','location');button.title=t('currentCourse');}
+      button.onclick=()=>{const node=s.querySelector(`[data-level="${first}"]`);node?.scrollIntoView({block:'center',behavior:reduced.matches?'instant':'smooth'});node?.focus({preventScroll:true});};navigation.append(button);
+    }
+    container.prepend(navigation);
     if(room){const active=container.querySelector('.current,.completed:last-child');active?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});}
   }
   let lastRoom,signature='';

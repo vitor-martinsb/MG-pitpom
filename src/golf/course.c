@@ -42,7 +42,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",m->wildlife.world,m->wildlife.stage,m->wildlife.course);
     for(int i=0;i<3;i++) {
         golf_wild_animal_t *a=&m->wildlife.animals[i];
-        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
+        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,(a->active&&(!m->schedule||i==m->third_kind))?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
     }
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"acceptedShots\":%u,\"puddles\":[",m->wildlife.accepted_shots);
     int puddles=0;for(int i=0;i<GOLF_PUDDLES;i++)if(m->wildlife.puddles[i].active){
@@ -50,7 +50,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     }
     vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time());
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"surfaceGroups\":%u,\"landscapeGap\":%.5g",golf_draw_surface_groups(),golf_garden_landscape_gap());
-    used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",m->cat_present?"true":"false",m->dog_present?"true":"false",m->third_kind,m->cat_presence,m->dog_presence,m->cat_phase,golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
     for(int i=0;i<g->physics.dynamic_bvh.node_infos.length&&i<32;i++) {
         golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);

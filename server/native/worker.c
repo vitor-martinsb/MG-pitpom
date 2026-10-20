@@ -70,7 +70,7 @@ static void wildlife_json(const golf_wildlife_t *w) {
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
     for(int i=0;i<3;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
-        printf("%s{\"kind\":%d,\"active\":%s,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
+        printf("%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,(a->active&&(!mechanics.schedule||i==mechanics.third_kind))?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
     }
     printf("],\"acceptedShots\":%u,\"puddles\":[",w->accepted_shots);
     int count=0;for(int i=0;i<GOLF_PUDDLES;i++)if(w->puddles[i].active){
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         if (cmd && !strcmp(cmd,"configure")) {
             mechanics.enabled=json_object_get_boolean(o,"mascots")==1;
             mechanics.impact=json_object_get_boolean(o,"impact")==1;
-            mechanics.seed=(uint32_t)json_object_get_number(o,"seed");
+            golf_mechanics_seed(&mechanics,(uint32_t)json_object_get_number(o,"seed"));golf_mechanics_animate(&mechanics,world.time);
             float probability=(float)json_object_get_number(o,"forwardProbability");
             mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;ok=true;
         } else if(cmd&&!strcmp(cmd,"plan")&&slot>=0&&slot<GOLF_MAX_PLAYERS){
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
                 }
                 for(int i=0;i<GOLF_MAX_PLAYERS;i++)players[i].ball.draw_pos=players[i].ball.pos;
             }
-            printf("{\"request\":%d,\"ok\":true,\"time\":%.9g,\"cpuMs\":%.3f,\"rssBytes\":%zu,\"memoryBytes\":%zu,\"mascots\":{\"enabled\":%s,\"cat\":[%.9g,%.9g,%.9g],\"dog\":[%.9g,%.9g,%.9g],\"slapTime\":%.9g,\"wakeTime\":%.9g,\"catActive\":%s,\"dogActive\":%s",request,world.time,cpu_ms(),rss_bytes(),headless_allocated_bytes(),mechanics.enabled?"true":"false",mechanics.cat.x,mechanics.cat.y,mechanics.cat.z,mechanics.dog.x,mechanics.dog.y,mechanics.dog.z,mechanics.cat_slap_time,mechanics.dog_wake_time,mechanics.cat_valid?"true":"false",mechanics.dog_valid?"true":"false");
+            printf("{\"request\":%d,\"ok\":true,\"time\":%.9g,\"cpuMs\":%.3f,\"rssBytes\":%zu,\"memoryBytes\":%zu,\"mascots\":{\"enabled\":%s,\"cat\":[%.9g,%.9g,%.9g],\"dog\":[%.9g,%.9g,%.9g],\"slapTime\":%.9g,\"wakeTime\":%.9g,\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g",request,world.time,cpu_ms(),rss_bytes(),headless_allocated_bytes(),mechanics.enabled?"true":"false",mechanics.cat.x,mechanics.cat.y,mechanics.cat.z,mechanics.dog.x,mechanics.dog.y,mechanics.dog.z,mechanics.cat_slap_time,mechanics.dog_wake_time,mechanics.cat_valid?"true":"false",mechanics.dog_valid?"true":"false",mechanics.cat_present?"true":"false",mechanics.dog_present?"true":"false",mechanics.third_kind,mechanics.cat_presence,mechanics.dog_presence,mechanics.cat_phase);
             wildlife_json(&mechanics.wildlife);printf("},\"players\":[");
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {

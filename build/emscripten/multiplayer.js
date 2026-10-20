@@ -37,10 +37,10 @@
     if(force||poolSignature!==signature){
       poolSignature=signature;$('map-options').replaceChildren();
       for(let family=1;family<=20;family++){
-        const group=document.createElement('fieldset');group.className='map-family';group.append(text('legend',t('familyTitle',{number:family})));
+        const group=document.createElement('fieldset');group.className='map-family';group.append(text('legend',GolfI18n.familyName(family)));
         for(const [id,course]of GOLF_CAMPAIGN.courses.entries())if(course.family===family){
           const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.dataset.mapId=String(id);input.checked=ids.includes(id);input.disabled=!host;
-          label.append(input,document.createTextNode(t('courseName',{number:course.label})));group.append(label);
+          label.append(input,document.createTextNode(GolfI18n.courseName(course)));group.append(label);
         }
         $('map-options').append(group);
       }
@@ -179,7 +179,7 @@
     if(phase==='finished')$('winner-banner').textContent=t('winners',{names:sorted().filter(p=>p.total===sorted()[0]?.total).map(p=>p.nickname).join(', ')});
     $('score-note').textContent=t('scoresNote',{penalty:room.penalty});
     const head=text('tr','');head.append(text('th','#'),text('th',t('player')));
-    for(let i=0;i<room.holes;i++)head.append(text('th',GOLF_CAMPAIGN.courses[room.sequence[i]]?.label??String(i+1)));head.append(text('th',t('total')));$('score-head').replaceChildren(head);
+    for(let i=0;i<room.holes;i++)head.append(text('th',GolfI18n.courseName(GOLF_CAMPAIGN.courses[room.sequence[i]])||String(i+1)));head.append(text('th',t('total')));$('score-head').replaceChildren(head);
     $('score-body').replaceChildren(...sorted().map((p,index)=>{const row=document.createElement('tr');if(p.id===identity?.id)row.classList.add('local');if(phase==='finished'&&p.total===sorted()[0]?.total)row.classList.add('winner');row.append(text('td',String(index+1)));const name=document.createElement('td');name.append(playerRow(p));row.append(name);
       for(let i=0;i<room.holes;i++)row.append(text('td',p.scores[i]===undefined?'—':p.dnf[i]?`${p.scores[i]} DNF`:String(p.scores[i])));row.append(text('td',String(p.total)));return row;}));
     $('close-scores').hidden=force;$('finish-exit').hidden=phase!=='finished';

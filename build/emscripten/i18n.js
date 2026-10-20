@@ -22,7 +22,9 @@
     paint();syncEngine();window.dispatchEvent(new Event('languagechange'));
   }
   function errorKey(message){return Object.keys(catalog['pt-BR']).find(key=>key.startsWith('error.')&&catalog['pt-BR'][key]===message);}
-  window.GolfI18n={t,setLanguage,get language(){return language;},ready(){engineReady=true;syncEngine();},
+  function familyName(family){return t(`family.${family}`);}
+  function courseName(course){return course?`${familyName(course.family)} - ${t('courseName',{number:course.revision+1})}`:'';}
+  window.GolfI18n={t,familyName,courseName,setLanguage,get language(){return language;},ready(){engineReady=true;syncEngine();},
     error(message){const key=message.code?`error.${message.code}`:errorKey(message.message);return key&&catalog.en[key]?t(key,message.params):t('error.BAD_REQUEST');}};
   document.getElementById('language').onchange=event=>setLanguage(event.target.value);
   paint();

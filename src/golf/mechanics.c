@@ -4,6 +4,21 @@
 #include <math.h>
 #include <string.h>
 static golf_navigation_t navigation;
+static uint32_t random_word(uint32_t n);
+/* Pure authority-time schedule: identical for offline play, bot simulations and
+   reconnects. Three roster members, staggered visits with quiet intervals. */
+float golf_pet_presence(uint32_t seed,int course,int pet,float time) {
+    uint32_t key=random_word(seed^((uint32_t)course*0x9e3779b9u));
+    float cycle=39+(key%7),offset=(key>>8)%6;
+    float arrival=pet*(cycle/3)+offset;
+    float phase=fmodf(time-arrival+cycle*100,cycle);
+    float duration=cycle/3-2.f;
+    float edge=fminf(phase,duration-phase)/.65f;
+    edge=golf_clampf(edge,0,1);return edge*edge*(3-2*edge);
+}
+bool golf_pet_present(uint32_t seed,int course,int pet,float time) {
+    return golf_pet_presence(seed,course,pet,time)>0;
+}
 static golf_bvh_aabb_t moving_zones[32];static int moving_zone_count;
 static bool dynamic_clear(vec3 p,float radius){
     for(int i=0;i<moving_zone_count;i++){
@@ -51,7 +66,7 @@ static vec3 placement(golf_mechanics_t *m,golf_navigation_t *nav,golf_bvh_t *bvh
 }
 void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh) {
     memset(m,0,sizeof(*m));m->forward_probability=.5f;m->slap_speed=7.5f;m->reach=.62f;m->cooldown=2.8f;
-    m->seed=0x50495450u;m->cat_slap_time=m->dog_wake_time=-100;
+    m->seed=0x50495450u;m->schedule=true;m->cat_slap_time=m->dog_wake_time=-100;
     m->bounds_min=V3(FLT_MAX,FLT_MAX,FLT_MAX);m->bounds_max=V3(-FLT_MAX,-FLT_MAX,-FLT_MAX);
     for(int i=0;i<level->entities.length;i++) {
         golf_entity_t *e=&level->entities.data[i];
@@ -86,11 +101,38 @@ void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh
         m->cat_span=span;
     }
     golf_wildlife_init(&m->wildlife,level,bvh,&navigation,m->start,m->hole,m->cat,m->dog,moving_zones,moving_zone_count);
+    golf_mechanics_animate(m,0);
 }
 void golf_mechanics_animate(golf_mechanics_t *m,float time) {
+    uint32_t key=random_word(m->seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
+    m->third_kind=(int)(key%3);
+    m->cat_presence=!m->schedule||time-m->cat_slap_time<1.1f?1:golf_pet_presence(m->seed,m->wildlife.course,0,time);
+    m->dog_presence=!m->schedule||time-m->dog_wake_time<1.1f?1:golf_pet_presence(m->seed,m->wildlife.course,1,time);
+    m->cat_present=m->cat_presence>0;m->dog_present=m->dog_presence>0;
+    for(int i=0;i<3;i++){
+        golf_wild_animal_t *a=&m->wildlife.animals[i];
+        a->presence=!m->schedule?1:i!=m->third_kind?0:time-a->action_time<1.2f?1:golf_pet_presence(m->seed,m->wildlife.course,2,time);
+        a->present=a->presence>0;
+    }
     /* Sine easing has a brief, gentle pause at each end of the crossing. */
-    float phase=sinf(time*.75f);
+    m->cat_phase=m->schedule?(key>>12)%628/100.f:0;
+    float phase=sinf(time*.75f+m->cat_phase);
     m->cat=vec3_add(m->cat_center,vec3_scale(m->across,m->cat_span*phase));
+}
+void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed){
+    m->seed=seed;
+    uint32_t key=random_word(seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
+    const golf_navigation_t *nav=m->wildlife.nav;
+    // Select an alternative nearby resting spot only after full clearance tests.
+    if(nav&&nav->count&&m->dog_valid)for(int k=0;k<nav->count;k++){
+        vec3 p=nav->nodes[(key+(uint32_t)k)%nav->count].pos;
+        if(!nav->nodes[(key+(uint32_t)k)%nav->count].reachable||vec3_distance(p,m->dog)>2.2f||vec3_distance(p,m->start)<1.8f||vec3_distance(p,m->hole)<1.8f||vec3_distance(p,m->cat_center)<2||!golf_wildlife_safe(&m->wildlife,p,.72f))continue;
+        bool clear=true;for(int j=0;j<3;j++)if(m->wildlife.animals[j].active&&(vec3_distance(p,m->wildlife.animals[j].a)<1.6f||vec3_distance(p,m->wildlife.animals[j].b)<1.6f))clear=false;
+        if(clear){m->dog=p;break;}
+    }
+    for(int k=0;k<3;k++)m->wildlife.animals[k].clock=((key>>(k*5))%100)/10.f;
+    golf_wildlife_tick(&m->wildlife,NULL,0,0,m->seed,false);
+    golf_mechanics_animate(m,0);
 }
 void golf_ball_return_before_shot(golf_player_t *p) {
     golf_ball_t *b=&p->ball;
@@ -114,13 +156,13 @@ void golf_mechanics_tick(golf_mechanics_t *m,golf_player_t *players,int count,fl
         } else if(m->enabled&&!b->is_in_hole&&p->stroke_count>0) {
             float cat_distance=vec3_distance(b->pos,vec3_add(m->cat,V3(0,b->radius,0)));
             if(cat_distance>m->reach+.18f)b->cat_contact=false;
-            if(m->cat_valid&&cat_distance<m->reach&&!b->cat_contact&&time>=b->cat_cooldown) {
+            if(m->cat_valid&&m->cat_present&&m->cat_presence>.95f&&cat_distance<m->reach&&!b->cat_contact&&time>=b->cat_cooldown) {
                 b->cat_contact=true;b->cat_cooldown=time+m->cooldown;b->cat_hits++;
                 float random=(random_word(m->seed^p->id^(b->cat_hits*0x9e3779b9u))>>8)/16777216.f;
                 b->vel=vec3_scale(m->direction,random<m->forward_probability?m->slap_speed:-m->slap_speed);
                 b->is_moving=true;b->time_going_slow=0;m->cat_slap_time=time;
             }
-            if(m->dog_valid&&vec3_distance(b->pos,vec3_add(m->dog,V3(0,b->radius,0)))<m->reach&&
+            if(m->dog_valid&&m->dog_present&&m->dog_presence>.95f&&vec3_distance(b->pos,vec3_add(m->dog,V3(0,b->radius,0)))<m->reach&&
                time>=b->dog_cooldown&&b->dog_stroke!=p->stroke_count) {
                 b->dog_stroke=p->stroke_count;b->capture_until=time+1.1f;b->captured=false;
                 b->is_moving=true;b->vel=V3(0,0,0);m->dog_wake_time=time;

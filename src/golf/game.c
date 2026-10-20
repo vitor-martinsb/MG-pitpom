@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <float.h>
+#include <stdlib.h>
 
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include "cimgui/cimgui.h"
@@ -584,6 +585,9 @@ void golf_game_start_level(void) {
     world.time = 0;
     golf_physics_build_world(&world, false);
     golf_mechanics_init(&game.mechanics,level,&game.physics.static_bvh);
+    if(!golf_online_active()){
+        golf_mechanics_seed(&game.mechanics,(uint32_t)rand()^((uint32_t)rand()<<16));
+    }
     game.mechanics.enabled=true;
 
     game.t = 0;
