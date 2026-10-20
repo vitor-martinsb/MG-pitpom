@@ -5,21 +5,24 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Physics} from '../src/physics.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-test('campaign publishes 100 different routes in ten worlds without replacing the original maps',()=>{
+test('catalogue restores exactly the twenty reference maps in their original order',()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'data/campaign/manifest.json'),'utf8'));
   const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
-  assert.equal(config.num_levels,100);assert.equal(manifest.worlds.length,10);assert.equal(manifest.courses.length,100);
-  assert.equal(new Set(manifest.courses.map((c:any)=>c.geometryHash)).size,100);
-  assert.equal(manifest.version,2);assert.ok(manifest.similarity.maximum<manifest.similarity.limit);
-  for(let world=1;world<=10;world++)assert.ok(new Set(manifest.courses.filter((c:any)=>c.world===world).map((c:any)=>c.layout)).size>=8);
-  assert.ok(manifest.courses.filter((c:any)=>c.branches.length>0).length>=20);
-  assert.ok(manifest.courses.filter((c:any)=>c.gapCount>0).length>=4);
-  for(const c of manifest.courses){assert.equal(config[`level${c.number}`],c.path);assert.ok(fs.existsSync(path.join(root,c.path)));assert.equal(c.world,Math.ceil(c.number/10));}
-  for(let i=1;i<=20;i++)assert.ok(fs.existsSync(path.join(root,`data/levels/level-${i}.level`)));
+  const order=[3,2,4,1,...Array.from({length:16},(_,i)=>i+5)];
+  assert.equal(config.num_levels,20);assert.equal(manifest.courses.length,20);
+  assert.equal(config.campaign_version,undefined);
+  assert.equal(manifest.reference,'ecaf879c1611601931338dfe5c234e01db22de89');
+  for(const [index,number] of order.entries()){
+    const expected=`data/levels/level-${number}.level`;
+    assert.equal(config[`level${index+1}`],expected);
+    assert.equal(manifest.courses[index].path,expected);
+    assert.ok(fs.existsSync(path.join(root,expected)));
+  }
+  assert.equal(fs.readdirSync(path.join(root,'data/campaign')).filter(n=>n.endsWith('.level')).length,0);
 });
 test('two authoritative workers reproduce the same animal patrols and fifty-ball state in classic and Impact',async()=>{
   for(const impact of [false,true]){
-    const a=new Physics(root,'data/campaign/course-100.level'),b=new Physics(root,'data/campaign/course-100.level');
+    const a=new Physics(root,'data/levels/level-20.level'),b=new Physics(root,'data/levels/level-20.level');
     try{
       await Promise.all([a.configure(impact,735),b.configure(impact,735)]);
       for(let slot=0;slot<50;slot++)await Promise.all([a.add(slot,slot+1),b.add(slot,slot+1)]);

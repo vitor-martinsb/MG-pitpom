@@ -10,7 +10,7 @@ void headless_config_load(void);
 bool headless_level_load(golf_level_t *,const char *);
 static void settle(golf_wildlife_t *w,golf_player_t *p,int count,float t){golf_wildlife_tick(w,p,count,t,917,true);}
 static void rocks(void){
- golf_level_t level={0};assert(headless_level_load(&level,"data/campaign/course-004.level"));
+ golf_level_t level={0};assert(headless_level_load(&level,"tests/fixtures/irregular-rock.level"));
  golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);golf_config_t config={0};
  golf_physics_world_t w={.level=&level,.config=&config,.static_bvh=&fixed,.dynamic_bvh=&moving,.multiplayer=true};golf_physics_build_world(&w,false);
  golf_entity_t *stone=NULL;for(int i=0;i<level.entities.length;i++)if(!strcmp(level.entities.data[i].name,"bank-shot-stone"))stone=&level.entities.data[i];assert(stone);
@@ -30,7 +30,7 @@ static void rocks(void){
  }
 }
 int main(void){
- headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,"data/campaign/course-021.level"));
+ headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,"data/levels/level-11.level"));
  golf_bvh_t fixed;golf_bvh_init(&fixed);golf_physics_world_t world={.level=&level,.static_bvh=&fixed};golf_physics_build_world(&world,false);
  golf_mechanics_t mechanics;golf_mechanics_init(&mechanics,&level,&fixed);golf_wildlife_t w=mechanics.wildlife;
  assert(w.animals[0].active);w.animals[1].active=w.animals[2].active=false;w.portal_count=w.wind_count=0;
@@ -62,6 +62,17 @@ int main(void){
   if(!a->walking)assert(fabsf(a->stride-old)<.00001f);
  }
  assert(travelled>.5f);assert(fabsf(w.animals[0].stride-travelled*(2*MF_PI/.42f))<.015f);
+ // Luna and Frida share the same movement contract, including a real stop.
+ for(int kind=1;kind<3;kind++){
+  w=mechanics.wildlife;assert(w.animals[kind].active);float distance=0;bool rested=false;
+  for(int tick=0;tick<2400;tick++){
+   vec3 old_pos=w.animals[kind].pos;float old_phase=w.animals[kind].stride;
+   settle(&w,NULL,0,tick/120.f);golf_wild_animal_t *a=&w.animals[kind];
+   distance+=vec3_distance(old_pos,a->pos);
+   if(vec3_distance(old_pos,a->pos)==0){rested=true;assert(a->stride==old_phase);}
+  }
+  assert(distance>.5f&&rested);assert(fabsf(w.animals[kind].stride-distance*(2*MF_PI/.42f))<.025f);
+ }
  golf_mechanics_init(&mechanics,&level,&fixed);assert(mechanics.wildlife.accepted_shots==0);for(int i=0;i<GOLF_PUDDLES;i++)assert(!mechanics.wildlife.puddles[i].active);
  puts("Puddles: exactly three completed valid global shots, duplicates, concurrency, no timer, independent expiry, cleanup and distance-driven gait passed.");
  rocks();puts("Irregular rock: shared render/collision hull, finite response and no tunnelling at low, medium and maximum shot power passed.");

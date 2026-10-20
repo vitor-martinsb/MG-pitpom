@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "key": "tranquility",
+    "names": {
+      "pt-BR": "Bosque da Tranquilidade",
+      "en": "Tranquil Grove",
+      "es": "Bosque de la Tranquilidad"
+    },
+    "color": "#91b775",
+    "first": 1,
+    "last": 2
+  },
+  {
+    "id": 2,
+    "key": "zen",
+    "names": {
+      "pt-BR": "Lagoa Zen",
+      "en": "Zen Lagoon",
+      "es": "Laguna Zen"
+    },
+    "color": "#77b6b3",
+    "first": 3,
+    "last": 4
+  },
+  {
+    "id": 3,
+    "key": "meditation",
+    "names": {
+      "pt-BR": "Loop da Meditação",
+      "en": "Meditation Loop",
+      "es": "Bucle de la Meditación"
+    },
+    "color": "#afba8b",
+    "first": 5,
+    "last": 6
+  },
+  {
+    "id": 4,
+    "key": "hope",
+    "names": {
+      "pt-BR": "Salto da Esperança",
+      "en": "Leap of Hope",
+      "es": "Salto de la Esperanza"
+    },
+    "color": "#e3bf99",
+    "first": 7,
+    "last": 8
+  },
+  {
+    "id": 5,
+    "key": "winds",
+    "names": {
+      "pt-BR": "Jardim dos Ventos",
+      "en": "Garden of Winds",
+      "es": "Jardín de los Vientos"
+    },
+    "color": "#a6c7a6",
+    "first": 9,
+    "last": 10
+  },
+  {
+    "id": 6,
+    "key": "illusions",
+    "names": {
+      "pt-BR": "Vale das Ilusões",
+      "en": "Valley of Illusions",
+      "es": "Valle de las Ilusiones"
+    },
+    "color": "#bba6ce",
+    "first": 11,
+    "last": 12
+  },
+  {
+    "id": 7,
+    "key": "volcano",
+    "names": {
+      "pt-BR": "Vulcão da Paciência",
+      "en": "Volcano of Patience",
+      "es": "Volcán de la Paciencia"
+    },
+    "color": "#c98369",
+    "first": 13,
+    "last": 14
+  },
+  {
+    "id": 8,
+    "key": "stars",
+    "names": {
+      "pt-BR": "Labirinto das Estrelas",
+      "en": "Star Labyrinth",
+      "es": "Laberinto de las Estrellas"
+    },
+    "color": "#889ac6",
+    "first": 15,
+    "last": 16
+  },
+  {
+    "id": 9,
+    "key": "harmony",
+    "names": {
+      "pt-BR": "Caos da Harmonia",
+      "en": "Harmonious Chaos",
+      "es": "Caos de la Armonía"
+    },
+    "color": "#c5b67c",
+    "first": 17,
+    "last": 18
+  },
+  {
+    "id": 10,
+    "key": "enlightenment",
+    "names": {
+      "pt-BR": "Caminho da Iluminação",
+      "en": "Path of Enlightenment",
+      "es": "Camino de la Iluminación"
+    },
+    "color": "#ddc586",
+    "first": 19,
+    "last": 20
+  }
+]

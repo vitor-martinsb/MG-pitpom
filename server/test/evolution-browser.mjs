@@ -22,8 +22,8 @@ try{
     await page.locator('#offline').click();await page.waitForTimeout(500);
     const viewport=page.viewportSize();await canvasClick(page,viewport.width/2,viewport.height*.75);
     await page.locator('#level-selection').waitFor({state:'visible'});
-    assert.equal(await page.locator('#level-adventure .trail-node').count(),100);
-    assert.equal(await page.locator('#level-adventure .locked').count(),99);
+    assert.equal(await page.locator('#level-adventure .trail-node').count(),20);
+    assert.equal(await page.locator('#level-adventure .locked').count(),19);
     assert.equal(await page.locator('#level-adventure .world-title').count(),10);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[1])),0);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[-1])),0);

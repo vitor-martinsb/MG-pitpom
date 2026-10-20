@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "golf/reference-courses.h"
 
 static uint32_t random_word(uint32_t n) {
     n^=n>>16;n*=0x7feb352du;n^=n>>15;n*=0x846ca68bu;return n^(n>>16);
@@ -38,6 +39,21 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         else if(sscanf(e->name,"portal:%d:%d",&pair,&end)==2&&w->portal_count<GOLF_PORTALS)
             w->portals[w->portal_count++]=(golf_portal_t){t.position,pair,end,false};
     }
+    /* Recognize the preserved maps without adding markers to their geometry. */
+    if(!w->course)for(int index=0;index<20;index++) {
+        if(level->entities.length!=reference_courses[index].entities)continue;
+        bool match=false;
+        for(int i=0;i<level->entities.length;i++) {
+            golf_entity_t *e=&level->entities.data[i];
+            if(e->type==HOLE_ENTITY&&vec3_distance(golf_entity_get_world_transform(level,e).position,reference_courses[index].hole)<.001f)match=true;
+        }
+        if(!match)continue;
+        w->course=index+1;w->world=index/2+1;w->stage=index%2+1;
+        for(int kind=0;kind<3;kind++)if(!present[kind]) {
+            wanted[kind]=vec3_add(start,vec3_scale(vec3_sub(hole,start),.25f+kind*.25f));present[kind]=true;
+        }
+        break;
+    }
     for(int i=0;i<w->portal_count;i++){
         golf_portal_t *portal=&w->portals[i];portal->active=golf_wildlife_safe(w,portal->pos,.26f);
         if(!portal->active){
@@ -57,7 +73,7 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         }
         if(best<0)continue;
         golf_wild_animal_t *a=&w->animals[kind];a->active=true;a->a=a->b=a->pos=nav->nodes[best].pos;
-        a->forward=V3(0,0,-1);a->action_time=-100;a->clock=kind*1.7f;
+        a->forward=V3(0,0,-1);a->action_time=-100;a->clock=0;
         // A short, fully sampled corridor avoids walls, water and moving sweeps.
         for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(a->a,p);

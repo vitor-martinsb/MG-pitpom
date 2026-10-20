@@ -9,7 +9,7 @@ import {Physics,type Ball,type BotDifficulty} from '../src/physics.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
-const levels=[config.level1,config.level31];
+const levels=[config.level1,config.level7];
 function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,send:(text:string)=>messages.push(JSON.parse(text)),close(){},messages} as unknown as WebSocket&{messages:any[]};}
 function ball(id:number,strokes=0,hole=false):Ball{return {id,pos:[0,.12,0],vel:[0,0,0],moving:false,hole,water:false,strokes,firstComplete:false,captured:false,captureUntil:0};}
 

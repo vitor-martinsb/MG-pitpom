@@ -18,8 +18,8 @@ try{
  await a.locator('#nickname').fill('Visual Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
  const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Mobile');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
  await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));
- room.selectedLevels=[20];room.holes=1;room.hole=0;await room.load();
- await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===21&&GolfCourse.inspect().frame.intro)));
+ room.selectedLevels=[10];room.holes=1;room.hole=0;await room.load();
+ await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===11&&GolfCourse.inspect().frame.intro)));
  await Promise.all(pages.map(p=>p.locator('#skip-presentation').click()));
  await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden)));
  fs.mkdirSync('../out/visual-refresh',{recursive:true});
@@ -52,5 +52,15 @@ try{
   await a.mouse.move(1050,650);await a.mouse.down();await a.mouse.move(500,650,{steps:10});await a.mouse.up();await a.waitForTimeout(200);
   await a.screenshot({path:`../out/visual-refresh/romeu-angle-${angle}.png`});
  }
- assert.deepEqual(errors,[]);console.log('Poppins four weights, text-free/animal-free live minimap, forest rendering and authoritative puddle replication 3/2/1/removed passed on desktop/mobile.');
+ for(const [kind,name]of [[1,'luna'],[2,'frida']]){
+  const pose=structuredClone(frame),animal=pose.mascots.wildlife[kind];
+  assert.ok(animal.active,`${name} has a safe patrol`);
+  pose.mascots.catActive=pose.mascots.dogActive=false;
+  pose.mascots.wildlife.forEach((x,i)=>{x.active=i===kind;x.forward=[0,0,1];});
+  pose.players[0].pos=[animal.pos[0]+.4,animal.pos[1]+.12,animal.pos[2]+1];
+  pose.players[0].moving=false;pose.players[0].firstComplete=true;
+  room.send([...room.members.values()][0],{...pose,type:'snapshot',full:true,hole:0});await a.waitForTimeout(600);
+  await a.screenshot({path:`../out/visual-refresh/${name}.png`});
+ }
+ assert.deepEqual(errors,[]);console.log('Poppins four weights, clean minimap, forest, Luna/Frida reference models and puddle replication passed on desktop/mobile.');
 }finally{await browser?.close();app.close();}

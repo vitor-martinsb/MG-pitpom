@@ -1,3 +1,7 @@
+> Current playable selection: **20 original courses**, selectively restored from `ecaf879c`.
+> Recent interface, multiplayer, music and animal improvements remain enabled.
+> See [restoration details](docs/reference-restoration.md).
+
 # PitPom Minigolfe
 A cross-platform minigolf game written in C. 
 
@@ -59,23 +63,18 @@ visible protection in Impact, articulated loading mascots, independent audio
 controls and final celebration extend the existing game.
 See [game evolution and validation](docs/game-evolution.md).
 
-The campaign contains **100 courses across ten worlds**. Solo **Choose a course**
-shows the sequential trail and saves campaign progress separately from the
-original twenty courses. Multiplayer hosts can draw 1–100 distinct courses.
-Romeu (a black poodle in a gray, blue and red crochet vest) briefly slows a ball;
-Luna returns it to the course start; Frida sends it to a safe location. These
-animals appear only during play, alongside Pituca and Pompom. Wind, portals,
-physical loops, ramps and timed gates arrive progressively.
-See [campaign rules, generation and validation](docs/campaign.md).
+The game contains **20 original courses**, in the reference version's order.
+Solo **Choose a course** shows their sequential trail and preserves original
+course records. Multiplayer hosts can draw 1-20 distinct courses. The ten music
+and scenery themes each cover two courses.
 
-The campaign now uses twenty structural families, real forks and airborne gaps,
-with geometry similarity rejection across all 100 layouts. Continuous forest
-terrain integrates the courses, and irregular gray rocks share their visible
-collision hull. Romeu follows the poodle reference with a fitted vest and
-distance-driven footsteps. His puddles last exactly three completed global
-strokes. The live minimap has no text or animals, and Poppins is used throughout
-the HTML and C-rendered interface.
-See [visual refresh, map diversity and validation](docs/visual-course-refresh.md).
+Romeu remains a black poodle with a fitted gray, blue and red vest. His puddles
+last exactly three completed global strokes. Luna follows the black dog artwork,
+with angular, folded-tip ears and brown eyes. Frida remains the white and gray
+cat from her photo. All moving animals use distance-driven footsteps. The live
+minimap has no text or animals, Poppins is used throughout, and forest terrain
+surrounds the preserved original tracks. Original obstacles retain their layouts.
+See [restoration details and validation](docs/reference-restoration.md).
 
 With this workspace's builds already generated:
 

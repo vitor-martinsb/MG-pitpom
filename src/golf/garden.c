@@ -254,6 +254,10 @@ void golf_garden_prepare(golf_level_t *level, int level_number) {
             course_max=V3(fmaxf(course_max.x,p.x),fmaxf(course_max.y,p.y),fmaxf(course_max.z,p.z));
         }
     }
+    if(!garden.biome&&golf_game_get()->mechanics.wildlife.course){
+        garden.biome=golf_game_get()->mechanics.wildlife.world;
+        course_min=golf_game_get()->mechanics.bounds_min;course_max=golf_game_get()->mechanics.bounds_max;
+    }
     if(garden.biome){garden.center=vec3_scale(vec3_add(course_min,course_max),.5f);garden.radius=fmaxf(28,vec3_distance(course_min,course_max)*.5f+10);campaign_scenery(&mesh,course_min,course_max);}
     bool sign_added=false;int trees=0;
     for(int i=0;i<level->entities.length&&i<1024;i++) {
@@ -335,7 +339,7 @@ vec4 golf_garden_sky_color(void) {
     return V4(.64f+garden.biome_color.x*.20f,.68f+garden.biome_color.y*.20f,.72f+garden.biome_color.z*.18f,1);
 }
 static void quadruped_leg(garden_mesh_t *,int,float,float,float,float,float,vec4,bool,float);
-static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float event_age,vec3 forward) {
+static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float event_age,vec3 forward,float phase,float gait) {
     garden.transform=mat4_multiply(mat4_translation(position),mat4_rotation_y(atan2f(forward.x,forward.z)));
     vec4 white=paint(.96f,.91f,.79f,0),orange=paint(.83f,.46f,.20f,0),black=paint(.14f,.17f,.16f,0),pink=paint(.88f,.51f,.46f,0);
     vec4 coat=cat?orange:white;
@@ -346,7 +350,7 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
     oval(mesh,V3(0,height,.27f),V3(cat?.17f:.22f,.20f,.14f),white,3,8);
     for(int i=0;i<4;i++) {
         float x=(i&1?1:-1)*(cat?.13f:.21f),z=i<2?.25f:-.27f;
-        if(cat){float lift=i==0&&event_age>=0&&event_age<.4f?.16f*sinf(event_age/.4f*MF_PI):0;quadruped_leg(mesh,i,x,z,height-.07f,time*6,1,white,false,lift);continue;}
+        if(cat){float lift=i==0&&event_age>=0&&event_age<.4f?.16f*sinf(event_age/.4f*MF_PI):0;quadruped_leg(mesh,i,x,z,height-.07f,phase,gait,white,false,lift);continue;}
         float step=cat?.05f*sinf(time*6+i*MF_PI*.5f):0;
         float paw_y=cat?.07f:.055f;
         if(cat&&i==0&&event_age>=0&&event_age<.4f){z+=.27f*sinf(event_age/.4f*MF_PI);paw_y+=.16f*sinf(event_age/.4f*MF_PI);}
@@ -451,29 +455,28 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
     garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
     if(kind==0){poodle(mesh,a,time);garden.transform=mat4_identity();return;}
     vec4 black=paint(.10f,.11f,.13f,0),cream=paint(.97f,.95f,.89f,0),pink=paint(.86f,.52f,.51f,0);
-    vec4 chocolate=paint(.22f,.15f,.13f,0),tabby=paint(.31f,.29f,.26f,0),gray=paint(.52f,.50f,.48f,0);
+    vec4 tabby=paint(.31f,.29f,.26f,0),gray=paint(.52f,.50f,.48f,0);
     float age=time-a->action_time;bool acting=age>=0&&age<1.15f;
-    float step=a->walking?sinf(a->clock*(kind==2?5.0f:7.0f)):0;
+    float phase=a->stride+fmaxf(0,time-game->mechanics.wildlife.time)*a->speed*(2*MF_PI/.42f);
+    float blend=a->gait,step=sinf(phase)*blend;
     float height=kind==1?.37f:kind==2?.36f:.32f,body=kind==1?.41f:.34f;
-    vec4 coat=kind==2?cream:kind==1?chocolate:black;
+    vec4 coat=kind==2?cream:black;
     float torso_y=height+fabsf(step)*.015f;
     oval(mesh,V3(0,torso_y,-.04f),V3(.23f,.21f,body),coat,4,9);
     if(kind==1) {
-        // Luna has a warm dark coat, a small pale chest and a dark collar.
-        oval(mesh,V3(0,height-.035f,.25f),V3(.09f,.13f,.045f),paint(.72f,.68f,.61f,0),3,7);
+        // Luna's compact black silhouette follows the supplied low-poly art.
+        oval(mesh,V3(0,height-.035f,.25f),V3(.09f,.13f,.045f),black,3,7);
         oval(mesh,V3(0,height+.13f,.22f),V3(.19f,.055f,.16f),black,2,8);
     }
     for(int leg=0;leg<4;leg++) {
         float x=(leg%2?1:-1)*.16f,z=leg<2?.23f:-body*.75f;
-        float stride=step*(leg%2?-.05f:.05f),paw=.055f+fabsf(stride)*.6f;
-        if(acting&&kind==2&&leg<2){z+=.22f*sinf(golf_clampf(age/.7f,0,1)*MF_PI);paw+=.06f;}
-        branch(mesh,V3(x*.8f,height-.08f,z),V3(x,paw,z+stride),.055f,.04f,coat);
-        oval(mesh,V3(x,paw,z+stride),V3(.065f,.05f,.095f),coat,2,6);
+        float lift=acting&&kind==2&&leg<2?.06f*sinf(golf_clampf(age/.7f,0,1)*MF_PI):0;
+        quadruped_leg(mesh,leg,x,z,height-.08f,phase,blend,coat,false,lift);
     }
     float head_y=kind==1?.67f:.61f;
     if(acting&&kind==1)head_y+=.045f*sinf(age*10);
     if(kind==2)frida_head(mesh,head_y,cream,tabby);
-    else oval(mesh,V3(0,head_y,.29f),V3(.225f,.21f,.22f),kind==1?paint(.16f,.12f,.11f,0):black,4,9);
+    else oval(mesh,V3(0,head_y,.29f),V3(.245f,.23f,.235f),black,4,9);
     for(int side=-1;side<=1;side+=2) {
         if(kind==2) {
             triangle(mesh,V3(side*.21f,head_y+.06f,.22f),V3(side*.19f,head_y+.31f,.23f),V3(side*.06f,head_y+.14f,.39f),tabby);
@@ -481,16 +484,21 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
             for(int whisker=0;whisker<2;whisker++)branch(mesh,V3(side*.075f,head_y-.075f,.55f),
                 V3(side*.245f,head_y-.07f+whisker*.04f,.56f),.003f,.0015f,gray);
         }else if(kind==1) {
-            // Rounded, partly upright ears, rather than long dachshund ears.
-            oval(mesh,V3(side*.23f,head_y+.115f+step*.015f,.23f),V3(.105f,.125f,.075f),chocolate,3,7);
-            oval(mesh,V3(side*.23f,head_y+.12f,.292f),V3(.062f,.075f,.014f),paint(.35f,.23f,.21f,0),2,6);
+            // Angular ears rise to a crease, with a distinct forward-folded tip.
+            vec3 outer=V3(side*.275f,head_y+.09f,.20f),inner=V3(side*.10f,head_y+.13f,.30f);
+            vec3 crease=V3(side*.27f,head_y+.30f,.17f),ridge=V3(side*.17f,head_y+.32f,.18f),tip=V3(side*.285f,head_y+.18f,.37f);
+            triangle(mesh,outer,crease,inner,black);triangle(mesh,inner,crease,ridge,black);
+            triangle(mesh,ridge,crease,tip,paint(.16f,.13f,.14f,0));
+            triangle(mesh,V3(side*.185f,head_y+.29f,.20f),V3(side*.25f,head_y+.28f,.20f),V3(side*.275f,head_y+.20f,.35f),paint(.30f,.17f,.17f,0));
+            triangle(mesh,outer,tip,crease,black);
         }
-        float eye_height=kind==2?.035f:.065f,pupil_height=kind==2?.024f:.043f;
+        float eye_height=kind==2?.035f:.080f,pupil_height=kind==2?.024f:.058f;
         oval(mesh,V3(side*.103f,head_y+.035f,.482f),V3(.055f,eye_height,.016f),kind==2?paint(.63f,.66f,.39f,0):paint(.49f,.34f,.20f,0),3,7);
         oval(mesh,V3(side*.103f,head_y+.035f,.497f),V3(.028f,pupil_height,.009f),black,2,6);
         oval(mesh,V3(side*.093f,head_y+.046f,.507f),V3(.010f,.011f,.007f),cream,2,5);
     }
-    oval(mesh,V3(0,head_y-.07f,.48f),V3(kind==1?.13f:.12f,.075f,.115f),kind==2?cream:kind==1?gray:paint(.35f,.34f,.34f,0),3,7);
+    oval(mesh,V3(0,head_y-.07f,.48f),V3(kind==1?.14f:.12f,.085f,.115f),kind==2?cream:paint(.16f,.16f,.18f,0),3,7);
+    if(kind==2)oval(mesh,V3(0,head_y-.137f,.51f),V3(.045f,.024f,.032f),cream,2,6);
     oval(mesh,V3(0,head_y-.04f,.587f),V3(.036f,.026f,.025f),kind==2?pink:black,2,6);
     if(kind!=2) {
         oval(mesh,V3(0,head_y-.125f,.54f),V3(.08f,.045f,.045f),black,2,6);
@@ -581,8 +589,11 @@ void golf_garden_draw_feedback(float time) {
     for(int i=0;i<garden.level->entities.length;i++)if(golf_garden_replaces_flag(&garden.level->entities.data[i]))wind_flag(&actor,&garden.level->entities.data[i],golf_garden_flag_time());
     if(golf_get()->state==GOLF_STATE_IN_GAME&&game->mechanics.enabled){
         vec3 forward=game->mechanics.across;if(cosf(time*.75f)<0)forward=vec3_scale(forward,-1);
-        if(game->mechanics.cat_valid)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward);
-        if(game->mechanics.dog_valid)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game));
+        float angle=fmaxf(time,0)*.75f,segment=fmodf(angle,MF_PI);
+        float travelled=game->mechanics.cat_span*(floorf(angle/MF_PI)*2+(segment<=MF_PI*.5f?sinf(segment):2-sinf(segment)));
+        float gait=golf_clampf(fabsf(cosf(angle))*game->mechanics.cat_span*.75f/.18f,0,1);
+        if(game->mechanics.cat_valid)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward,travelled*(2*MF_PI/.42f),gait);
+        if(game->mechanics.dog_valid)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game),0,0);
         for(int kind=0;kind<3;kind++)if(game->mechanics.wildlife.animals[kind].active)
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
         campaign_obstacles(&actor,&game->mechanics.wildlife,time);

@@ -29,6 +29,10 @@ test('classic snapshots keep balls independent; seeded mascot snapshots are dete
   const a=new Physics(root,levels[0]!),b=new Physics(root,levels[0]!);
   try{
     await a.configure(false,1234);await b.configure(false,1234);
+    // Isolate ball-to-ball independence: shared puddles and Frida's per-player
+    // destinations deliberately give different outcomes when NPCs are enabled.
+    await a.command({cmd:'configure',mascots:false,impact:false,seed:1234});
+    await b.command({cmd:'configure',mascots:false,impact:false,seed:1234});
     for(let i=0;i<50;i++){await a.add(i,i+1);await b.add(i,i+1);}
     await a.step(120);await b.step(120);
     for(let i=0;i<50;i++){assert.equal(await a.shot(i,[0,0,-1],.2),true);await b.shot(i,[0,0,-1],.2);}

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('campaign', ROOT / 'build/generate-campaign.py')
+spec = importlib.util.spec_from_file_location('campaign', ROOT / 'build/fixture-mesh.py')
 campaign = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(campaign)
 
@@ -18,7 +18,7 @@ def floor(mesh, x0, x1, z0, z1, y0, y1=None):
         mesh.face(list(reversed(points)) if reverse else points,'wall')
 
 def make(name, descending=False):
-    template=json.loads((ROOT / 'data/campaign/course-001.level').read_text(encoding='utf-8'))
+    template=json.loads((ROOT / 'tests/fixtures/bot-ramp-gap.level').read_text(encoding='utf-8'))
     mesh=campaign.Mesh()
     if descending:
         floor(mesh,-2,2,3,-5,2.4)

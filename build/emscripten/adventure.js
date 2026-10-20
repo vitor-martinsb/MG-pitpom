@@ -90,7 +90,7 @@
   function paint(container,order,room,selection){
     if(!container)return;
     const narrow=selection&&innerWidth<600,width=narrow?400:720;
-    const grouped=!!selection&&order.length===100,rowHeight=narrow?82:65;
+    const grouped=!!selection&&order.length===20,rowHeight=narrow?82:65;
     container.replaceChildren();const h=Math.max(600,order.length*rowHeight+120+(grouped?700:0)),s=svg('svg',{viewBox:`0 0 ${width} ${h}`,role:selection?'group':'img','aria-label':t(selection?'levelSelection':'adventureTitle')});
     s.innerHTML=`<defs><linearGradient id="sky-${container.id}" x2="0" y2="1"><stop stop-color="#cadeda"/><stop offset="1" stop-color="#f2dfb5"/></linearGradient></defs>
       <rect width="720" height="${h}" rx="35" fill="url(#sky-${container.id})"/>
@@ -102,10 +102,10 @@
       g.innerHTML=i%4===0?'<path d="M-16 10 Q0 -26 16 10Z" fill="#db9b66"/><path d="M0 10V26" stroke="#f6eccf" stroke-width="10"/><circle cx="-6" cy="4" r="3" fill="#fff4dd"/>':i%5===0?'<path d="M-20 18V-3L0-22L20-3V18Z" fill="#f0dcae"/><path d="M-25-3L0-27L25-3" fill="#c5916c"/><path d="M-3 18V4H6V18" fill="#927554"/>':'<path d="M0 12V40" stroke="#977657" stroke-width="7"/><ellipse cy="-4" rx="25" ry="33" fill="#668c68"/><ellipse cx="-14" cy="9" rx="18" ry="23" fill="#759d70"/>';
       s.append(g);
     }
-    const points=order.map((_,i)=>[width/2+Math.sin(i*.95)*(narrow?60:160),grouped?110+i*rowHeight+Math.floor(i/10)*70:75+i*(h-140)/Math.max(1,order.length-1)]);
+    const points=order.map((_,i)=>[width/2+Math.sin(i*.95)*(narrow?60:160),grouped?110+i*rowHeight+Math.floor(i/2)*70:75+i*(h-140)/Math.max(1,order.length-1)]);
     if(grouped)for(let i=0;i<10;i++) {
-      const world=GOLF_CAMPAIGN.worlds[i],y=points[i*10][1];
-      s.append(svg('rect',{x:8,y:y-85,width:width-16,height:rowHeight*9+145,rx:24,fill:world.color,opacity:.25}));
+      const world=GOLF_CAMPAIGN.worlds[i],y=points[i*2][1];
+      s.append(svg('rect',{x:8,y:y-85,width:width-16,height:rowHeight+145,rx:24,fill:world.color,opacity:.25}));
       const title=svg('text',{x:width/2,y:y-55,'text-anchor':'middle','font-size':narrow?19:25,'font-weight':700,fill:'#354831',class:'world-title'});title.textContent=world.names[GolfI18n.language]??world.names.en;s.append(title);
       const range=svg('text',{x:width/2,y:y-32,'text-anchor':'middle','font-size':13,fill:'#526b48'});range.textContent=t('worldRange',{world:i+1,from:world.first,to:world.last});s.append(range);
     }

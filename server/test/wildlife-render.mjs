@@ -25,8 +25,8 @@ try{
   await page.locator('#game-mode').selectOption('impact');await page.locator('#start').click();
   await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();
   await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));
-  room.selectedLevels=[99];room.holes=1;room.hole=0;await room.load();
-  await page.waitForFunction(()=>GolfCourse.inspect().frame?.course===100&&GolfCourse.inspect().frame.intro,{},{timeout:30000});
+  room.selectedLevels=[19];room.holes=1;room.hole=0;await room.load();
+  await page.waitForFunction(()=>GolfCourse.inspect().frame?.course===20&&GolfCourse.inspect().frame.intro,{},{timeout:30000});
   await page.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]));
   await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden);
   const snapshot=await freezePhysics(room);
