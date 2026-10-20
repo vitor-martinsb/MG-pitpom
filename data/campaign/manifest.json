@@ -3842,7 +3842,7 @@
       "world": 10,
       "stage": 8,
       "path": "data/campaign/family-20-3.level",
-      "geometryHash": "89266e15f32a5e468f78e25c801bcd195c3129d59d9ef2c5afdfa7fe327dd60d",
+      "geometryHash": "3ae3bb7aaf08dd86170356f39aa92029712cd217e469dec753389233d01de40b",
       "baselineHash": "7eb4ffb466848016d2671be4b7b8b6eee352d89ebb0dfaa9a4e2d14ba343442c",
       "animals": [
         0,
@@ -3918,7 +3918,7 @@
             ]
           ],
           2,
-          0
+          1.75
         ],
         [
           "W",
