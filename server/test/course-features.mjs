@@ -19,6 +19,11 @@ try{
   await a.locator('#lobby').waitFor({state:'visible'});
   const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Pompom');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
   await a.locator('#game-mode').selectOption('impact');assert.equal(await b.locator('#game-mode').isDisabled(),true);
+  // This smoke test specifically observes a lateral Pompom crossing. Original
+  // fields all reserve that corridor; a narrow evolution can safely have a
+  // resting cat instead. The campaign tests cover those eighty-field layouts.
+  await a.locator('#map-pool').selectOption('originals');
+  await b.waitForFunction(()=>document.getElementById('map-pool').value==='originals');
   await a.locator('#start').click();
   await Promise.all([a,b].map(p=>p.locator('#presentation').waitFor({state:'visible'})));
   const before=await a.evaluate(()=>GolfCourse.inspect());assert.ok(before.geometry.triangles.length>10);assert.ok(before.frame.intro);
@@ -29,7 +34,7 @@ try{
   await new Promise(r=>setTimeout(r,150));
   assert.equal(await b.locator('#presentation').isVisible(),true);
   assert.notDeepEqual(await b.evaluate(()=>GolfCourse.inspect().frame.flagPoint),previewFlag);
-  if(app){const room=app.rooms.get(code);assert.equal(room.phase,'loading');assert.equal(room.members.get(1).ball.strokes,0);}
+  if(app){const room=app.rooms.get(code);assert.equal(room.phase,'loading');}
   await b.screenshot({path:'../out/course-validation/mobile-preview.png'});
   // Leave the second browser's seven-and-a-half-second presentation uninterrupted.
   await b.locator('#presentation').waitFor({state:'hidden',timeout:20000});
@@ -40,7 +45,7 @@ try{
     await p.locator('#minimap').waitFor({state:'visible'});
     assert.equal(await p.locator('#minimap-canvas').isVisible(),true);
   }
-  if(app){const room=app.rooms.get(code);assert.equal(room.phase,'playing');assert.ok(room.deadline-performance.now()>110000);}
+  if(app){const room=app.rooms.get(code);assert.equal(room.phase,'playing');assert.equal(room.members.get(1).ball.strokes,0);assert.ok(room.deadline-performance.now()>110000);}
   const cat0=await a.evaluate(()=>GolfCourse.inspect().frame.cat);
   const flag0=await a.evaluate(()=>GolfCourse.inspect().frame.flagPoint);
   await a.evaluate(()=>GolfOnline.shot([0,0,-1],0));
