@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 void headless_config_load(void);
 bool headless_level_load(golf_level_t *,const char *);
@@ -38,9 +39,29 @@ static void currents(void){
     vec3 bend=water_velocity(V3(0,0,-3),2,120,1.f/120);
     assert(fabsf(bend.x)<.0001f&&fabsf(bend.z+one.x)<.0001f);
 }
+static void curved_stream(void){
+    golf_level_t empty={0};golf_entity_t water={0};water.type=WATER_ENTITY;water.parent_idx=-1;
+    strcpy(water.name,"evolution-stream-test");water.water.transform.scale=V3(2,1,1);water.water.transform.rotation=QUAT(0,0,0,1);
+    golf_model_t *model=&water.water.geo.model;model->is_water=true;
+    const vec3 points[]={V3(0,0,0),V3(2,0,0),V3(2,0,2),V3(2,0,2),V3(4,0,2),V3(5,0,4)};
+    const vec2 uv[]={V2(0,0),V2(1,0),V2(1,-1),V2(0,-1),V2(1,-1),V2(1,-2)};
+    for(int i=0;i<6;i++){vec_push(&model->positions,points[i]);vec_push(&model->texcoords,uv[i]);}
+    for(int i=0;i<2;i++){golf_model_group_t group={0};group.start_vertex=i*3;group.vertex_count=3;vec_push(&model->groups,group);}
+    vec_push(&model->water_dir,V3(0,0,1));vec_push(&model->water_dir,V3(1,0,0));
+    golf_bvh_t bvh;golf_bvh_init(&bvh);golf_bvh_node_info(&bvh,0,&empty,&water,0);
+    assert(bvh.faces.length==2);
+    assert(fabsf(bvh.faces.data[0].water_dir.z-1)<.0001f);
+    vec3 bend=bvh.faces.data[1].water_dir;
+    assert(bend.x>.7f&&bend.z>.7f&&fabsf(bend.x-bend.z)<.0001f);
+    // Legacy water keeps its authored vectors across separate material groups.
+    strcpy(water.name,"original-water");bvh.faces.length=0;golf_bvh_node_info(&bvh,0,&empty,&water,0);
+    assert(bvh.faces.data[0].water_dir.z==1&&bvh.faces.data[1].water_dir.x==2&&bvh.faces.data[1].water_dir.z==0);
+    vec_deinit(&bvh.faces);vec_deinit(&model->positions);vec_deinit(&model->texcoords);vec_deinit(&model->groups);vec_deinit(&model->water_dir);
+}
 int main(int argc,char **argv) {
     headless_config_load();
     currents();
+    curved_stream();
     golf_level_t level={0}; assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
     golf_config_t config={0}; golf_bvh_t fixed,moving; golf_bvh_init(&fixed); golf_bvh_init(&moving);
     golf_physics_world_t world={0}; world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;

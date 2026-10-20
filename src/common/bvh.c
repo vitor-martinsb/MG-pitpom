@@ -2,6 +2,8 @@
 
 #include <assert.h>
 #include <float.h>
+#include <math.h>
+#include <string.h>
 
 #include "common/log.h"
 
@@ -62,7 +64,20 @@ golf_bvh_node_info_t golf_bvh_node_info(golf_bvh_t *bvh, int idx, golf_level_t *
             face.entity = entity;
             face.t = t;
             if (model->is_water) {
-                face.water_dir = vec3_apply_mat4(model->water_dir.data[j / 3], 0, model_mat);
+                face.water_dir = vec3_apply_mat4(model->water_dir.data[v_idx / 3], 0, model_mat);
+                /* Authored streams encode downstream as decreasing texture V.
+                   Recover its world tangent after corridor deformation, so the
+                   physical flow follows the very same bends as the shader. */
+                if(!strncmp(entity->name,"evolution-stream-",17)&&model->texcoords.length>v_idx+2){
+                    vec2 uv0=model->texcoords.data[v_idx],uv1=model->texcoords.data[v_idx+1],uv2=model->texcoords.data[v_idx+2];
+                    float u1=uv1.x-uv0.x,v1=uv1.y-uv0.y,u2=uv2.x-uv0.x,v2=uv2.y-uv0.y;
+                    float determinant=u1*v2-u2*v1;
+                    if(fabsf(determinant)>.000001f){
+                        vec3 tangent=vec3_scale(vec3_sub(vec3_scale(vec3_sub(c,a),u1),vec3_scale(vec3_sub(b,a),u2)),-1/determinant);
+                        tangent.y=0;float length=vec3_length(tangent);
+                        if(length>.000001f)face.water_dir=vec3_scale(tangent,1/length);
+                    }
+                }
             }
             else {
                 face.water_dir = V3(0, 0, 0);

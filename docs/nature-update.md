@@ -44,7 +44,10 @@ intensidade com a escala da malha. Preserva os parâmetros existentes:
 velocidade alvo de 4 m/s e resposta de 2,5 por segundo. A água não passa a
 amortecer artificialmente a gravidade.
 
-As curvas usam os vetores locais e UVs dos segmentos já gerados. Margens,
+Nos riachos gerados, a direção local é recuperada da tangente dos UVs após
+a deformação do corredor: a física acompanha o mesmo sentido visual do shader,
+inclusive quando uma evolução curva um riacho de uma versão anterior. As águas
+originais conservam seus vetores, com indexação correta entre grupos de material. Margens,
 pedras, quedas e recuperação continuam usando suas colisões reais. Solo,
 worker autoritativo e simulações de trajetória dos bots executam o mesmo C.
 Os testes com sondas imersas conferem direção, escala, emendas e duração de
