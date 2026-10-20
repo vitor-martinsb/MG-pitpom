@@ -21,6 +21,7 @@
 #include "golf/golf.h"
 
 static golf_game_t game;
+static int previous_solo_pet=-1;
 static golf_t *golf;
 static golf_graphics_t *graphics;
 static golf_inputs_t *inputs;
@@ -586,7 +587,8 @@ void golf_game_start_level(void) {
     golf_physics_build_world(&world, false);
     golf_mechanics_init(&game.mechanics,level,&game.physics.static_bvh);
     if(!golf_online_active()){
-        golf_mechanics_seed(&game.mechanics,(uint32_t)rand()^((uint32_t)rand()<<16));
+        golf_mechanics_seed(&game.mechanics,(uint32_t)rand()^((uint32_t)rand()<<16),previous_solo_pet);
+        previous_solo_pet=game.mechanics.third_kind;
     }
     game.mechanics.enabled=true;
 

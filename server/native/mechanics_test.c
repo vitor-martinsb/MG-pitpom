@@ -18,7 +18,7 @@ int main(int argc,char **argv) {
     golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);
     golf_config_t config={0};golf_physics_world_t world={0};world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;
     golf_physics_build_world(&world,false);
-    golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;m.schedule=false;
+    golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
     assert(m.cat_valid&&m.dog_valid);
     assert(m.cat_span>=.1f&&m.cat_span<=1.25f);
     assert(vec3_distance(m.start,m.cat_center)>1.4f&&vec3_distance(m.hole,m.dog)>1.4f);

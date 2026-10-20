@@ -70,7 +70,7 @@ static void wildlife_json(const golf_wildlife_t *w) {
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
     for(int i=0;i<3;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
-        printf("%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,(a->active&&(!mechanics.schedule||i==mechanics.third_kind))?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
+        printf("%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,(a->active&&i==mechanics.third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
     }
     printf("],\"acceptedShots\":%u,\"puddles\":[",w->accepted_shots);
     int count=0;for(int i=0;i<GOLF_PUDDLES;i++)if(w->puddles[i].active){
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         if (cmd && !strcmp(cmd,"configure")) {
             mechanics.enabled=json_object_get_boolean(o,"mascots")==1;
             mechanics.impact=json_object_get_boolean(o,"impact")==1;
-            golf_mechanics_seed(&mechanics,(uint32_t)json_object_get_number(o,"seed"));golf_mechanics_animate(&mechanics,world.time);
+            golf_mechanics_seed(&mechanics,(uint32_t)json_object_get_number(o,"seed"),json_object_has_value(o,"previousPet")?(int)json_object_get_number(o,"previousPet"):-1);golf_mechanics_animate(&mechanics,world.time);
             float probability=(float)json_object_get_number(o,"forwardProbability");
             mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;ok=true;
         } else if(cmd&&!strcmp(cmd,"plan")&&slot>=0&&slot<GOLF_MAX_PLAYERS){
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
             printf("],\"events\":[");for(int i=0;i<event_count;i++)printf("%s{\"id\":%u,\"player\":%u,\"kind\":\"%s\",\"strength\":%.5g}",i?",":"",events[i].id,events[i].player,events[i].kind,events[i].strength);
             puts("]}");event_count=0; fflush(stdout); json_value_free(value); continue;
         }
-        printf("{\"request\":%d,\"ok\":%s}\n",request,ok?"true":"false"); fflush(stdout); json_value_free(value);
+        printf("{\"request\":%d,\"ok\":%s,\"thirdKind\":%d}\n",request,ok?"true":"false",mechanics.third_kind); fflush(stdout); json_value_free(value);
     }
     return 0;
 }

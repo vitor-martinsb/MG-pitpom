@@ -62,25 +62,36 @@ int main(int argc,char **argv) {
     golf_physics_world_t world={0};world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;world.multiplayer=true;
     world.funnel_radius=CFG_NUM(&config,"multiplayer_funnel_radius");world.funnel_force=CFG_NUM(&config,"multiplayer_funnel_force");world.capture_radius=CFG_NUM(&config,"multiplayer_capture_radius");world.capture_max_speed=CFG_NUM(&config,"multiplayer_capture_max_speed");
     golf_physics_build_world(&world,false);golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
-    // Exactly three roster members on every field; candidate geometry remains
-    // available for isolated effects below. Visits are deterministic and staggered.
+    // All three members are present from loading through long idle periods.
+    // Repeated seeding here represents separate fields, never a live respawn.
     assert(m.cat_valid&&m.dog_valid);
     for(int kind=0;kind<3;kind++)assert(m.wildlife.animals[kind].active);
-    golf_mechanics_t scheduled=m;
-    bool chosen[3]={false};
+    bool chosen[3]={false};int previous=-1;
     for(uint32_t seed=1;seed<=32;seed++){
-        scheduled=m;golf_mechanics_seed(&scheduled,seed);int seen[3]={0};
-        assert(golf_wildlife_safe(&scheduled.wildlife,scheduled.dog,.72f));
-        for(int t=0;t<100;t++){
-            golf_mechanics_animate(&scheduled,(float)t);chosen[scheduled.third_kind]=true;
-            int visible=scheduled.cat_present+scheduled.dog_present;
-            seen[0]+=scheduled.cat_present;seen[1]+=scheduled.dog_present;
-            for(int k=0;k<3;k++)if(scheduled.wildlife.animals[k].present){assert(k==scheduled.third_kind);visible++;seen[2]++;}
-            assert(visible<=1);
-            golf_mechanics_t replay=scheduled;golf_mechanics_animate(&replay,(float)t);
-            assert(replay.third_kind==scheduled.third_kind&&replay.cat_present==scheduled.cat_present&&replay.dog_present==scheduled.dog_present);
+        golf_mechanics_t resident=m;golf_mechanics_seed(&resident,seed,previous);
+        const int selected=resident.third_kind;
+        assert(selected!=previous);chosen[selected]=true;previous=selected;
+        assert(golf_wildlife_safe(&resident.wildlife,resident.dog,.72f));
+        for(int t=0;t<=3600;t+=37){
+            golf_mechanics_animate(&resident,(float)t);
+            assert(resident.third_kind==selected);
+            assert(resident.cat_present&&resident.dog_present);
+            assert(resident.cat_presence==1&&resident.dog_presence==1);
+            int visible=2;
+            for(int k=0;k<3;k++){
+                const golf_wild_animal_t *a=&resident.wildlife.animals[k];
+                assert(a->present==(k==selected));
+                if(a->present){assert(a->presence==1);visible++;}
+            }
+            assert(visible==3);
+            assert(vec3_distance(resident.cat,resident.dog)>=1.3f);
+            golf_wild_animal_t *pet=&resident.wildlife.animals[selected];
+            for(int sample=0;sample<=20;sample++){
+                vec3 pos=vec3_add(pet->a,vec3_scale(vec3_sub(pet->b,pet->a),sample/20.f));
+                assert(vec3_distance(resident.cat,pos)>=1.19f);
+                assert(vec3_distance(resident.dog,pos)>=1.24f);
+            }
         }
-        for(int k=0;k<3;k++)assert(seen[k]>0&&seen[k]<70);
     }
     assert(chosen[0]&&chosen[1]&&chosen[2]);
     // Existing twenty-course records must survive the interleaved catalogue.

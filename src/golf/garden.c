@@ -605,10 +605,6 @@ static vec3 dog_facing(golf_game_t *game) {
     forward.y=0;
     return vec3_length(forward)>.01f?vec3_normalize(forward):vec3_scale(game->mechanics.direction,-1);
 }
-static void pet_entrance(garden_mesh_t *mesh,int first,vec3 origin,float presence){
-    float scale=golf_clampf(presence,0,1);
-    for(int i=first;i<mesh->count;i++)mesh->vertices[i].position=vec3_add(origin,vec3_scale(vec3_sub(mesh->vertices[i].position,origin),scale));
-}
 void golf_garden_draw_feedback(float time) {
     garden.transform=mat4_identity();garden_mesh_t shadow={shadows,0,FX_LIMIT},fx={effects,0,FX_LIMIT};
     golf_game_t *game=golf_game_get();
@@ -619,14 +615,10 @@ void golf_garden_draw_feedback(float time) {
         vec3 forward=game->mechanics.across;if(cosf(angle)<0)forward=vec3_scale(forward,-1);
         float travelled=game->mechanics.cat_span*(floorf(angle/MF_PI)*2+(segment<=MF_PI*.5f?sinf(segment):2-sinf(segment)));
         float gait=golf_clampf(fabsf(cosf(angle))*game->mechanics.cat_span*.75f/.18f,0,1);
-        int first=actor.count;
         if(game->mechanics.cat_valid&&game->mechanics.cat_present)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward,travelled*(2*MF_PI/.42f),gait);
-        pet_entrance(&actor,first,game->mechanics.cat,game->mechanics.cat_presence);first=actor.count;
         if(game->mechanics.dog_valid&&game->mechanics.dog_present)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game),0,0);
-        pet_entrance(&actor,first,game->mechanics.dog,game->mechanics.dog_presence);
         for(int kind=0;kind<3;kind++)if(game->mechanics.wildlife.animals[kind].active&&game->mechanics.wildlife.animals[kind].present){
-            first=actor.count;wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
-            pet_entrance(&actor,first,game->mechanics.wildlife.animals[kind].pos,game->mechanics.wildlife.animals[kind].presence);
+            wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
         }
         campaign_obstacles(&actor,&game->mechanics.wildlife,time);
         for(int i=0;i<GOLF_PUDDLES;i++)if(game->mechanics.wildlife.puddles[i].active){

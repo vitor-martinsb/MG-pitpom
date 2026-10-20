@@ -9,7 +9,7 @@
 typedef struct golf_wild_animal {
     bool active, walking, present;
     vec3 a,b,pos,forward;
-    float clock,action_time,stride,speed,gait,presence;
+    float clock,action_time,stride,speed,gait,presence,patrol_period;
     int action;
 } golf_wild_animal_t;
 typedef struct golf_wind_zone { vec3 pos,size; float strength; } golf_wind_zone_t;

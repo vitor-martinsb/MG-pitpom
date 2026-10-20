@@ -34,6 +34,8 @@ try{
     const metadata=await a.evaluate(i=>GOLF_CAMPAIGN.courses[i],index);
     assert.equal(f.wildlife.filter(a=>a.active).length,1);
     assert.equal(f.catActive,true);assert.equal(f.dogActive,true);
+    assert.equal(f.catVisible,true);assert.equal(f.dogVisible,true);
+    assert.equal(f.wildlife.filter(a=>a.visible&&a.presence===1).length,1);
     assert.equal(f.wildlife.find(a=>a.active).kind,f.thirdKind);
     for(const animal of f.wildlife.filter(a=>a.active))assert.ok(animal.pos.every(Number.isFinite));
     assert.ok(f.actorVertices>0&&f.actorVertices<24576,`actor capacity, map ${index+1}: ${f.actorVertices}`);

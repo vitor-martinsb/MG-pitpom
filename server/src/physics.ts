@@ -54,7 +54,7 @@ export class Physics {
     });
   }
   add(slot: number, id: number) { return this.command({ cmd: 'add', slot, id }); }
-  configure(impact: boolean, seed: number, forwardProbability=.5) { return this.command({cmd:'configure',impact,mascots:true,seed,forwardProbability}); }
+  configure(impact: boolean, seed: number, forwardProbability=.5,previousPet=-1) { return this.command({cmd:'configure',impact,mascots:true,seed,forwardProbability,previousPet}); }
   connected(slot: number, connected: boolean) { return this.command({ cmd: 'connected', slot, connected }); }
   async shot(slot: number, direction: number[], power: number): Promise<boolean> { return (await this.command({ cmd: 'shot', slot, direction, power })).ok; }
   async step(ticks: number): Promise<Frame> { return this.command({ cmd: 'step', ticks }); }

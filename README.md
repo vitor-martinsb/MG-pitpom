@@ -177,4 +177,4 @@ As mascotes interativas, o Modo Impacto, a apresentação dos mapas, o minimapa 
 
 ### Temas, correnteza e animais
 
-Os 80 campos aparecem como tema + Campo 1 a 4, com uma trilha navegavel entre os dez mundos. Pituca e Pompom fazem parte de cada campo junto com um terceiro animal sorteado, em visitas alternadas. [Detalhes da atualizacao](docs/nature-update.md).
+Os 80 campos aparecem como tema + Campo 1 a 4, com uma trilha navegavel entre os dez mundos. Pituca e Pompom fazem parte de cada campo junto com um terceiro animal sorteado, presentes permanentemente durante toda a fase, sem repetir o terceiro animal em campos consecutivos. [Detalhes da atualizacao](docs/nature-update.md).

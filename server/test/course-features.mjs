@@ -60,15 +60,11 @@ try{
   const guest=await b.evaluate(()=>GolfCourse.inspect().frame);assert.equal(guest.players.filter(p=>p.visible).length,2);assert.equal(guest.players.find(p=>p.id===guest.local).firstComplete,false);
   assert.ok(distance(after.cat,cat0)>.005);
   assert.ok(Math.abs(after.flagPoint[0]-flag0[0])>.0001);
-  // The new roster has quiet intervals: measure a real scheduled visit rather
-  // than assuming that every arbitrary frame contains all five old mascots.
-  const visit=await a.waitForFunction(()=>{
-    const f=GolfCourse.inspect().frame;
-    return (f.catVisible||f.dogVisible||f.wildlife.some(a=>a.visible))&&f.actorVertices>1000?f:false;
-  },{},{timeout:10000});
-  const visiting=await visit.jsonValue();await visit.dispose();
-  assert.ok(visiting.actorVertices<24576);assert.equal(visiting.catActive,true);assert.equal(visiting.dogActive,true);
-  assert.equal(visiting.wildlife.filter(a=>a.active).length,1);
+  const residents=await a.evaluate(()=>GolfCourse.inspect().frame);
+  assert.ok(residents.actorVertices>1000&&residents.actorVertices<24576);
+  assert.equal(residents.catActive,true);assert.equal(residents.dogActive,true);
+  assert.equal(residents.catVisible,true);assert.equal(residents.dogVisible,true);
+  assert.equal(residents.wildlife.filter(animal=>animal.active&&animal.visible).length,1);
   // Exercise a trusted capture/return snapshot in the renderer. The native
   // tests separately perform real captures for all 50 authoritative balls.
   const capture=await a.evaluate(()=>{

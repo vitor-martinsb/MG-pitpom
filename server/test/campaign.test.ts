@@ -39,13 +39,14 @@ test('two authoritative workers reproduce the same animal patrols and fifty-ball
     try{
       await Promise.all([a.configure(impact,735),b.configure(impact,735)]);
       for(let slot=0;slot<50;slot++)await Promise.all([a.add(slot,slot+1),b.add(slot,slot+1)]);
-      for(const ticks of [120,120,120]){
+      // Cross the former appearance/absence windows without reloading the field.
+      for(const ticks of [120,1200,1200,1200,1200,1200,1200]){
         const [x,y]=await Promise.all([a.step(ticks),b.step(ticks)]);
         assert.deepEqual(x.mascots,y.mascots);assert.deepEqual(x.players,y.players);
         assert.equal(x.mascots.wildlife?.filter(a=>a.active).length,1);assert.equal(x.players.length,50);
         assert.equal(x.mascots.catActive,true);assert.equal(x.mascots.dogActive,true);
         assert.equal(x.mascots.wildlife?.find(a=>a.active)?.kind,x.mascots.thirdKind);
-        assert.ok(Number(x.mascots.catVisible)+Number(x.mascots.dogVisible)+x.mascots.wildlife!.filter(a=>a.visible).length<=2);
+        assert.equal(Number(x.mascots.catVisible)+Number(x.mascots.dogVisible)+x.mascots.wildlife!.filter(a=>a.visible).length,3);
         for(const p of x.players){assert.ok(p.pos.every(Number.isFinite));assert.equal(p.strokes,0);assert.equal(p.effectSerial,0);}
       }
       const before=await a.step(0);await a.plan(0,'hard');const after=await a.step(0);
@@ -55,5 +56,24 @@ test('two authoritative workers reproduce the same animal patrols and fifty-ball
       assert.equal(frame.players[0]!.strokes,1);assert.ok(frame.players.slice(1).every(p=>p.strokes===0));
       assert.ok(frame.events.some(e=>e.kind==='shot'&&e.player===1));
     }finally{a.close();b.close();}
+  }
+});
+
+test('resident selection stays fixed for a whole field and never repeats the previous companion',async()=>{
+  let previous=-1;
+  for(let field=0;field<9;field++){
+    const physics=new Physics(root,'data/levels/level-3.level');
+    try{
+      const configured=await physics.configure(false,field*735+19,.5,previous);
+      assert.ok([0,1,2].includes(configured.thirdKind));
+      assert.notEqual(configured.thirdKind,previous);
+      previous=configured.thirdKind;
+      for(const ticks of [0,1200,1200,1200]){
+        const {mascots}=await physics.step(ticks);
+        assert.equal(mascots.thirdKind,previous);
+        assert.equal(mascots.catVisible,true);assert.equal(mascots.dogVisible,true);
+        assert.deepEqual(mascots.wildlife?.filter(a=>a.visible).map(a=>a.kind),[previous]);
+      }
+    }finally{physics.close();}
   }
 });

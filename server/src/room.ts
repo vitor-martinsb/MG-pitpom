@@ -32,6 +32,7 @@ export class Room {
   mapPoolKind:'all'|'originals'|'evolutions'|'custom'='all';
   match=0;
   mascots?: Mascots;
+  private previousPet = -1;
   readonly physicsSeed = randomBytes(4).readUInt32LE();
   private nextId = 1;
   private physics?: Physics;
@@ -183,7 +184,8 @@ export class Room {
     const current=()=>!this.closed&&generation===this.generation&&physics===this.physics;
     try {
       await physics.ready;if(!current())return;
-      await physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability);if(!current())return;
+      const configured=await physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability,this.previousPet);if(!current())return;
+      this.previousPet=configured.thirdKind;
       for (const m of this.members.values()) { await physics.add(m.slot,m.id);if(!current())return; if (!m.socket&&!m.bot) await physics.connected(m.slot,false);if(!current())return; }
       this.loading=false; this.deadline=this.now()+this.options.loadingTimeout; this.lastStep=this.now(); this.accumulated=0;
       const frame=await physics.step(0);if(!current())return; this.mascots=frame.mascots; for (const b of frame.players) this.members.get(b.id)!.ball=b;

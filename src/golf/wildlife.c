@@ -18,8 +18,8 @@ bool golf_wildlife_safe(const golf_wildlife_t *w,vec3 p,float radius) {
     return true;
 }
 static bool separated(const golf_wildlife_t *w,vec3 p,int until,vec3 cat,vec3 dog) {
-    float reserve=until<0?.9f:1.6f;
-    if(vec3_distance(p,w->spawn)<(until<0?1.6f:2)||vec3_distance(p,w->hole)<1.8f||vec3_distance(p,cat)<reserve||vec3_distance(p,dog)<reserve)return false;
+    float reserve=until<0?1.25f:1.6f;
+    if(vec3_distance(p,w->spawn)<(until<0?1.25f:2)||vec3_distance(p,w->hole)<1.5f||vec3_distance(p,cat)<reserve||vec3_distance(p,dog)<reserve)return false;
     /* These are alternative third-pet routes, never simultaneous occupants. */
     (void)until;
     for(int i=0;i<w->portal_count;i++)if(vec3_distance(p,w->portals[i].pos)<1.6f)return false;
@@ -68,8 +68,8 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
     }
     for(int kind=0;kind<3;kind++)if(present[kind]) {
         float score=FLT_MAX;int best=-1;bool shared=false;
-        /* Visits have disjoint windows. On a narrow field, reserve a closer
-           safe spot only when the preferred independent region does not fit. */
+        /* On narrow fields use a second spatial search, preserving separation
+           from both permanent mascots and clearance from the tee and cup. */
         for(int pass=0;pass<2&&best<0;pass++)for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(p,wanted[kind]);
             if(!nav->nodes[j].reachable||d>=score||!separated(w,p,pass?-1:kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||((w->course-1)%4&&!golf_wildlife_safe(w,p,.44f)))continue;
@@ -78,7 +78,7 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         if(best<0)continue;
         golf_wild_animal_t *a=&w->animals[kind];a->active=a->present=true;a->a=a->b=a->pos=nav->nodes[best].pos;
         a->forward=V3(0,0,-1);a->action_time=-100;a->clock=0;
-        a->presence=1;
+        a->presence=1;a->patrol_period=8+kind*1.7f;
         // A short, fully sampled corridor avoids walls, water and moving sweeps.
         for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(a->a,p);
@@ -98,7 +98,7 @@ static void animate(golf_wildlife_t *w,float time) {
         golf_wild_animal_t *a=&w->animals[kind];if(!a->active)continue;
         float age=time-a->action_time;
         if(age>=0&&age<1.1f){a->walking=false;a->speed=0;a->gait*=expf(-dt*12);continue;}
-        a->clock+=dt;float period=8+kind*1.7f,p=fmodf(a->clock,period)/period;
+        a->clock+=dt;float period=a->patrol_period>0?a->patrol_period:8+kind*1.7f,p=fmodf(a->clock,period)/period;
         float t=p<.4f?p/.4f:p<.5f?1:p<.9f?1-(p-.5f)/.4f:0;
         t=t*t*(3-2*t);vec3 old=a->pos;
         a->pos=vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),t));

@@ -12,6 +12,22 @@ const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'
 const levels=Array.from({length:20},(_,i)=>config[`level${i*4+1}`]);
 function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,send:(data:string)=>messages.push(JSON.parse(data)),close:()=>{},messages} as unknown as WebSocket & {messages:any[]};}
 
+test('field transitions choose a different companion and broadcast the same three residents to both clients',async()=>{
+  const room=new Room('PETS',root,levels),a=socket(),b=socket();
+  const host=room.join(a,'Host','#ffffff',0);room.join(b,'Guest','#ff0000',1);
+  try{
+    await room.start(host,9);let previous=-1;
+    for(let hole=0;hole<9;hole++){
+      if(hole){room.hole=hole;await (room as any).load();}
+      const x=a.messages.findLast(m=>m.type==='snapshot').mascots;
+      const y=b.messages.findLast(m=>m.type==='snapshot').mascots;
+      assert.deepEqual(x,y);assert.notEqual(x.thirdKind,previous);previous=x.thirdKind;
+      assert.equal(x.catVisible,true);assert.equal(x.dogVisible,true);
+      assert.deepEqual(x.wildlife.filter((pet:any)=>pet.visible).map((pet:any)=>pet.kind),[previous]);
+    }
+  }finally{room.close();}
+});
+
 test('all 20 original maps load and simulate finite geometry',async()=>{
   for(const level of levels){
     const physics=new Physics(root,level);
@@ -82,8 +98,10 @@ test('reconnect preserves ball, identity and shot sequence; token cannot replace
     await room.start(host,3);room.ready(host,0);room.ready(other,0);
     await room.shot(host,{sequence:1,direction:[0,0,-1],power:.1});
     now=500;await room.tick();const position=[...host.ball!.pos];
+    const residents=structuredClone(room.mascots);
     room.disconnect(host,first);assert.equal(room.host,other.id);
     const again=socket();assert.equal(await room.reconnect(again,host.token),host);
+    assert.deepEqual(room.mascots,residents);
     assert.deepEqual(host.ball!.pos,position);assert.equal(host.color,'#12ab34');assert.equal(host.avatar,4);assert.equal(host.lastSequence,1);
     await assert.rejects(room.reconnect(socket(),host.token),/já conectado/);
     room.ready(host,0);await assert.rejects(room.shot(host,{sequence:1,direction:[0,0,-1],power:.2}),/duplicada/);

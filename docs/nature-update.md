@@ -1,4 +1,4 @@
-# Temas, trilha, correnteza e visitas dos animais
+# Temas, trilha, correnteza e moradores permanentes
 
 Os 80 identificadores, caminhos dos mapas e chaves de progresso continuam iguais.
 Os rótulos decimais do catálogo são referências internas legadas. A apresentação
@@ -53,29 +53,32 @@ worker autoritativo e simulações de trajetória dos bots executam o mesmo C.
 Os testes com sondas imersas conferem direção, escala, emendas e duração de
 contato; os testes de campanha resolvem os 80 campos com física real.
 
-## Três integrantes, visitas alternadas
+## Três moradores permanentes
 
-A escalação de cada campo tem Pituca, Pompom e um sorteio entre Romeu, Luna e
-Frida. As três rotas extras guardadas na geometria são alternativas; apenas
-uma delas integra a escalação e pode interagir. Por isso, alternativas podem
-reservar o mesmo trecho seguro, sem aparecer juntas. Pituca e Pompom mantêm
-seus espaços separados; todos os candidatos continuam evitando spawn, buraco,
-água, paredes e áreas varridas por obstáculos móveis.
+Todos os 80 campos têm Pituca e Pompom mais um integrante sorteado entre
+Romeu, Luna e Frida. A escolha acontece uma vez no carregamento e exclui o
+companheiro do campo anterior, tanto no solo como no multiplayer. As três
+rotas extras guardadas na geometria são alternativas: apenas a escolhida
+integra a partida. Elas podem compartilhar espaço entre si porque nunca
+são usadas simultaneamente.
 
-Uma semente autoritativa e o identificador do campo determinam o terceiro
-integrante, a fase dos passeios, um local seguro próximo para Pituca descansar
-e a agenda de visitas. Os ciclos duram de 39 a 45 segundos, com visitas
-defasadas e intervalos de dois segundos. Entradas e saídas têm transição suave de
-0,65 segundo; interações só começam quando o animal já está apresentado.
-Uma ação em andamento termina antes da saída. O sorteio do modo solo é novo
-a cada entrada em campo. No multiplayer, a semente e o tempo pertencem ao
-servidor; reconectar não refaz o sorteio nem reinicia a agenda.
+Os três moradores ficam visíveis durante toda a fase, inclusive em descanso.
+Não há agenda de visitas, temporizador de remoção ou animação de escala para
+fazê-los entrar ou sair. As posições e percursos reservam espaços separados,
+com verificações do piso, paredes, água, buraco e obstáculos móveis. Em campos
+estreitos, o passeio da Pompom é limitado ao espaço seguro disponível.
 
-Snapshots distinguem `active` (integrante da escalação) de `visible` e
-`presence` (visita atual e transição). `catActive`, `dogActive`, `thirdKind`,
-`catVisible`, `dogVisible`, `catPresence` e `dogPresence` permitem verificar
-o estado sem enviar decisões de física do cliente ao servidor.
+Os passeios alternam deslocamento suave e descanso; a velocidade varia entre
+os animais e a animação das patas acompanha a distância percorrida. Pituca
+preserva sua postura deitada e suas reações. O servidor escolhe o terceiro e
+simula as posições no mesmo código C usado pelo solo. Reconectar mantém a
+composição e o estado da fase; todos os clientes recebem os mesmos snapshots.
 
-O xixi do Romeu mantém a poça e a lentidão por **três tacadas próprias
-concluídas**. A agenda não apaga efeitos já aplicados nem altera seu contador.
-As fotos/modelos, identidade dos animais, músicas e loading foram preservados.
+Os campos `active`, `visible` e `presence` continuam no protocolo para
+compatibilidade. Os três integrantes permanecem visíveis com presença plena;
+as duas alternativas não escolhidas permanecem inativas. Os animais continuam
+ocultos no minimapa.
+
+As interações existentes foram preservadas. O xixi do Romeu mantém a poça e a
+lentidão por **três tacadas próprias concluídas**, sem alterar a física global.
+Os modelos, identidades, músicas e loading continuam preservados.

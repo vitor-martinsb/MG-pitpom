@@ -8,7 +8,7 @@
 /* Shared, allocation-free state: native authority and the offline game. */
 typedef struct golf_mechanics {
     bool enabled, impact, cat_valid, dog_valid;
-    bool schedule, cat_present, dog_present;
+    bool cat_present, dog_present;
     int third_kind;
     float cat_presence,dog_presence,cat_phase;
     uint32_t seed;
@@ -19,10 +19,8 @@ typedef struct golf_mechanics {
     golf_wildlife_t wildlife;
 } golf_mechanics_t;
 void golf_mechanics_init(golf_mechanics_t *, golf_level_t *, golf_bvh_t *);
-void golf_mechanics_seed(golf_mechanics_t *,uint32_t);
+void golf_mechanics_seed(golf_mechanics_t *,uint32_t,int previous_pet);
 void golf_mechanics_animate(golf_mechanics_t *, float time);
-bool golf_pet_present(uint32_t seed,int course,int pet,float time);
-float golf_pet_presence(uint32_t seed,int course,int pet,float time);
 void golf_mechanics_tick(golf_mechanics_t *, golf_player_t *, int count, float time);
 void golf_mechanics_impacts(golf_player_t *, int count);
 void golf_ball_return_before_shot(golf_player_t *);
