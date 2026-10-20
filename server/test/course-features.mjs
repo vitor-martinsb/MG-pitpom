@@ -69,7 +69,7 @@ try{
   assert.equal(capture.hidden.visible,false);assert.equal(capture.hidden.captured,true);
   for(let i=0;i<3;i++)assert.ok(Math.abs(capture.returned[i]-capture.pos[i])<.0001);
   await b.locator('#toggle-minimap').click();assert.equal(await b.locator('#minimap-canvas').isVisible(),false);await b.locator('#toggle-minimap').click();
-  await b.locator('#music-controls').click();await b.locator('#language').selectOption('pt-BR');assert.equal(await b.locator('#toggle-minimap').textContent(),'Mapa da pista');await b.locator('#music-controls summary').click();
+  await b.locator('#music-controls').click();await b.locator('#language').selectOption('pt-BR');assert.equal(await b.locator('#toggle-minimap').getAttribute('aria-label'),'Mapa da pista');assert.equal((await b.locator('#minimap').textContent()).trim(),'');await b.locator('#music-controls summary').click();
   await a.screenshot({path:'../out/course-validation/desktop-course.png'});await b.screenshot({path:'../out/course-validation/mobile-course.png'});
   assert.deepEqual(errors,[]);
   await Promise.all(contexts.map(c=>c.close()));

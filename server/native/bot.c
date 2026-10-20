@@ -132,6 +132,7 @@ static trial_t simulate(golf_physics_world_t *world,golf_bvh_t *dynamic,const go
     trial_t t={.player=*p,.mechanics=*m,.time=world->time,.peak=p->ball.pos.y};
     golf_physics_world_t w=*world;w.dynamic_bvh=dynamic;w.sound=NULL;w.stop_sound=NULL;w.ripple=NULL;w.contacts=NULL;t.mechanics.impact=false;
     if(!golf_physics_shoot(&w,&t.player,direction,power)){t.cost=100000;return t;}
+    golf_wildlife_shot(&t.mechanics.wildlife,&t.player);
     moving_world(&w);
     bool danger=false;
     for(int tick=0;tick<horizon;tick++){

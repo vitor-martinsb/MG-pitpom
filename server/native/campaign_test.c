@@ -28,7 +28,8 @@ static void validate_effect(golf_wildlife_t original,int kind,golf_physics_world
     assert(vec3_distance(other,p[1].ball.pos)<.0001f);
     assert(p[0].color.x==color.x&&p[0].color.y==color.y&&p[0].color.z==color.z);
     if(kind==0) {
-        assert(p[0].ball.slow_until>23&&vec3_length(p[0].ball.vel)<3);
+        assert(p[0].ball.slow_until>20&&vec3_length(p[0].ball.vel)<3);
+        assert(w.puddles[0].active&&w.puddles[0].remaining==3);
         for(int i=1;i<500;i++) {
             p[0].ball.pos=vec3_add(a->pos,V3(0,GOLF_BALL_RADIUS,0));
             golf_wildlife_tick(&w,p,1,20+i/120.f,1234,true);
@@ -130,10 +131,13 @@ int main(int argc,char **argv) {
     // exercises their effects separately without relying on a lucky random hit.
     m.enabled=false;m.impact=false;golf_player_t p;golf_player_init(&p,1,"Witness",V4(1,1,1,1),0);
     golf_player_start_level(&p,vec3_add(m.start,V3(0,GOLF_BALL_RADIUS,0)));world.time=0;
+    golf_bot_memory_t memory={0};
     for(int stroke=0;stroke<90&&!p.ball.is_in_hole;stroke++) {
-        golf_bot_plan_t plan=golf_bot_plan(&world,&m,nav,&p,2);
+        golf_bot_observe(&memory,&p,nav);
+        golf_bot_plan_t plan=golf_bot_plan_adaptive(&world,&m,nav,&p,2,&memory);
         if(argc>2){vec3 target=golf_nav_target(nav,p.ball.pos);fprintf(stderr,"shot %d at %.3f %.3f %.3f target %.3f %.3f %.3f direction %.3f %.3f power %.4f cost %.3f\n",stroke,p.ball.pos.x,p.ball.pos.y,p.ball.pos.z,target.x,target.y,target.z,plan.direction.x,plan.direction.z,plan.power,golf_nav_cost(nav,p.ball.pos));}
         assert(golf_physics_shoot(&world,&p,plan.direction,plan.power));
+        golf_bot_record(&memory,&p,plan.direction,plan.power);
         for(int tick=0;tick<1800&&!p.ball.is_in_hole;tick++) {
             world.time+=1.f/120;golf_physics_build_world(&world,true);
             golf_physics_tick_player(&world,&p,1.f/120);golf_mechanics_tick(&m,&p,1,world.time);

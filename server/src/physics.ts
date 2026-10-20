@@ -5,7 +5,7 @@ import path from 'node:path';
 
 export type WildAnimal={kind:number;active:boolean;pos:number[];forward:number[];walking:boolean;clock:number;action:number;actionTime:number};
 export type Ball = { id: number; pos: number[]; vel: number[]; moving: boolean; hole: boolean; water: boolean; strokes: number; firstComplete: boolean; captured: boolean; captureUntil: number; slowUntil?:number; captureKind?:number; effectKind?:number; effectTime?:number; effectSerial?:number; wildlifeProtection?:number };
-export type Mascots = { enabled: boolean; cat: number[]; dog: number[]; slapTime: number; wakeTime: number; world?:number; stage?:number; course?:number; wildlife?:WildAnimal[] };
+export type Mascots = { enabled: boolean; cat: number[]; dog: number[]; slapTime: number; wakeTime: number; acceptedShots?:number;puddles?:{id:number;pos:number[];born:number;remaining:number}[];world?:number; stage?:number; course?:number; wildlife?:WildAnimal[] };
 export type SoundEvent={id:number;player:number;kind:string;strength:number};
 export type BotDifficulty='easy'|'medium'|'hard'|'expert';
 export type Frame = { time: number; players: Ball[]; mascots: Mascots; events:SoundEvent[]; cpuMs: number; rssBytes: number; memoryBytes: number };

@@ -1270,7 +1270,7 @@ static void _golf_ui_in_game_finished(float dt) {
 
 static void _golf_ui_player_labels(void) {
     if (CFG_NUM(game_cfg, "player_labels_enabled") == 0) return;
-    golf_font_t *font = golf_data_get_font("data/font/FiraSans-Bold.ttf");
+    golf_font_t *font = golf_data_get_font("data/font/poppins/Poppins-SemiBold.ttf");
     if (!font || font->atlases.length == 0) return;
     float font_size = golf_clampf(24 * _get_ui_scale(), 14, 24);
     float scale = font_size / 24;

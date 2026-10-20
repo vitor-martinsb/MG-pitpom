@@ -6,7 +6,7 @@
   const heard=new Map(),effectNames=['','romeu','luna','frida','portal'];
   const worldLabel=document.createElement('small'),effectLabel=document.createElement('small');
   worldLabel.id='campaign-world';effectLabel.id='wildlife-effect';effectLabel.setAttribute('role','status');
-  $('minimap').append(worldLabel,effectLabel);
+  const status=document.createElement('aside');status.id='course-status';status.append(worldLabel,effectLabel);document.body.append(status);
   const canvas=$('minimap-canvas'),ctx=canvas.getContext('2d');
   const size=240,padding=14;
   function point(p){
@@ -24,13 +24,11 @@
     const start=point(geometry.start),hole=point(geometry.hole);
     const angle=Math.atan2(hole[1]-start[1],hole[0]-start[0]),tip=[start[0]+12*Math.cos(angle),start[1]+12*Math.sin(angle)];
     c.strokeStyle='#526b48';c.lineWidth=2;c.beginPath();c.moveTo(...start);c.lineTo(...tip);c.lineTo(tip[0]-5*Math.cos(angle-.6),tip[1]-5*Math.sin(angle-.6));c.moveTo(...tip);c.lineTo(tip[0]-5*Math.cos(angle+.6),tip[1]-5*Math.sin(angle+.6));c.stroke();
-    c.font='19px sans-serif';c.fillText('⚑',hole[0]-4,hole[1]+3);c.fillStyle='#b74a36';c.fillText('⚑',hole[0]-4,hole[1]+3);
+    c.fillStyle='#263d2e';c.beginPath();c.arc(hole[0],hole[1],5,0,Math.PI*2);c.fill();c.strokeStyle='#fdf8eb';c.lineWidth=2;c.stroke();
   }
   function draw(){
-    ctx.drawImage(base,0,0);ctx.font='18px sans-serif';ctx.textAlign='center';
+    ctx.drawImage(base,0,0);
     ctx.fillStyle='#997650';for(const box of frame.obstacles??[]){const a=point(box.slice(0,2)),b=point(box.slice(2,4));ctx.fillRect(a[0],a[1],Math.max(2,b[0]-a[0]),Math.max(2,b[1]-a[1]));}
-    for(const [p,icon,active] of [[frame.cat,'🐈',frame.catActive],[frame.dog,'🐕',frame.dogActive]]){if(active===false)continue;const v=point(p);ctx.fillText(icon,v[0],v[1]+6);}
-    for(const a of frame.wildlife??[]){if(!a.active)continue;const v=point([a.pos[0],a.pos[2]]);ctx.fillStyle=['#5585af','#34363c','#f8f5e6'][a.kind];ctx.beginPath();ctx.arc(...v,7,0,Math.PI*2);ctx.fill();ctx.fillStyle=a.kind===2?'#30343b':'#fff';ctx.font='bold 10px sans-serif';ctx.fillText(['R','L','F'][a.kind],v[0],v[1]+3);}
     for(const p of frame.players){
       if(!p.visible)continue;const v=point(p.pos);ctx.beginPath();ctx.arc(v[0],v[1],p.id===frame.local?5:3,0,Math.PI*2);
       const protectedBall=frame.mode==='impact'&&!p.firstComplete;ctx.globalAlpha=protectedBall?.72:1;
@@ -46,7 +44,6 @@
     const local=frame.players.find(p=>p.id===frame.local);
     const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
     effectLabel.textContent=effect?GolfI18n.t('effect.'+effectNames[effect]):'';
-    $('minimap-legend').textContent=t('minimapLegend')+((frame.wildlife??[]).some(a=>a.active)?' · '+t('animalLegend'):'');
   }
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;
@@ -61,16 +58,18 @@
       for(const p of frame.players){const previous=heard.get(p.id)??0;if(p.effectSerial>previous&&p.effectKind)GolfAudio.play(effectNames[p.effectKind]);heard.set(p.id,p.effectSerial);}
     }
     lastSlap=frame.slapTime;lastWake=frame.wakeTime;
-    $('minimap').hidden=!frame.active;$('presentation').hidden=!frame.active||!frame.intro;
+    status.hidden=!frame.active;$('minimap').hidden=!frame.active;$('presentation').hidden=!frame.active||!frame.intro;
     if(!frame.active)return;
     matchLabels();
+    const mapBounds=$('minimap').getBoundingClientRect();
+    status.style.left=mapBounds.left+'px';status.style.bottom=(innerHeight-mapBounds.top+8)+'px';status.style.maxWidth=Math.min(260,innerWidth-mapBounds.left-8)+'px';
     $('presentation-progress').value=Math.min(1,frame.progress);
     if(level!==frame.level||!geometry){level=frame.level;geometry=JSON.parse(Module.ccall('golf_course_geometry','string',[],[]));background();}
     if(!collapsed)draw();
   }
   $('skip-presentation').onclick=()=>Module.ccall('golf_course_skip',null,[],[]);
   $('toggle-minimap').onclick=()=>{collapsed=!collapsed;canvas.hidden=collapsed;$('minimap-legend').hidden=collapsed;$('toggle-minimap').setAttribute('aria-expanded',String(!collapsed));};
-  function language(){canvas.setAttribute('aria-label',t('minimapLabel'));$('minimap-legend').textContent=t('minimapLegend');matchLabels();}
+  function language(){canvas.setAttribute('aria-label',t('minimapLabel'));$('toggle-minimap').setAttribute('aria-label',t('minimap'));matchLabels();}
   window.addEventListener('languagechange',language);language();
   window.GolfCourse={initialized:false,inspect:()=>({frame,geometry,collapsed})};requestAnimationFrame(update);
 })();

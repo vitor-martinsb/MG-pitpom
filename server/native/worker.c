@@ -70,9 +70,12 @@ static void wildlife_json(const golf_wildlife_t *w) {
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
     for(int i=0;i<3;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
-        printf("%s{\"kind\":%d,\"active\":%s,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->action,a->action_time);
+        printf("%s{\"kind\":%d,\"active\":%s,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
     }
-    printf("]");
+    printf("],\"acceptedShots\":%u,\"puddles\":[",w->accepted_shots);
+    int count=0;for(int i=0;i<GOLF_PUDDLES;i++)if(w->puddles[i].active){
+        const golf_puddle_t *p=&w->puddles[i];printf("%s{\"id\":%u,\"pos\":[%.7g,%.7g,%.7g],\"born\":%u,\"remaining\":%d}",count++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->born,p->remaining);
+    }printf("]");
 }
 
 int main(int argc, char **argv) {
@@ -112,7 +115,7 @@ int main(int argc, char **argv) {
         } else if (cmd && !strcmp(cmd,"add") && slot>=0 && slot<GOLF_MAX_PLAYERS) {
             golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn);memset(&bot_memory[slot],0,sizeof(bot_memory[slot]));ok=true;
         } else if (cmd && !strcmp(cmd,"connected") && slot>=0 && slot<GOLF_MAX_PLAYERS) { players[slot].connected=json_object_get_boolean(o,"connected")==1; ok=true;
-        } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { vec3 direction=golf_json_object_get_vec3(o,"direction");float power=(float)json_object_get_number(o,"power");ok=golf_physics_shoot(&world,&players[slot],direction,power);if(ok){golf_bot_record(&bot_memory[slot],&players[slot],direction,power);event("shot",&players[slot],power);}
+        } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { vec3 direction=golf_json_object_get_vec3(o,"direction");float power=(float)json_object_get_number(o,"power");ok=golf_physics_shoot(&world,&players[slot],direction,power);if(ok){golf_wildlife_shot(&mechanics.wildlife,&players[slot]);golf_bot_record(&bot_memory[slot],&players[slot],direction,power);event("shot",&players[slot],power);}
         } else if (cmd && !strcmp(cmd,"step")) {
             int ticks=(int)json_object_get_number(o,"ticks"); if (ticks<0 || ticks>1200) ticks=0;
             for (int t=0;t<ticks;t++) {

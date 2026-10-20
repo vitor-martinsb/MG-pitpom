@@ -3630,7 +3630,7 @@ golf_shader_t *golf_data_get_shader(const char *path) {
 }
 
 golf_font_t *golf_data_get_font(const char *path) {
-    static const char *fallback = "data/font/DroidSerif-Bold.ttf";
+    static const char *fallback = "data/font/poppins/Poppins-Regular.ttf";
 
     golf_font_t *font = _golf_data_get_ptr(path, GOLF_DATA_FONT);
     if (!font) {

@@ -18,9 +18,11 @@ test('all legacy server messages have stable language-independent codes',()=>{
   assert.equal(errorCode(new Error('internal detail')),'BAD_REQUEST');
 });
 test('font atlases contain visible Portuguese and Spanish accented glyphs',()=>{
-  const font=JSON.parse(fs.readFileSync(new URL('../../data/font/FiraSans-Bold.ttf.golf_data',import.meta.url),'utf8'));
+  for(const weight of ['Regular','Medium','SemiBold','Bold']){
+  const font=JSON.parse(fs.readFileSync(new URL(`../../data/font/poppins/Poppins-${weight}.ttf.golf_data`,import.meta.url),'utf8'));
   for(const atlas of font.atlases)for(const character of 'áéíóúãõçêñ¡ü'){
     const glyph=atlas.char_datas.find((glyph:any)=>glyph.c===character.codePointAt(0));
     assert.ok(glyph&&glyph.x1>glyph.x0&&glyph.y1>glyph.y0&&glyph.xadvance>0,character);
+  }
   }
 });

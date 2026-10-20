@@ -122,7 +122,15 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             for(int k=0;k<3;k++) {
                 golf_wild_animal_t *a=&game->mechanics.wildlife.animals[k];
                 JSON_Object *o=json_array_get_object(animals,k);a->active=o&&json_object_get_boolean(o,"active")==1;
-                if(a->active){a->pos=golf_json_object_get_vec3(o,"pos");a->forward=golf_json_object_get_vec3(o,"forward");a->walking=json_object_get_boolean(o,"walking")==1;a->clock=(float)json_object_get_number(o,"clock");a->action=(int)json_object_get_number(o,"action");a->action_time=(float)json_object_get_number(o,"actionTime");}
+                if(a->active){a->pos=golf_json_object_get_vec3(o,"pos");a->forward=golf_json_object_get_vec3(o,"forward");a->walking=json_object_get_boolean(o,"walking")==1;a->clock=(float)json_object_get_number(o,"clock");a->stride=(float)json_object_get_number(o,"stride");a->speed=(float)json_object_get_number(o,"speed");a->gait=(float)json_object_get_number(o,"gait");a->action=(int)json_object_get_number(o,"action");a->action_time=(float)json_object_get_number(o,"actionTime");}
+            }
+        }
+        if(mascots){
+            golf_wildlife_t *w=&game->mechanics.wildlife;w->time=(float)json_object_get_number(o,"time");w->accepted_shots=(uint32_t)json_object_get_number(mascots,"acceptedShots");
+            memset(w->puddles,0,sizeof(w->puddles));JSON_Array *puddles=json_object_get_array(mascots,"puddles");
+            for(size_t i=0;i<json_array_get_count(puddles)&&i<GOLF_PUDDLES;i++){
+                JSON_Object *q=json_array_get_object(puddles,i);golf_puddle_t *p=&w->puddles[i];
+                p->active=true;p->pos=golf_json_object_get_vec3(q,"pos");p->id=(uint32_t)json_object_get_number(q,"id");p->born=(uint32_t)json_object_get_number(q,"born");p->remaining=(int)json_object_get_number(q,"remaining");
             }
         }
         for(size_t i=0;i<json_array_get_count(balls);i++) {

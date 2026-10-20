@@ -10,6 +10,10 @@ test('campaign publishes 100 different routes in ten worlds without replacing th
   const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
   assert.equal(config.num_levels,100);assert.equal(manifest.worlds.length,10);assert.equal(manifest.courses.length,100);
   assert.equal(new Set(manifest.courses.map((c:any)=>c.geometryHash)).size,100);
+  assert.equal(manifest.version,2);assert.ok(manifest.similarity.maximum<manifest.similarity.limit);
+  for(let world=1;world<=10;world++)assert.ok(new Set(manifest.courses.filter((c:any)=>c.world===world).map((c:any)=>c.layout)).size>=8);
+  assert.ok(manifest.courses.filter((c:any)=>c.branches.length>0).length>=20);
+  assert.ok(manifest.courses.filter((c:any)=>c.gapCount>0).length>=4);
   for(const c of manifest.courses){assert.equal(config[`level${c.number}`],c.path);assert.ok(fs.existsSync(path.join(root,c.path)));assert.equal(c.world,Math.ceil(c.number/10));}
   for(let i=1;i<=20;i++)assert.ok(fs.existsSync(path.join(root,`data/levels/level-${i}.level`)));
 });

@@ -19,6 +19,7 @@ bool golf_wildlife_safe(const golf_wildlife_t *w,vec3 p,float radius) {
 static bool separated(const golf_wildlife_t *w,vec3 p,int until,vec3 cat,vec3 dog) {
     if(vec3_distance(p,w->spawn)<2||vec3_distance(p,w->hole)<1.8f||vec3_distance(p,cat)<1.6f||vec3_distance(p,dog)<1.6f)return false;
     for(int i=0;i<until;i++)if(w->animals[i].active&&vec3_distance(p,w->animals[i].a)<2.2f)return false;
+    for(int i=0;i<w->portal_count;i++)if(vec3_distance(p,w->portals[i].pos)<1.6f)return false;
     return true;
 }
 void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor,const golf_navigation_t *nav,
@@ -36,6 +37,16 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
             w->wind[w->wind_count++]=(golf_wind_zone_t){t.position,t.scale,strength};
         else if(sscanf(e->name,"portal:%d:%d",&pair,&end)==2&&w->portal_count<GOLF_PORTALS)
             w->portals[w->portal_count++]=(golf_portal_t){t.position,pair,end,false};
+    }
+    for(int i=0;i<w->portal_count;i++){
+        golf_portal_t *portal=&w->portals[i];portal->active=golf_wildlife_safe(w,portal->pos,.26f);
+        if(!portal->active){
+            float best=3.0f;vec3 wanted=portal->pos;
+            for(int j=0;j<nav->count;j++){
+                vec3 p=nav->nodes[j].pos;float d=vec3_distance(wanted,p);
+                if(d<best&&vec3_distance(p,start)>1.3f&&vec3_distance(p,hole)>1.3f&&golf_wildlife_safe(w,p,.26f)){best=d;portal->pos=p;portal->active=true;}
+            }
+        }
     }
     for(int kind=0;kind<3;kind++)if(present[kind]) {
         float score=FLT_MAX;int best=-1;
@@ -55,21 +66,48 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
             if(safe){a->b=p;break;}
         }
     }
-    for(int i=0;i<w->portal_count;i++)w->portals[i].active=golf_wildlife_safe(w,w->portals[i].pos,.26f);
 }
 static void animate(golf_wildlife_t *w,float time) {
     float dt=w->time<0?0:golf_clampf(time-w->time,0,.1f);w->time=time;
     for(int kind=0;kind<3;kind++) {
         golf_wild_animal_t *a=&w->animals[kind];if(!a->active)continue;
         float age=time-a->action_time;
-        if(age>=0&&age<1.1f){a->walking=false;continue;}
+        if(age>=0&&age<1.1f){a->walking=false;a->speed=0;a->gait*=expf(-dt*12);continue;}
         a->clock+=dt;float period=8+kind*1.7f,p=fmodf(a->clock,period)/period;
         float t=p<.4f?p/.4f:p<.5f?1:p<.9f?1-(p-.5f)/.4f:0;
         t=t*t*(3-2*t);vec3 old=a->pos;
         a->pos=vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),t));
         vec3 hit;if(golf_nav_floor(w->floor,a->pos,&hit,0))a->pos.y=hit.y;
         vec3 velocity=vec3_sub(a->pos,old);velocity.y=0;a->walking=vec3_length(velocity)>.00001f;
+        float travelled=vec3_length(velocity);a->speed=dt>0?travelled/dt:0;
+        a->stride+=travelled*(2*MF_PI/.42f);a->gait+=(golf_clampf(a->speed/.18f,0,1)-a->gait)*(1-expf(-dt*14));
         if(a->walking)a->forward=vec3_normalize(velocity);
+    }
+}
+void golf_wildlife_shot(golf_wildlife_t *w,const golf_player_t *p){
+    if(!p->id||p->stroke_count<1)return;
+    for(int i=0;i<GOLF_MAX_PLAYERS;i++)if(w->shots[i].player==p->id||!w->shots[i].player){
+        golf_wild_shot_t *s=&w->shots[i];if(s->player==p->id&&s->stroke>=p->stroke_count)return;
+        *s=(golf_wild_shot_t){p->id,++w->accepted_shots,p->stroke_count,true};return;
+    }
+}
+static void finish_shots(golf_wildlife_t *w,golf_player_t *players,int count){
+    for(int i=0;i<count;i++){
+        golf_player_t *p=&players[i];if(!p->id)continue;
+        for(int j=0;j<GOLF_MAX_PLAYERS;j++){
+            golf_wild_shot_t *s=&w->shots[j];
+            if(s->player!=p->id||!s->pending||(!p->ball.is_in_hole&&(p->ball.is_moving||p->ball.capture_until)))continue;
+            s->pending=false;
+            for(int k=0;k<GOLF_PUDDLES;k++){
+                golf_puddle_t *q=&w->puddles[k];
+                if(q->active&&s->sequence>q->born&&s->sequence<=q->born+3&&--q->remaining==0)q->active=false;
+            }
+        }
+    }
+}
+static void puddle(golf_wildlife_t *w,vec3 pos){
+    for(int i=0;i<GOLF_PUDDLES;i++)if(!w->puddles[i].active){
+        w->puddles[i]=(golf_puddle_t){pos,++w->next_puddle,w->accepted_shots,3,true};return;
     }
 }
 static vec3 random_destination(const golf_wildlife_t *w,const golf_player_t *p,uint32_t seed) {
@@ -107,7 +145,10 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             if(time>=b->capture_until)release(b,time);
             continue;
         }
-        if(b->slow_until>time&&b->is_moving) {
+        bool wet=false;
+        if(enabled)for(int j=0;j<GOLF_PUDDLES;j++)if(w->puddles[j].active&&vec3_distance(b->pos,vec3_add(w->puddles[j].pos,V3(0,b->radius,0)))<.62f)wet=true;
+        b->slow_until=wet?time+2.f/120:0;
+        if(wet&&b->is_moving) {
             b->vel.x*=.996f;b->vel.z*=.996f;
         }
         if(!enabled||b->capture_until>0||b->is_in_water||b->is_out_of_bounds||!p->stroke_count||time<b->wildlife_protection)continue;
@@ -120,7 +161,7 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             a->action=kind+1;a->action_time=time;
             vec3 facing=vec3_sub(b->pos,a->pos);facing.y=0;if(vec3_length(facing)>.01f)a->forward=vec3_normalize(facing);
             if(kind==0) {
-                b->slow_until=time+3.8f;b->vel=vec3_scale(b->vel,.55f);
+                puddle(w,a->pos);b->slow_until=time+2.f/120;b->vel=vec3_scale(b->vel,.55f);
                 b->effect_kind=1;b->effect_time=time;b->effect_serial++;
             }else if(kind==1)capture(b,2,vec3_add(w->spawn,V3(0,b->radius,0)),time,1.15f);
             else capture(b,3,random_destination(w,p,seed),time,.85f);
@@ -140,5 +181,11 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             if(fabsf(d.x)<z->size.x&&fabsf(d.z)<z->size.z&&fabsf(d.y)<z->size.y)
                 b->vel.x+=z->strength*(.55f+.45f*sinf(time*.8f+j))/120;
         }
+    }
+    finish_shots(w,players,count);
+    // Expiration and its friction indicator disappear in the same authoritative tick.
+    for(int i=0;i<count;i++)if(players[i].ball.slow_until>0){
+        bool wet=false;for(int j=0;j<GOLF_PUDDLES;j++)if(w->puddles[j].active&&vec3_distance(players[i].ball.pos,vec3_add(w->puddles[j].pos,V3(0,players[i].ball.radius,0)))<.62f)wet=true;
+        if(!wet)players[i].ball.slow_until=0;
     }
 }

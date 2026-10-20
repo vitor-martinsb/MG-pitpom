@@ -42,7 +42,11 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",m->wildlife.world,m->wildlife.stage,m->wildlife.course);
     for(int i=0;i<3;i++) {
         golf_wild_animal_t *a=&m->wildlife.animals[i];
-        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->action_time,a->action);
+        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,a->active?"true":"false",a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
+    }
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"acceptedShots\":%u,\"puddles\":[",m->wildlife.accepted_shots);
+    int puddles=0;for(int i=0;i<GOLF_PUDDLES;i++)if(m->wildlife.puddles[i].active){
+        golf_puddle_t *p=&m->wildlife.puddles[i];used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g,%.5g],\"remaining\":%d}",puddles++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->remaining);
     }
     vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time());
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"surfaceGroups\":%u,\"landscapeGap\":%.5g",golf_draw_surface_groups(),golf_garden_landscape_gap());

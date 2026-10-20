@@ -40,7 +40,9 @@ the swept areas of moving obstacles. Short eased walks include pauses.
 
 * **Romeu:** black curly poodle with floppy ears, a graying muzzle and a gray
   crochet vest with navy blue/red rows. A playful
-  raised-leg animation applies 3.8 seconds of extra drag and a temporary tint.
+  raised-leg animation creates a puddle with the same drag. Each puddle lasts
+  for the next three accepted global strokes to finish, with its own counter,
+  independent of time. Duplicate messages and cancelled aiming do not count.
   The player's stored color and avatar never change.
 * **Luna:** small, slightly elongated dark chocolate dog with partly upright
   rounded ears, a gray muzzle and a pale chest patch. Carries the ball for 1.15 seconds

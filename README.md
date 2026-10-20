@@ -68,6 +68,15 @@ animals appear only during play, alongside Pituca and Pompom. Wind, portals,
 physical loops, ramps and timed gates arrive progressively.
 See [campaign rules, generation and validation](docs/campaign.md).
 
+The campaign now uses twenty structural families, real forks and airborne gaps,
+with geometry similarity rejection across all 100 layouts. Continuous forest
+terrain integrates the courses, and irregular gray rocks share their visible
+collision hull. Romeu follows the poodle reference with a fitted vest and
+distance-driven footsteps. His puddles last exactly three completed global
+strokes. The live minimap has no text or animals, and Poppins is used throughout
+the HTML and C-rendered interface.
+See [visual refresh, map diversity and validation](docs/visual-course-refresh.md).
+
 With this workspace's builds already generated:
 
 ```sh

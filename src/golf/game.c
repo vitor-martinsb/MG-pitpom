@@ -668,6 +668,7 @@ void golf_game_hit_ball(vec2 aim_delta) {
     }
     game.state = GOLF_GAME_STATE_WATCHING_BALL;
     player->stroke_count++;
+    golf_wildlife_shot(&game.mechanics.wildlife,player);
 
     vec3 aim_direction = V3(aim_delta.x, 0, aim_delta.y);
     aim_direction = vec3_normalize(vec3_rotate_y(aim_direction, game.cam.angle - 0.5f * MF_PI));

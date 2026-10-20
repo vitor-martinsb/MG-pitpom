@@ -18,6 +18,7 @@ jobs:
           python3 build/verify-gameplay-assets.py
           python3 build/generate-visual-shaders.py --check
           python3 build/generate-campaign.py --check
+          python3 -m unittest discover -s tests -p test_campaign_layouts.py
       - name: Compile Linux physics, WebAssembly and Node container
         run: docker build -t pitpom:ci .
       - name: Validate languages and protocol in the built container
@@ -47,6 +48,7 @@ jobs:
           node test/wildlife-render.mjs
           node test/loading-audio.mjs
           node test/bot-updates-browser.mjs
+          node test/visual-refresh.mjs
       - name: Container logs
         if: always()
         run: docker logs pitpom || true
