@@ -4,6 +4,16 @@ import {chromium} from '@playwright/test';
 import {canvasClick} from './canvas-input.mjs';
 const external=process.argv.includes('--url'),app=external?null:(await import('../dist/index.js')).createServer();
 let browser;
+async function openCourseSelection(page){
+  const viewport=page.viewportSize();
+  for(let attempt=0;attempt<8;attempt++){
+    await canvasClick(page,viewport.width/2,viewport.height*.75);
+    try{
+      await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_ui_level_selection','string',[],[])).open,{},{timeout:1500});
+      await page.locator('#level-selection').waitFor({state:'visible'});return;
+    }catch(error){if(attempt===7)throw error;}
+  }
+}
 try{
   if(app)await new Promise(r=>app.server.listen(0,'127.0.0.1',r));
   const url=app?`http://127.0.0.1:${app.server.address().port}`:process.argv[process.argv.indexOf('--url')+1];
@@ -19,9 +29,8 @@ try{
   assert.equal(await a.locator('#loading .mascot-run .run-frame').count(),2);
   assert.equal(await a.locator('#loading .chase-ring').count(),0);
   for(const [page,name]of [[a,'desktop'],[b,'mobile']]){
-    await page.locator('#offline').click();await page.waitForTimeout(500);
-    const viewport=page.viewportSize();await canvasClick(page,viewport.width/2,viewport.height*.75);
-    await page.locator('#level-selection').waitFor({state:'visible'});
+    await page.locator('#offline').click();await page.locator('#connect').waitFor({state:'hidden'});
+    await openCourseSelection(page);
     assert.equal(await page.locator('#level-adventure .trail-node').count(),20);
     assert.equal(await page.locator('#level-adventure .locked').count(),19);
     assert.equal(await page.locator('#level-adventure .world-title').count(),10);
@@ -33,7 +42,7 @@ try{
     }
     await page.screenshot({path:`../out/evolution-validation/course-selection-${name}.png`});
     await page.locator('#close-level-selection').click();await page.locator('#level-selection').waitFor({state:'hidden'});
-    await canvasClick(page,viewport.width/2,viewport.height*.75);await page.locator('#level-selection').waitFor({state:'visible'});
+    await openCourseSelection(page);
     await page.locator('#level-adventure [data-level="0"]').click();
     await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();
     await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&GolfCourse.inspect().frame.level===0);
