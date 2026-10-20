@@ -254,11 +254,34 @@ void golf_garden_prepare(golf_level_t *level, int level_number) {
             course_max=V3(fmaxf(course_max.x,p.x),fmaxf(course_max.y,p.y),fmaxf(course_max.z,p.z));
         }
     }
+    if(garden.biome&&golf_game_get()->mechanics.wildlife.course){
+        course_min=golf_game_get()->mechanics.bounds_min;course_max=golf_game_get()->mechanics.bounds_max;
+    }
     if(!garden.biome&&golf_game_get()->mechanics.wildlife.course){
         garden.biome=golf_game_get()->mechanics.wildlife.world;
         course_min=golf_game_get()->mechanics.bounds_min;course_max=golf_game_get()->mechanics.bounds_max;
     }
     if(garden.biome){garden.center=vec3_scale(vec3_add(course_min,course_max),.5f);garden.radius=fmaxf(28,vec3_distance(course_min,course_max)*.5f+10);campaign_scenery(&mesh,course_min,course_max);}
+    // Visual banks support the new streams down to the continuous terrain.
+    // They never enter the collision BVH or change the existing water response.
+    for(int i=0;i<level->entities.length;i++){
+        golf_entity_t *e=&level->entities.data[i];if(e->type!=GROUP_ENTITY||strcmp(e->name,"evolution-river-bank"))continue;
+        golf_transform_t t=golf_entity_get_world_transform(level,e);float half=t.scale.x*.5f,length=t.scale.z*.5f;
+        float bottom=fminf(-.32f,course_min.y-.32f-t.position.y);
+        t.scale=V3(1,1,1);garden.transform=golf_transform_get_model_mat(t);
+        vec4 soil=paint(.42f,.48f,.32f,0),stone=paint(.51f,.54f,.48f,0);
+        triangle(&mesh,V3(-half,-.065f,-length),V3(-half,-.065f,length),V3(half,-.065f,length),stone);
+        triangle(&mesh,V3(-half,-.065f,-length),V3(half,-.065f,length),V3(half,-.065f,-length),stone);
+        for(int side=-1;side<=1;side+=2){
+            vec3 a=V3(side*half,-.035f,-length),b=V3(side*(half+.45f),.11f,-length),c=V3(side*(half+.45f),.11f,length),d=V3(side*half,-.035f,length);
+            if(side>0){triangle(&mesh,a,c,b,soil);triangle(&mesh,a,d,c,soil);}else{triangle(&mesh,a,b,c,soil);triangle(&mesh,a,c,d,soil);}
+            a=b;b=V3(side*(half+2.2f),bottom,-length);d=c;c=V3(side*(half+2.2f),bottom,length);
+            if(side>0){triangle(&mesh,a,c,b,soil);triangle(&mesh,a,d,c,soil);}else{triangle(&mesh,a,b,c,soil);triangle(&mesh,a,c,d,soil);}
+            oval(&mesh,V3(side*(half+.28f),.07f,0),V3(.16f,.08f,.20f),stone,2,6);
+            grass(&mesh,V3(side*(half+.38f),.10f,length*.55f),.18f,i+side);
+        }
+        garden.transform=mat4_identity();
+    }
     bool sign_added=false;int trees=0;
     for(int i=0;i<level->entities.length&&i<1024;i++) {
         golf_entity_t *entity=&level->entities.data[i];

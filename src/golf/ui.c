@@ -24,6 +24,7 @@
 #endif
 
 static golf_ui_t ui;
+static bool solo_progression=false;
 static golf_inputs_t *inputs; 
 static golf_graphics_t *graphics; 
 static golf_game_t *game; 
@@ -83,13 +84,14 @@ static void _golf_ui_start_fade_out(bool to_main_menu, bool to_loading_level, in
 
 #ifdef GOLF_PLATFORM_EMSCRIPTEN
 /* The browser trail uses the same saved scores and sequential locks as the native grid. */
+EMSCRIPTEN_KEEPALIVE void golf_ui_set_progression(int enabled){solo_progression=enabled!=0;}
 EMSCRIPTEN_KEEPALIVE const char *golf_ui_level_selection(void) {
     static char text[4096];
     int count = (int)CFG_NUM(game_cfg, "num_levels");
     bool open = golf->state == GOLF_STATE_MAIN_MENU && ui.main_menu.is_level_select_open
         && !ui.fade_out.active && !golf_online_active();
-    int used = snprintf(text, sizeof(text), "{\"open\":%s,\"loading\":%s,\"levels\":[",
-        open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false");
+    int used = snprintf(text, sizeof(text), "{\"open\":%s,\"loading\":%s,\"progression\":%s,\"levels\":[",
+        open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false",solo_progression?"true":"false");
     for (int i = 0; i < count && used < (int)sizeof(text) - 40; i++) {
         char key[64]; float best;
         golf_progress_key(key,sizeof(key),game_cfg,i);
@@ -105,7 +107,7 @@ EMSCRIPTEN_KEEPALIVE int golf_ui_choose_level(int level) {
     if (golf->state != GOLF_STATE_MAIN_MENU || !ui.main_menu.is_level_select_open
         || ui.fade_out.active || golf_online_active() || level < 0
         || level >= (int)CFG_NUM(game_cfg, "num_levels")) return 0;
-    for (int i = 0; i < level; i++) {
+    for (int i = 0; solo_progression && i < level; i++) {
         char key[64]; float best;
         golf_progress_key(key,sizeof(key),game_cfg,i);
         if (!golf_storage_get_num(key, &best)) return 0;
@@ -1420,7 +1422,8 @@ static void _golf_ui_in_game(float dt) {
                 alpha = 1 - (golf->in_game.t - time_to_show_level_num) / fade_in_length;
             }
             entity->text.text.len = 0;
-            golf_string_appendf(&entity->text.text, golf_i18n_t("c.level"), golf->level_num + 1);
+            char label[24];golf_course_label(label,sizeof(label),game_cfg,golf->level_num);
+            golf_string_appendf(&entity->text.text, golf_i18n_t("c.level"), label);
             _golf_ui_text(layout, *entity, alpha);
         }
     }

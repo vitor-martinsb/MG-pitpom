@@ -48,7 +48,7 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
             if(e->type==HOLE_ENTITY&&vec3_distance(golf_entity_get_world_transform(level,e).position,reference_courses[index].hole)<.001f)match=true;
         }
         if(!match)continue;
-        w->course=index+1;w->world=index/2+1;w->stage=index%2+1;
+        w->course=index*4+1;w->world=index/2+1;w->stage=index%2*4+1;
         for(int kind=0;kind<3;kind++)if(!present[kind]) {
             wanted[kind]=vec3_add(start,vec3_scale(vec3_sub(hole,start),.25f+kind*.25f));present[kind]=true;
         }
@@ -68,7 +68,7 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         float score=FLT_MAX;int best=-1;
         for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(p,wanted[kind]);
-            if(!nav->nodes[j].reachable||d>=score||!separated(w,p,kind,cat,dog)||!golf_wildlife_safe(w,p,.48f))continue;
+            if(!nav->nodes[j].reachable||d>=score||!separated(w,p,kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||((w->course-1)%4&&!golf_wildlife_safe(w,p,.44f)))continue;
             score=d;best=j;
         }
         if(best<0)continue;
@@ -78,7 +78,11 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(a->a,p);
             if(!nav->nodes[j].reachable||d<.7f||d>1.8f||!separated(w,p,kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||!golf_nav_segment(floor,a->a,p,.48f))continue;
-            bool safe=true;for(int k=0;k<=8;k++)if(!golf_wildlife_safe(w,vec3_add(a->a,vec3_scale(vec3_sub(p,a->a),k/8.f)),.48f))safe=false;
+            int samples=(w->course-1)%4?(int)ceilf(d/.04f):8;
+            bool safe=true;for(int k=0;k<=samples;k++){
+                vec3 q=vec3_add(a->a,vec3_scale(vec3_sub(p,a->a),k/(float)samples));
+                if(!golf_wildlife_safe(w,q,.48f)||((w->course-1)%4&&!golf_wildlife_safe(w,q,.44f)))safe=false;
+            }
             if(safe){a->b=p;break;}
         }
     }

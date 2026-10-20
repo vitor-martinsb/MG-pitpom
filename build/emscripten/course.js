@@ -40,7 +40,7 @@
   function matchLabels(){
     if(!frame)return;
     const world=window.GOLF_CAMPAIGN?.worlds[frame.world-1];
-    worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.t('stageNumber',{number:frame.stage})}`:'';
+    worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.t('courseName',{number:window.GOLF_CAMPAIGN?.courses[frame.level]?.label??frame.level+1})}`:'';
     const local=frame.players.find(p=>p.id===frame.local);
     const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
     effectLabel.textContent=effect?GolfI18n.t('effect.'+effectNames[effect]):'';

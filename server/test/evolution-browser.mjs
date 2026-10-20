@@ -31,12 +31,14 @@ try{
   for(const [page,name]of [[a,'desktop'],[b,'mobile']]){
     await page.locator('#offline').click();await page.locator('#connect').waitFor({state:'hidden'});
     await openCourseSelection(page);
-    assert.equal(await page.locator('#level-adventure .trail-node').count(),20);
-    assert.equal(await page.locator('#level-adventure .locked').count(),19);
-    assert.equal(await page.locator('#level-adventure .world-title').count(),10);
+    assert.equal(await page.locator('#level-adventure .trail-node').count(),80);
+    assert.equal(await page.locator('#level-adventure .locked').count(),0);
+    await page.locator('#solo-progression').check();
+    await page.waitForFunction(()=>document.querySelectorAll('#level-adventure .locked').length===79);
+    assert.equal(await page.locator('#level-adventure .family-title').count(),20);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[1])),0);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[-1])),0);
-    assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[20])),0);
+    assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[80])),0);
     for(const [lang,title]of [['pt-BR','Escolha de Fase'],['es','Elegir nivel'],['en','Choose a course']]){
       await page.evaluate(lang=>GolfI18n.setLanguage(lang),lang);assert.equal(await page.locator('#level-selection-title').textContent(),title);
     }
@@ -52,7 +54,20 @@ try{
   }
   await a.locator('#nickname').fill('Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
   const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Guest');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
-  for(const id of ['holes','game-mode','add-bot'])assert.equal(await b.locator('#'+id).isDisabled(),true);
+  for(const id of ['holes','game-mode','add-bot','map-pool'])assert.equal(await b.locator('#'+id).isDisabled(),true);
+  await a.locator('#map-pool').selectOption('originals');
+  await b.waitForFunction(()=>document.getElementById('map-pool').value==='originals');
+  assert.equal(await a.locator('#holes option:not(:disabled)').count(),20);
+  await a.locator('#map-pool').selectOption('evolutions');
+  await a.waitForFunction(()=>document.querySelectorAll('#holes option:not(:disabled)').length===60);
+  await a.locator('#map-pool').selectOption('custom');
+  await b.waitForFunction(()=>document.getElementById('map-pool').value==='custom');
+  await a.locator('#custom-maps').waitFor({state:'visible'});
+  await a.locator('#map-options input').evaluateAll(inputs=>inputs.forEach(input=>{input.checked=false;input.dispatchEvent(new Event('change',{bubbles:true}));}));
+  await a.locator('#map-options input[data-map-id="0"]').check();
+  await a.locator('#map-options input[data-map-id="3"]').check();
+  await a.locator('#apply-maps').click();
+  await b.waitForFunction(()=>[...document.getElementById('holes').options].filter(option=>!option.disabled).length===2);
   await a.locator('#holes').selectOption('2');await a.locator('#game-mode').selectOption('impact');
   await b.waitForFunction(()=>document.getElementById('holes').value==='2'&&document.getElementById('game-mode').value==='impact');
   await a.locator('#add-bot').click();await a.locator('.bot-controls').waitFor();

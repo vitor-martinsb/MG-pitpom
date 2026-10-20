@@ -28,6 +28,8 @@ export class Room {
   simulationSpeed=1;
   mode: 'classic' | 'impact' = 'classic';
   selectedLevels: number[] = [];
+  mapPool:number[]=[];
+  mapPoolKind:'all'|'originals'|'evolutions'|'custom'='all';
   match=0;
   mascots?: Mascots;
   readonly physicsSeed = randomBytes(4).readUInt32LE();
@@ -54,6 +56,7 @@ export class Room {
       try{if(seen.has(file))return [];seen.add(file);const data=JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));return Array.isArray(data.entities)&&data.entities.some((e:any)=>e.type==='ball-start')&&data.entities.some((e:any)=>e.type==='hole')?[index]:[];}catch{return [];}
     });
     this.holes=Math.min(3,this.validLevels.length);
+    this.mapPool=[...this.validLevels];
   }
   send(member: Member, message: unknown) {
     if (member.socket?.readyState === 1) {
@@ -66,7 +69,7 @@ export class Room {
   state() {
     return { type: 'room', code: this.code, phase: this.phase, host: this.host, hole: this.hole, holes: this.holes, penalty: this.options.penalty,
       level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,
-      sequence:this.selectedLevels, availableMaps:this.validLevels.length,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,
+      sequence:this.selectedLevels, availableMaps:this.validLevels.length,mapPool:this.mapPool,mapPoolKind:this.mapPoolKind,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,
       players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,
         connected: !!m.socket || !!m.bot, bot:m.bot, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
   }
@@ -108,7 +111,7 @@ export class Room {
   }
   async start(m: Member, holes: unknown, mode: unknown = 'classic') {
     this.configure(m,holes,mode);
-    this.selectedLevels=[...this.validLevels];
+    this.selectedLevels=[...this.mapPool];
     for(let i=this.selectedLevels.length-1;i>0;i--){const j=randomInt(i+1);[this.selectedLevels[i],this.selectedLevels[j]]=[this.selectedLevels[j]!,this.selectedLevels[i]!];}
     this.selectedLevels.length=this.holes;
     this.match++;
@@ -122,9 +125,16 @@ export class Room {
   }
   configure(m:Member,holes:unknown=this.holes,mode:unknown=this.mode){
     this.hostOnly(m);
-    if(!Number.isInteger(holes)||(holes as number)<1||(holes as number)>this.validLevels.length)throw Error('Quantidade de mapas inválida.');
+    if(!Number.isInteger(holes)||(holes as number)<1||(holes as number)>this.mapPool.length)throw Error('Quantidade de mapas inválida.');
     if(mode!=='classic'&&mode!=='impact')throw Error('Modo de jogo inválido.');
     this.holes=holes as number;this.mode=mode;this.publish();
+  }
+  configurePool(m:Member,kind:unknown,ids:unknown){
+    this.hostOnly(m);
+    if(!['all','originals','evolutions','custom'].includes(kind as string))throw Error('Quantidade de mapas inválida.');
+    const pool=kind==='custom'?ids:this.validLevels.filter(i=>kind==='all'||(kind==='originals'?this.levels[i]!.startsWith('data/levels/'):this.levels[i]!.startsWith('data/campaign/')));
+    if(!Array.isArray(pool)||!pool.length||pool.length>this.validLevels.length||new Set(pool).size!==pool.length||pool.some(i=>!Number.isInteger(i)||!this.validLevels.includes(i)))throw Error('Quantidade de mapas inválida.');
+    this.mapPool=[...pool];this.mapPoolKind=kind as typeof this.mapPoolKind;this.holes=Math.min(this.holes,pool.length);this.publish();
   }
   private nextBotName(){
     const used=new Set([...this.members.values()].map(p=>p.nickname.toLowerCase()));

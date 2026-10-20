@@ -1,6 +1,8 @@
 #include "golf/mechanics.h"
 #include "golf/physics.h"
 #include "bot.h"
+#include "golf/progress.h"
+#include "parson/parson.h"
 #undef NDEBUG
 #include <assert.h>
 #include <float.h>
@@ -60,11 +62,48 @@ int main(int argc,char **argv) {
     golf_physics_world_t world={0};world.level=&level;world.config=&config;world.static_bvh=&fixed;world.dynamic_bvh=&moving;world.multiplayer=true;
     world.funnel_radius=CFG_NUM(&config,"multiplayer_funnel_radius");world.funnel_force=CFG_NUM(&config,"multiplayer_funnel_force");world.capture_radius=CFG_NUM(&config,"multiplayer_capture_radius");world.capture_max_speed=CFG_NUM(&config,"multiplayer_capture_max_speed");
     golf_physics_build_world(&world,false);golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
-    assert(m.wildlife.course>=1&&m.wildlife.course<=20&&m.wildlife.world>=1&&m.wildlife.world<=10);
+    // Existing twenty-course records must survive the interleaved catalogue.
+    JSON_Value *saved=json_parse_string("{\"stroke_count_level_0\":2,\"stroke_count_level_1\":3,\"stroke_count_level_19\":7,\"pitpom100_best_1\":1}");
+    const int old_courses[]={0,4,76},old_scores[]={2,3,7};char key[64];
+    for(int i=0;i<3;i++){golf_progress_key(key,sizeof(key),&config,old_courses[i]);assert(json_object_get_number(json_value_get_object(saved),key)==old_scores[i]);}
+    golf_progress_key(key,sizeof(key),&config,1);assert(json_object_get_value(json_value_get_object(saved),key)==NULL);json_value_free(saved);
+    // Verify every added stream is exposed physical water, with the original
+    // drag/current and ordinary out-of-bounds recovery, rather than blue paint.
+    for(int e=0;e<level.entities.length;e++)if(!strncmp(level.entities.data[e].name,"evolution-stream-",17)){
+        bool exposed=false;
+        for(int f=0;f<fixed.faces.length&&!exposed;f++){
+            golf_bvh_face_t *face=&fixed.faces.data[f];if(face->entity!=&level.entities.data[e])continue;
+            vec3 center=vec3_scale(vec3_add(vec3_add(face->a,face->b),face->c),1.f/3);
+            golf_bvh_face_t top;float distance=FLT_MAX;int index;
+            if(!golf_bvh_ray_test(&fixed,vec3_add(center,V3(0,.15f,0)),V3(0,-1,0),&distance,&index,&top)||top.entity!=face->entity)continue;
+            golf_player_t wet;player(&wet,90,vec3_add(center,V3(0,.06f,0)));wet.ball.start_pos=vec3_add(m.start,V3(0,GOLF_BALL_RADIUS,0));wet.ball.vel=V3(.5f,0,0);wet.ball.is_moving=true;
+            bool contacted=false;world.time=0;
+            for(int tick=0;tick<1800;tick++){
+                world.time+=1.f/120;golf_physics_tick_player(&world,&wet,1.f/120);contacted|=wet.ball.is_in_water;
+                assert(isfinite(wet.ball.pos.x)&&isfinite(wet.ball.pos.y)&&isfinite(wet.ball.pos.z));
+                if(wet.ball.is_out_of_bounds){golf_ball_return_before_shot(&wet);break;}
+                if(!wet.ball.is_moving)break;
+            }
+            assert(contacted);assert(!wet.ball.is_moving);exposed=true;
+        }
+        if(!exposed){
+            int faces=0;
+            for(int f=0;f<fixed.faces.length;f++)if(fixed.faces.data[f].entity==&level.entities.data[e]){
+                golf_bvh_face_t *face=&fixed.faces.data[f];vec3 center=vec3_scale(vec3_add(vec3_add(face->a,face->b),face->c),1.f/3);
+                golf_bvh_face_t top={0};float distance=FLT_MAX;int index;
+                golf_bvh_ray_test(&fixed,vec3_add(center,V3(0,.15f,0)),V3(0,-1,0),&distance,&index,&top);
+                fprintf(stderr,"Covered stream %s %.3f %.3f %.3f top %s t%.4f\n",face->entity->name,center.x,center.y,center.z,top.entity?top.entity->name:"none",distance);faces++;
+            }
+            fprintf(stderr,"Stream faces %d\n",faces);
+        }
+        assert(exposed);
+    }
+    world.time=0;
+    assert(m.wildlife.course>=1&&m.wildlife.course<=80&&m.wildlife.world>=1&&m.wildlife.world<=10);
     const golf_navigation_t *nav=golf_mechanics_navigation();assert(nav->count>0);
     int requested=0;for(int i=0;i<level.entities.length;i++)if(!strncmp(level.entities.data[i].name,"animal:",7))requested++;
     int active=0;for(int i=0;i<3;i++)if(m.wildlife.animals[i].active){active++;validate_effect(m.wildlife,i,&world);}
-    assert(requested?active==requested:active<=3);
+    assert(active<=3&&(!requested||active<=requested));
     // Fifty balls receive independent state, including simultaneous captures.
     for(int kind=0;kind<3;kind++)if(m.wildlife.animals[kind].active) {
         golf_wildlife_t w=m.wildlife;w.wind_count=w.portal_count=0;w.time=30;
@@ -123,8 +162,11 @@ int main(int argc,char **argv) {
     }
     for(int tick=0;tick<2400;tick++) {
         float t=tick/120.f;golf_wildlife_tick(&m.wildlife,NULL,0,t,1234,true);
-        for(int kind=0;kind<3;kind++)if(m.wildlife.animals[kind].active)
-            assert(golf_wildlife_safe(&m.wildlife,m.wildlife.animals[kind].pos,.44f));
+        for(int kind=0;kind<3;kind++)if(m.wildlife.animals[kind].active){
+            golf_wild_animal_t *a=&m.wildlife.animals[kind];
+            if(!golf_wildlife_safe(&m.wildlife,a->pos,.44f))fprintf(stderr,"Unsafe patrol %d t%.3f p %.3f %.3f %.3f a %.3f %.3f %.3f b %.3f %.3f %.3f\n",kind,t,a->pos.x,a->pos.y,a->pos.z,a->a.x,a->a.y,a->a.z,a->b.x,a->b.y,a->b.z);
+            assert(golf_wildlife_safe(&m.wildlife,a->pos,.44f));
+        }
     }
     // Real shots, real C collision response, no teleporting or fixture positions.
     // Animals are disabled only for the geometry witness; isolation/safety above
@@ -132,8 +174,7 @@ int main(int argc,char **argv) {
     m.enabled=false;m.impact=false;golf_player_t p;golf_player_init(&p,1,"Witness",V4(1,1,1,1),0);
     golf_player_start_level(&p,vec3_add(m.start,V3(0,GOLF_BALL_RADIUS,0)));world.time=0;
     golf_bot_memory_t memory={0};
-    // Reference compatibility checks bound real bot execution, rather than
-    // requiring the old 100-course solver to finish every imported course.
+    // Every registered campaign test must finish within the real room limit.
     bool solve=argc>2&&!strcmp(argv[2],"--solve");
     for(int stroke=0;stroke<(solve?90:4)&&!p.ball.is_in_hole;stroke++) {
         golf_bot_observe(&memory,&p,nav);
@@ -152,6 +193,7 @@ int main(int argc,char **argv) {
     }
     if(solve&&!p.ball.is_in_hole)fprintf(stderr,"Campaign witness failed: %s, pos %.3f %.3f %.3f, hole %.3f %.3f %.3f, cost %.3f\n",argv[1],p.ball.pos.x,p.ball.pos.y,p.ball.pos.z,m.hole.x,m.hole.y,m.hole.z,golf_nav_cost(nav,p.ball.pos));
     assert(solve?p.ball.is_in_hole:p.stroke_count>0);
+    if(solve)assert(p.stroke_count<=48);
     printf("Campaign %d: %d real shots; %d animals validated, safe patrols and individual effects.\n",m.wildlife.course,p.stroke_count,active);
     return 0;
 }

@@ -27,6 +27,26 @@
   const send=m=>{if(socket?.readyState===WebSocket.OPEN) socket.send(JSON.stringify(m));};
   const call=m=>{if(initialized) Module.ccall('golf_online_receive',null,['string'],[JSON.stringify(m.type==='room'?{...m,players:m.players.map(p=>p.bot?{...p,nickname:'[BOT] '+p.nickname}:p)}:m)]);};
   const speedLabel=document.createElement('small');speedLabel.id='bot-speed';speedLabel.hidden=true;speedLabel.setAttribute('role','status');$('hud').append(speedLabel);
+  let poolSignature='';
+  function poolControls(force=false){
+    if(!room)return;const host=room.host===identity?.id&&phase==='lobby';
+    const ids=room.mapPool??GOLF_CAMPAIGN.courses.map((_,i)=>i),kind=room.mapPoolKind??'all';
+    $('map-pool').value=kind;$('map-pool').disabled=!host;$('custom-maps').hidden=kind!=='custom';$('apply-maps').disabled=!host;
+    $('selected-maps').textContent=t('selectedMaps',{count:ids.length});
+    const signature=JSON.stringify([ids,kind,GolfI18n.language]);
+    if(force||poolSignature!==signature){
+      poolSignature=signature;$('map-options').replaceChildren();
+      for(let family=1;family<=20;family++){
+        const group=document.createElement('fieldset');group.className='map-family';group.append(text('legend',t('familyTitle',{number:family})));
+        for(const [id,course]of GOLF_CAMPAIGN.courses.entries())if(course.family===family){
+          const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.dataset.mapId=String(id);input.checked=ids.includes(id);input.disabled=!host;
+          label.append(input,document.createTextNode(t('courseName',{number:course.label})));group.append(label);
+        }
+        $('map-options').append(group);
+      }
+    }
+    for(const input of $('map-options').querySelectorAll('input'))input.disabled=!host;
+  }
   function syncClock(m){playbackSpeed=m.simulationSpeed??1;if(Number.isFinite(m.remaining))deadline=performance.now()+m.remaining/playbackSpeed;}
   function botControls(){
     if(!room)return;const host=room.host===identity?.id&&phase==='lobby',bots=room.players.filter(p=>p.bot),max=50-room.players.filter(p=>!p.bot).length;
@@ -91,7 +111,8 @@
         $('room-code').textContent=m.code;$('count').textContent=t('players',{count:m.players.filter(p=>p.connected).length});
         $('members').replaceChildren(...m.players.map(lobbyRow));$('start').hidden=m.host!==identity?.id;$('start').disabled=m.host!==identity?.id;
         $('holes').disabled=m.host!==identity?.id;$('holes').value=String(m.holes);$('game-mode').value=m.mode;
-        for(const option of $('holes').options)option.disabled=Number(option.value)>m.availableMaps;
+        for(const option of $('holes').options)option.disabled=Number(option.value)>(m.mapPool?.length??m.availableMaps);
+        poolControls();
         $('add-bot').disabled=m.host!==identity?.id||m.players.length>=50;
         botControls();
         document.querySelector('[data-i18n="mapPolicy"]').textContent=t('mapPolicy',{count:m.availableMaps});
@@ -158,7 +179,7 @@
     if(phase==='finished')$('winner-banner').textContent=t('winners',{names:sorted().filter(p=>p.total===sorted()[0]?.total).map(p=>p.nickname).join(', ')});
     $('score-note').textContent=t('scoresNote',{penalty:room.penalty});
     const head=text('tr','');head.append(text('th','#'),text('th',t('player')));
-    for(let i=0;i<room.holes;i++)head.append(text('th',String(i+1)));head.append(text('th',t('total')));$('score-head').replaceChildren(head);
+    for(let i=0;i<room.holes;i++)head.append(text('th',GOLF_CAMPAIGN.courses[room.sequence[i]]?.label??String(i+1)));head.append(text('th',t('total')));$('score-head').replaceChildren(head);
     $('score-body').replaceChildren(...sorted().map((p,index)=>{const row=document.createElement('tr');if(p.id===identity?.id)row.classList.add('local');if(phase==='finished'&&p.total===sorted()[0]?.total)row.classList.add('winner');row.append(text('td',String(index+1)));const name=document.createElement('td');name.append(playerRow(p));row.append(name);
       for(let i=0;i<room.holes;i++)row.append(text('td',p.scores[i]===undefined?'—':p.dnf[i]?`${p.scores[i]} DNF`:String(p.scores[i])));row.append(text('td',String(p.total)));return row;}));
     $('close-scores').hidden=force;$('finish-exit').hidden=phase!=='finished';
@@ -187,6 +208,7 @@
     $('count').textContent=t('players',{count:room.players.filter(p=>p.connected).length});
     $('members').replaceChildren(...room.players.map(lobbyRow));
     botControls();
+    poolControls(true);
     document.querySelector('[data-i18n="mapPolicy"]').textContent=t('mapPolicy',{count:room.availableMaps});
     $('host-note').textContent=t(room.host===identity?.id?'hostYou':'hostWait');
     $('hole').textContent=t('hole',{current:Math.min(room.hole+1,room.holes),total:room.holes});
@@ -197,6 +219,12 @@
   });
   $('create').onclick=()=>join(true);$('join').onclick=()=>join(false);$('start').onclick=()=>send({type:'start',holes:Number($('holes').value),mode:$('game-mode').value});
   $('holes').onchange=$('game-mode').onchange=()=>send({type:'configure',holes:Number($('holes').value),mode:$('game-mode').value});
+  $('map-pool').onchange=()=>send({type:'map-pool',kind:$('map-pool').value,ids:room?.mapPool});
+  $('apply-maps').onclick=()=>{
+    const ids=[...$('map-options').querySelectorAll('input:checked')].map(input=>Number(input.dataset.mapId));
+    if(!ids.length){toast(t('selectOneMap'));return;}
+    send({type:'map-pool',kind:'custom',ids});
+  };
   $('add-bot').onclick=()=>send({type:'bot',action:'add',settings:{difficulty:$('bot-difficulty-all').value}});
   $('apply-bot-count').onclick=()=>send({type:'bot',action:'count',settings:{count:Number($('bot-count').value),difficulty:$('bot-difficulty-all').value}});
   $('play-again').onclick=()=>send({type:'rematch'});

@@ -5,20 +5,26 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Physics} from '../src/physics.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-test('catalogue restores exactly the twenty reference maps in their original order',()=>{
+test('eighty courses preserve the twenty originals and group three cumulative evolutions per family',()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'data/campaign/manifest.json'),'utf8'));
   const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
   const order=[3,2,4,1,...Array.from({length:16},(_,i)=>i+5)];
-  assert.equal(config.num_levels,20);assert.equal(manifest.courses.length,20);
+  assert.equal(config.num_levels,80);assert.equal(manifest.courses.length,80);
   assert.equal(config.campaign_version,undefined);
   assert.equal(manifest.reference,'ecaf879c1611601931338dfe5c234e01db22de89');
   for(const [index,number] of order.entries()){
     const expected=`data/levels/level-${number}.level`;
-    assert.equal(config[`level${index+1}`],expected);
-    assert.equal(manifest.courses[index].path,expected);
+    assert.equal(config[`level${index*4+1}`],expected);
+    assert.equal(manifest.courses[index*4].path,expected);
+    for(let revision=0;revision<4;revision++){
+      const row=manifest.courses[index*4+revision];
+      assert.equal(row.label,`${index+1}${revision?'.'+revision:''}`);
+      assert.equal(row.parent,revision?manifest.courses[index*4+revision-1].label:null);
+      assert.equal(row.path,config[`level${index*4+revision+1}`]);
+    }
     assert.ok(fs.existsSync(path.join(root,expected)));
   }
-  assert.equal(fs.readdirSync(path.join(root,'data/campaign')).filter(n=>n.endsWith('.level')).length,0);
+  assert.equal(fs.readdirSync(path.join(root,'data/campaign')).filter(n=>n.endsWith('.level')).length,60);
 });
 test('two authoritative workers reproduce the same animal patrols and fifty-ball state in classic and Impact',async()=>{
   for(const impact of [false,true]){

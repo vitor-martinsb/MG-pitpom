@@ -18,8 +18,8 @@ try{
  await a.locator('#nickname').fill('Visual Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
  const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Mobile');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
  await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));
- room.selectedLevels=[10];room.holes=1;room.hole=0;await room.load();
- await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===11&&GolfCourse.inspect().frame.intro)));
+ room.selectedLevels=[3];room.holes=1;room.hole=0;await room.load();
+ await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===4&&GolfCourse.inspect().frame.intro)));
  await Promise.all(pages.map(p=>p.locator('#skip-presentation').click()));
  await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden)));
  fs.mkdirSync('../out/visual-refresh',{recursive:true});

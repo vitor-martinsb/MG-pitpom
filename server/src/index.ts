@@ -71,6 +71,7 @@ export function createServer() {
             } else throw Error('Crie ou entre em uma sala.');
           } else if (message.type==='start') await room!.start(member,message.holes,message.mode ?? 'classic');
           else if(message.type==='configure')room!.configure(member,message.holes,message.mode);
+          else if(message.type==='map-pool')room!.configurePool(member,message.kind,message.ids);
           else if(message.type==='bot')room!.botSettings(member,message.action,message.id,message.settings);
           else if(message.type==='rematch')room!.rematch(member);
           else if (message.type==='ready') room!.ready(member,message.hole);

@@ -1,6 +1,6 @@
-> Current playable selection: **20 original courses**, selectively restored from `ecaf879c`.
+> Current playable selection: **80 courses in 20 families**: 20 untouched originals and 60 cumulative evolutions.
 > Recent interface, multiplayer, music and animal improvements remain enabled.
-> See [restoration details](docs/reference-restoration.md).
+> See [all sixty evolutions and validation](docs/family-expansion.md).
 
 # PitPom Minigolfe
 A cross-platform minigolf game written in C. 
@@ -63,13 +63,16 @@ visible protection in Impact, articulated loading mascots, independent audio
 controls and final celebration extend the existing game.
 See [game evolution and validation](docs/game-evolution.md).
 
-The game contains **20 original courses**, in the reference version's order.
-Solo **Choose a course** shows their sequential trail and preserves original
-course records. Multiplayer hosts can draw 1-20 distinct courses. The ten music
-and scenery themes each cover two courses.
+The game contains **80 courses**, ordered `1, 1.1, 1.2, 1.3, 2, ... 20.3`.
+Solo **Choose a course** groups the twenty families, offers free selection and
+optional gradual progression, and preserves the original course records.
+Multiplayer hosts choose all 80, the 20 originals, the 60 evolutions or a manual
+pool; the match draws without repeats. Ten music and scenery themes each cover
+two complete families. See [the family guide](docs/family-expansion.md).
 
 Romeu remains a black poodle with a fitted gray, blue and red vest. His puddles
-last exactly three completed global strokes. Luna follows the black dog artwork,
+last exactly three completed global strokes; each affected ball stays slowed for
+its next three completed personal shots. Luna follows the black dog artwork,
 with angular, folded-tip ears and brown eyes. Frida remains the white and gray
 cat from her photo. All moving animals use distance-driven footsteps. The live
 minimap has no text or animals, Poppins is used throughout, and forest terrain

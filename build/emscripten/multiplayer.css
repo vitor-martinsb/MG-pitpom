@@ -124,3 +124,5 @@ input[type=range]{accent-color:var(--moss)}
 @media(max-height:500px) and (orientation:landscape){.mascot-chase{width:150px;height:150px}}
 
 :root{--font-ui:Poppins,sans-serif}body,button,input,select,textarea{font-family:var(--font-ui)}button{font-weight:500}h1,h2,th,.code{font-weight:700}.player strong,.hud strong{font-weight:600}#minimap-legend{display:none!important}#minimap #toggle-minimap{font-size:0;width:32px;height:26px;padding:2px}#course-status{position:fixed;bottom:14px;left:16px;z-index:3;max-width:45vw;pointer-events:none}#course-status small{display:block;background:#f5e9ceeb;color:#526b48;border-radius:8px;padding:4px 8px;margin-top:3px}#course-status small:empty{display:none}
+
+.map-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-height:330px;overflow:auto}.map-family{border:1px solid #a3ac87;border-radius:10px;padding:8px}.map-family label,.progression-choice{display:flex;align-items:center;gap:8px}.map-family input,.progression-choice input{width:auto;min-height:22px;flex:none}.map-family legend{font-weight:600}@media(max-width:500px){.map-grid{grid-template-columns:1fr}}

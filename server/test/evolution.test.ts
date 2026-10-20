@@ -8,7 +8,7 @@ import {Room,defaults,BOT_STROKE_LIMIT} from '../src/room.js';
 import {Physics} from '../src/physics.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'utf8'));
-const levels=Array.from({length:20},(_,i)=>config[`level${i+1}`]);
+const levels=Array.from({length:20},(_,i)=>config[`level${i*4+1}`]);
 function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s)),close(){},messages} as unknown as WebSocket&{messages:any[]};}
 test('only the human host can configure every room setting and bot; human plus bot capacity is fifty',()=>{
   const room=new Room('RULES',root,levels),a=socket(),b=socket();

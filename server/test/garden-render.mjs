@@ -29,7 +29,7 @@ try {
   await page.locator('#start').click();
   const room=[...app.rooms.values()][0],counts=[];
   await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
-  room.selectedLevels=Array.from({length:20},(_,i)=>i);room.holes=20;room.hole=0;await room.load();
+  room.selectedLevels=Array.from({length:20},(_,i)=>i*4);room.holes=20;room.hole=0;await room.load();
   fs.mkdirSync('../out/garden-validation',{recursive:true});
   for(let index=0;index<20;index++){
     // Exercise original maps directly through the server test fixture, preserving production rules.
