@@ -107,7 +107,8 @@ int main(int argc,char **argv) {
             golf_bvh_face_t *face=&fixed.faces.data[f];if(face->entity!=&level.entities.data[e])continue;
             vec3 center=vec3_scale(vec3_add(vec3_add(face->a,face->b),face->c),1.f/3);
             golf_bvh_face_t top;float distance=FLT_MAX;int index;
-            if(!golf_bvh_ray_test(&fixed,vec3_add(center,V3(0,.15f,0)),V3(0,-1,0),&distance,&index,&top)||top.entity!=face->entity)continue;
+            vec3 sky=V3(center.x,m.bounds_max.y+3,center.z);
+            if(!golf_bvh_ray_test(&fixed,sky,V3(0,-1,0),&distance,&index,&top)||top.entity!=face->entity)continue;
             golf_player_t wet;player(&wet,90,vec3_add(center,V3(0,.06f,0)));wet.ball.start_pos=vec3_add(m.start,V3(0,GOLF_BALL_RADIUS,0));wet.ball.vel=V3(.5f,0,0);wet.ball.is_moving=true;
             bool contacted=false;world.time=0;
             for(int tick=0;tick<1800;tick++){
@@ -166,9 +167,16 @@ int main(int argc,char **argv) {
     }
     for(int j=0;j<m.wildlife.wind_count;j++) {
         golf_wildlife_t w=m.wildlife;w.time=50;w.portal_count=0;for(int a=0;a<3;a++)w.animals[a].active=false;
-        golf_player_t ball;player(&ball,1,w.wind[j].pos);ball.ball.is_moving=true;
+        golf_player_t ball;player(&ball,1,vec3_add(w.wind[j].pos,vec3_scale(w.wind[j].direction,.5f)));ball.ball.is_moving=true;
+        vec3 expected=golf_wildlife_wind(&w,ball.ball.pos,50);
         ball.ball.vel=V3(0,0,-1);golf_wildlife_tick(&w,&ball,1,50,917,true);
-        assert(fabsf(ball.ball.vel.x)>.00001f);
+        assert(vec3_length(vec3_sub(ball.ball.vel,V3(0,0,-1)))>.00001f);
+        assert(vec3_distance(ball.ball.vel,vec3_add(V3(0,0,-1),vec3_scale(expected,1.f/120)))<.00001f);
+        if(w.wind[j].mill){
+            assert(vec3_dot(expected,w.wind[j].direction)>0);
+            assert(vec3_length(golf_wildlife_wind(&w,vec3_add(w.wind[j].pos,V3(100,0,100)),50))==0);
+            assert(vec3_length(golf_wildlife_wind(&w,w.hole,50))==0);
+        }
     }
     // The loop is physical geometry, not a cosmetic ring: a real shot climbs
     // above its centre while low-speed players can use the connected green.
@@ -211,7 +219,10 @@ int main(int argc,char **argv) {
     for(int stroke=0;stroke<(solve?90:4)&&!p.ball.is_in_hole;stroke++) {
         golf_bot_observe(&memory,&p,nav);
         golf_bot_plan_t plan=golf_bot_plan_adaptive(&world,&m,nav,&p,2,&memory);
-        if(argc>2){vec3 target=golf_nav_target(nav,p.ball.pos);fprintf(stderr,"shot %d at %.3f %.3f %.3f target %.3f %.3f %.3f direction %.3f %.3f power %.4f cost %.3f\n",stroke,p.ball.pos.x,p.ball.pos.y,p.ball.pos.z,target.x,target.y,target.z,plan.direction.x,plan.direction.z,plan.power,golf_nav_cost(nav,p.ball.pos));}
+        for(int idle=0;idle<(int)(plan.wait*120);idle++){
+            world.time+=1.f/120;golf_mechanics_tick(&m,NULL,0,world.time);
+        }
+        if(argc>2){vec3 target=golf_nav_target(nav,p.ball.pos);fprintf(stderr,"shot %d at %.3f %.3f %.3f target %.3f %.3f %.3f direction %.3f %.3f power %.4f cost %.3f launch %.3f\n",stroke,p.ball.pos.x,p.ball.pos.y,p.ball.pos.z,target.x,target.y,target.z,plan.direction.x,plan.direction.z,plan.power,golf_nav_cost(nav,p.ball.pos),plan.launch_speed);}
         assert(golf_physics_shoot(&world,&p,plan.direction,plan.power));
         golf_bot_record(&memory,&p,plan.direction,plan.power);
         for(int tick=0;tick<1800&&!p.ball.is_in_hole;tick++) {

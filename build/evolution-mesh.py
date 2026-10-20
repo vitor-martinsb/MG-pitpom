@@ -129,6 +129,86 @@ def floor_at(level,x,z,hint):
                 if abs(y-hint)<.35 and(best is None or abs(y-hint)<abs(best-hint)):best=y
     return best
 
+def bend(level,axis,center,radius,shift):
+    """A coherent shear of the playable mesh, banks and moving assemblies.
+
+    Motion sweeps get flat offset plateaus: their rigid collision geometry and
+    surrounding floor move together, without bending a pendulum or its pivot.
+    The cross-axis shear is invertible and leaves height/launch slopes intact.
+    """
+    cross=2 if axis==0 else 0
+    bands=[]
+    for i,e in enumerate(level['entities']):
+        if 'geo' not in e or e.get('movement',{}).get('type','none')=='none':continue
+        points=[p for _,poly in polygons(level,i) for p in poly]
+        pivot=world(level,i,(0,0,0));movement=e['movement']
+        lo=min(p[axis] for p in points);hi=max(p[axis] for p in points)
+        if movement['type']=='linear':
+            a=movement.get('p0',[0,0,0])[axis];b=movement.get('p1',[0,0,0])[axis]
+            lo+=min(a,b);hi+=max(a,b)
+        elif movement['type'] in ['spinner','pendulum']:
+            extent=max(math.hypot(p[0]-pivot[0],p[2]-pivot[2]) for p in points)
+            lo=min(lo,pivot[axis]-extent);hi=max(hi,pivot[axis]+extent)
+        if hi>center-radius and lo<center+radius:bands.append((lo-.2,hi+.2))
+    merged=[]
+    for a,b in sorted(bands):
+        if merged and a<merged[-1][1]+.3:merged[-1]=(merged[-1][0],max(b,merged[-1][1]))
+        else:merged.append((a,b))
+    def base(x):
+        u=abs(x-center)/radius
+        return shift*(.5+.5*math.cos(math.pi*u)) if u<1 else 0
+    def offset(x):
+        value=base(x)
+        for a,b in merged:
+            # Smooth shoulder outside each rigid moving assembly.
+            distance=max(a-x,0,x-b);blend=max(0,1-distance/.65)
+            blend=blend*blend*(3-2*blend)
+            value=value*(1-blend)+base((a+b)*.5)*blend
+        return value
+    def deform(p):
+        q=list(p);q[cross]+=offset(p[axis]);return tuple(q)
+    planes=[center-radius+i*radius/4 for i in range(9)]
+    planes+= [v for a,b in merged for v in (a-.65,a,b,b+.65)]
+    planes=sorted(set(planes))
+    for index,e in list(enumerate(level['entities'])):
+        if 'geo' in e:
+            if e.get('movement',{}).get('type','none')!='none':
+                pivot=world(level,index,(0,0,0));amount=offset(pivot[axis])
+                # Original moving objects have unrotated root/translation parents.
+                parent=e['parent_idx'];origin=e['transform']['position']
+                q=deform(pivot)
+                local=world(level,parent,q,True) if parent>=0 else q
+                e['transform']['position']=list(local)
+                continue
+            faces=[]
+            for face,poly in polygons(level,index):
+                pieces=[poly]
+                for plane in planes:
+                    pieces=[part for piece in pieces for part in
+                        ([clip(piece,axis,plane,True),clip(piece,axis,plane,False)]
+                        if min(p[axis] for p in piece)<plane-1e-6 and max(p[axis] for p in piece)>plane+1e-6 else [piece])]
+                faces.extend((copy.deepcopy(face),[deform(p) for p in piece]) for piece in pieces)
+            store(level,index,faces)
+        elif e['type']=='group' and e['name']=='evolution-river-bank':
+            # Short bank segments follow the same local tangent as their water.
+            t=e['transform'];length=t['scale'][2]
+            a=tuple(t['position'][k]+rotate((0,0,-length*.5),t['rotation'])[k] for k in range(3))
+            b=tuple(t['position'][k]+rotate((0,0,length*.5),t['rotation'])[k] for k in range(3))
+            cuts=[0,1]
+            if abs(b[axis]-a[axis])>1e-8:
+                cuts+= [(v-a[axis])/(b[axis]-a[axis]) for v in planes if 0<(v-a[axis])/(b[axis]-a[axis])<1]
+            cuts=sorted(set(cuts))
+            for part,(u,v) in enumerate(zip(cuts,cuts[1:])):
+                A=deform(tuple(a[k]+(b[k]-a[k])*u for k in range(3)));B=deform(tuple(a[k]+(b[k]-a[k])*v for k in range(3)))
+                bank=copy.deepcopy(e);bank['transform']['position']=[(A[k]+B[k])*.5 for k in range(3)]
+                angle=math.atan2(B[0]-A[0],B[2]-A[2]);bank['transform']['rotation']=[0,math.sin(angle*.5),0,math.cos(angle*.5)]
+                bank['transform']['scale'][2]=math.hypot(B[0]-A[0],B[2]-A[2])
+                if part==0:level['entities'][index]=bank
+                else:level['entities'].append(bank)
+        elif e['type']=='group' and e['name'].startswith('mill:'):
+            e['transform']['position']=list(deform(e['transform']['position']))
+    return deform
+
 def identity():return dict(position=[0,0,0],scale=[1,1,1],rotation=[0,0,0,1])
 def group(name,p=(0,0,0)):
     t=identity();t['position']=list(p);return dict(parent_idx=-1,name=name,type='group',transform=t)
@@ -156,6 +236,18 @@ def rock(level,name,x,z,hint,rx,rz,height,yaw=0):
     if normal(faces[-2][1])[1]<0:faces[-2]=(faces[-2][0],list(reversed(faces[-2][1])))
     level['entities'].append(geo_entity(name,faces))
 
+def deck(level,x,z,y,width,length):
+    """A low arched wooden crossing with collision ramps at both ends."""
+    sections=[(-length/2,y+.015),(-length*.3,y+.14),(length*.3,y+.14),(length/2,y+.015)]
+    faces=[]
+    for (a,ha),(b,hb) in zip(sections,sections[1:]):
+        faces.append(face([(x-width/2,ha,z+a),(x-width/2,hb,z+b),(x+width/2,hb,z+b),(x+width/2,ha,z+a)],'wood'))
+        for side in [-1,1]:
+            xx=x+side*width/2
+            poly=[(xx,y-.12,z+a),(xx,ha,z+a),(xx,hb,z+b),(xx,y-.12,z+b)]
+            faces.append(face(poly if side<0 else list(reversed(poly)),'wood'))
+    level['entities'].append(geo_entity('evolution-bridge',faces))
+
 def subtract_strip(poly,quad):
     """Polygon minus a convex stream strip, keeping every outside piece."""
     inside=poly;outside=[]
@@ -182,7 +274,7 @@ def stream(level,name,path,width,y):
         faces=[]
         for f,poly in polygons(level,index):
             n=normal(poly)
-            if f['material_name']!='ground'or n[1]<.4*math.sqrt(sum(v*v for v in n))or max(abs(p[1]-(y+.025))for p in poly)>.2:
+            if not f['material_name'].startswith('ground')or n[1]<.4*math.sqrt(sum(v*v for v in n))or max(abs(p[1]-(y+.025))for p in poly)>.2:
                 faces.append((f,poly));continue
             pieces=[poly]
             for quad in strips:pieces=[part for piece in pieces for part in subtract_strip(piece,quad)]

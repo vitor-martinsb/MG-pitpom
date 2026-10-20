@@ -47,10 +47,9 @@ static bool route_connected(const golf_navigation_t *nav,vec3 start){
     }
     return reachable[first];
 }
-static void build_route(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav){
-    if(route.nav==nav&&route.level==world->level&&route.base_count==nav->count&&route.portals==m->enabled&&vec3_distance(route.hole,nav->hole)<.001f)return;
+static void build_route_pass(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav,bool refine){
     memset(&route,0,sizeof(route));route.nav=nav;route.level=world->level;route.base_count=nav->count;route.hole=nav->hole;route.portals=m->enabled;
-    bot_layers(nav);nav=&route.navigation;route.count=nav->count;
+    bot_layers(nav,refine);nav=&route.navigation;route.count=nav->count;
     for(int i=0;i<world->level->entities.length&&route.mover_count<1024;i++){
         golf_entity_t *e=&world->level->entities.data[i];
         if(e->type!=MODEL_ENTITY&&e->type!=GEO_ENTITY&&e->type!=WATER_ENTITY)continue;
@@ -82,7 +81,9 @@ static void build_route(golf_physics_world_t *world,const golf_mechanics_t *m,co
     }
     /* Ballistics suggest takeoff speed; original 120 Hz collision physics
      * validates every actual shot, including its ramp and safe landing. */
-    if(components>1)for(int pass=0;pass<2;pass++){
+    int start_node=nearest(nav,m->start),goal_node=nearest(nav,nav->hole);
+    bool gap_route=start_node>=0&&goal_node>=0&&route.component[start_node]!=route.component[goal_node];
+    if(gap_route)for(int pass=0;pass<2;pass++){
       int slots=pass?components*8:8;
       for(int i=0;i<nav->count;i++)if(nav->nodes[i].edges!=255){
         int best[slots];float distances[slots];
@@ -133,7 +134,7 @@ static void build_route(golf_physics_world_t *world,const golf_mechanics_t *m,co
     /* Concave return ramps launch away from the landing, then turn the ball
      * back. Seed that approach from the actual steep faces; simulation below
      * still has to climb the complete curved mesh and land on a real green. */
-    if(components>1&&!route_connected(nav,m->start))for(int i=0;i<nav->count;i++){
+    if(gap_route&&!route_connected(nav,m->start))for(int i=0;i<nav->count;i++){
         vec3 a=nav->nodes[i].pos,uphill=V3(0,0,0);float near=1.2f;
         for(int f=0;f<world->static_bvh->faces.length;f++){
             golf_bvh_face_t *face=&world->static_bvh->faces.data[f];
@@ -178,11 +179,18 @@ static void build_route(golf_physics_world_t *world,const golf_mechanics_t *m,co
 
 
 }
+static void build_route(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav){
+    if(route.nav==nav&&route.level==world->level&&route.base_count==nav->count&&route.portals==m->enabled&&vec3_distance(route.hole,nav->hole)<.001f)return;
+    build_route_pass(world,m,nav,false);
+    int first=nearest(&route.navigation,m->start);
+    if(first<0||route.cost[first]>=FLT_MAX/2)build_route_pass(world,m,nav,true);
+}
 static float route_cost(const golf_navigation_t *nav,vec3 p){
     if(route.count)nav=&route.navigation;
     int i=nearest(nav,p);if(i<0)return vec3_distance(p,nav->hole);
     return route.cost[i]<FLT_MAX/2?route.cost[i]+vec3_distance(p,nav->nodes[i].pos):10000+vec3_distance(p,nav->hole);
 }
+void golf_bot_prepare(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav){build_route(world,m,nav);}
 static vec3 target(const golf_navigation_t *nav,vec3 p,float reach,float *launch_speed){
     *launch_speed=0;int i=nearest(nav,p);if(i<0)return nav->hole;
     vec3 best=nav->nodes[i].pos;float cost=route.cost[i];
@@ -286,6 +294,19 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
                 float score=t.cost+2.7f+repeated(memory,p,first[i].direction,first[i].power);
                 if(t.safe&&score<best){int candidates=plan.candidates,lookahead=plan.lookahead;plan=first[i];plan.candidates=candidates;plan.lookahead=lookahead;best=score;}
             }
+        }
+    }
+    // Try bounded waits against the same future physics, not a heuristic force
+    // compensation. The room permits one wait per stroke, then plans again at
+    // the actual authority time so a gust cannot keep a bot waiting forever.
+    bool gusts=false;for(int j=0;j<m->wildlife.wind_count;j++)if(m->wildlife.wind[j].mill&&m->wildlife.wind[j].period>0)gusts=true;
+    if(gusts&&difficulty>=1&&best>-9999){
+        for(int delay=1;delay<=3;delay++){
+            golf_physics_world_t future=*world;future.time+=delay;
+            golf_mechanics_t later=*m;
+            for(int k=1;k<=delay*120;k++)golf_mechanics_tick(&later,NULL,0,world->time+k/120.f);
+            trial_t t=simulate(&future,&dynamic,&later,nav,p,plan.direction,plan.power,horizons[difficulty]);
+            if(t.safe&&t.cost+.35f*delay<best-.8f){best=t.cost+.35f*delay;plan.wait=(float)delay;}
         }
     }
     vec_deinit(&dynamic.faces);vec_deinit(&dynamic.node_infos);vec_deinit(&dynamic.nodes);

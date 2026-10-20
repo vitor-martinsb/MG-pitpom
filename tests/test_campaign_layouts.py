@@ -43,7 +43,8 @@ class ReferenceCourses(unittest.TestCase):
     def test_new_streams_have_real_water_and_bank_geometry(self):
         rows=json.loads((ROOT/'data/campaign/manifest.json').read_text(encoding='utf-8'))['courses']
         water=[row for row in rows if row['hasNewWater']]
-        self.assertEqual(len(water),21)
+        self.assertGreaterEqual(len(water),30)
+        self.assertLess(len(water),60)
         for row in water:
             level=json.loads((ROOT/row['path']).read_text())
             streams=[e for e in level['entities'] if e['name'].startswith('evolution-stream-')]
@@ -59,4 +60,26 @@ class ReferenceCourses(unittest.TestCase):
                     self.assertEqual(len(face['uvs']),len(face['idxs'])*2)
                     self.assertTrue(all(0<=u<=1 for u in face['uvs'][::2]),row['label'])
                     self.assertGreater(max(face['uvs'][::2])-min(face['uvs'][::2]),0)
+
+    def test_every_evolution_has_a_substantial_authored_bend(self):
+        rows=json.loads((ROOT/'data/campaign/manifest.json').read_text(encoding='utf-8'))['courses']
+        profiles=[];mills=[]
+        for family in range(20):
+            chain=rows[family*4:family*4+4]
+            signatures=[]
+            for revision,row in enumerate(chain[1:],1):
+                bends=[op for op in row['operations'] if op[0]=='C']
+                self.assertEqual(len(bends),revision)
+                self.assertGreaterEqual(abs(bends[-1][-1]),1.1)
+                signatures.append(bends[-1][1:])
+                level=json.loads((ROOT/row['path']).read_text())
+                towers=[e for e in level['entities'] if e['name'].startswith('mill:')]
+                if towers:
+                    mills.append(row['number'])
+                    self.assertTrue(any(e['name']=='evolution-mill-tower' for e in level['entities']))
+                for e in level['entities']:
+                    if 'geo' in e:self.assertTrue(all(__import__('math').isfinite(v) for v in e['geo']['p']))
+            profiles.append(str(signatures))
+        self.assertEqual(len(set(profiles)),20)
+        self.assertGreaterEqual(len(mills),20);self.assertLess(len(mills),50)
 if __name__=='__main__':unittest.main()

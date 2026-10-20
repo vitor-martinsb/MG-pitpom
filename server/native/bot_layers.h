@@ -19,8 +19,15 @@ static bool bot_segment(golf_bvh_t *bvh,vec3 a,vec3 b,float clearance){
     }
     return true;
 }
-static void bot_layers(const golf_navigation_t *base){
+static void bot_layers(const golf_navigation_t *base,bool refine){
     golf_navigation_t *nav=&route.navigation;*nav=*base;nav->count=0;
+    // Resolve bent, narrow openings missed by the normal 55 cm sampling.
+    // Refine only when the complete graph fits the existing fixed budgets.
+    if(refine&&base->count*2.5f<GOLF_NAV_NODES*.85f){
+        float step=base->step*.64f;
+        int width=(int)((base->max.x-base->min.x)/step)+1,height=(int)((base->max.z-base->min.z)/step)+1;
+        if(width*height<GOLF_NAV_CELLS){nav->step=step;nav->width=width;nav->height=height;}
+    }
     memset(route.heads,-1,sizeof(route.heads));memset(route.neighbor,-1,sizeof(route.neighbor));
     for(int z=0;z<nav->height;z++)for(int x=0;x<nav->width;x++){
         int cell=z*nav->width+x;

@@ -10,7 +10,7 @@ export type Member = {
   socket?: WebSocket; ready: boolean; lastSequence: number; scores: number[]; dnf: boolean[];
   disconnectedAt?: number; ball?: Ball;
   lastChatAt?: number;
-  bot?: BotDifficulty; nextDecision?: number; planRetries?:number;
+  bot?: BotDifficulty; nextDecision?: number; planRetries?:number; windWaitStroke?:number;
 };
 export type ChatMessage = { type: 'chat'; id: number; playerId: number; nickname: string; color: string; text: string; sentAt: number };
 export type RoomOptions = { duration: number; grace: number; loadingTimeout: number; resultsDuration: number; penalty: number; reconnectTTL: number; snapshotHz: number; catForwardProbability: number };
@@ -176,7 +176,7 @@ export class Room {
   private async load() {
     const generation=++this.generation;
     this.phase='loading'; this.loading=true; this.deadline=0; this.worldTime=0;this.lastPhysicsCpu=0;this.events=[];this.simulationSpeed=1;
-    for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0;m.planRetries=0; }
+    for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0;m.planRetries=0;m.windWaitStroke=undefined; }
     this.lastSent.clear(); this.physics?.close();
     const level=this.selectedLevels[this.hole] ?? this.hole;
     this.publish(); this.broadcast({type:'load',level,hole:this.hole});
@@ -187,6 +187,9 @@ export class Room {
       const configured=await physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability,this.previousPet);if(!current())return;
       this.previousPet=configured.thirdKind;
       for (const m of this.members.values()) { await physics.add(m.slot,m.id);if(!current())return; if (!m.socket&&!m.bot) await physics.connected(m.slot,false);if(!current())return; }
+      // Build the shared route graph inside the loading barrier, once for all
+      // bots. Narrow-course refinement must not pause the live match timer.
+      if([...this.members.values()].some(m=>m.bot)){await physics.prepareBots();if(!current())return;}
       this.loading=false; this.deadline=this.now()+this.options.loadingTimeout; this.lastStep=this.now(); this.accumulated=0;
       const frame=await physics.step(0);if(!current())return; this.mascots=frame.mascots; for (const b of frame.players) this.members.get(b.id)!.ball=b;
       this.snapshot(true); this.publish(); this.maybeBegin();
@@ -264,6 +267,8 @@ export class Room {
         for(let i=0;i<(speed===5?3:1)&&bots.length;i++){
           const bot=bots.splice(this.botCursor++%bots.length,1)[0]!;bot.nextDecision=clock+650+((this.physicsSeed^bot.id^(bot.ball?.strokes??0)*197)>>>0)%500;
           const plan=await physics.plan(bot.slot,bot.bot!);
+          if(generation!==this.generation||physics!==this.physics||this.phase!=='playing')continue;
+          if(plan.wait>0&&bot.windWaitStroke!==bot.ball?.strokes){bot.windWaitStroke=bot.ball?.strokes;bot.nextDecision=clock+Math.min(3,plan.wait)*1000;continue;}
           if(plan.safe===false&&(bot.planRetries??0)<2){bot.planRetries=(bot.planRetries??0)+1;bot.nextDecision=clock+350;continue;}
           bot.planRetries=0;
           if(generation===this.generation&&this.phase==='playing'&&this.now()<this.deadline&&plan.ok)await this.shot(bot,{sequence:bot.lastSequence+1,direction:plan.direction,power:plan.power});

@@ -32,6 +32,12 @@ try{
     assert.ok(f.surfaceGroups>=3,`actual terrain draw calls, map ${index+1}`);
     assert.ok(f.landscapeGap>=9.9&&g.landscapeGap>=9.9,`landscape and camera clearance, map ${index+1}: ${f.landscapeGap}`);
     const metadata=await a.evaluate(i=>GOLF_CAMPAIGN.courses[i],index);
+    const mills=metadata.operations.filter(op=>op[0]==='F').length;
+    assert.equal(f.wind.filter(z=>z.mill).length,mills);assert.equal(g.wind.filter(z=>z.mill).length,mills);
+    for(const zone of f.wind){
+      assert.ok(zone.pos.every(Number.isFinite));assert.ok(Math.abs(Math.hypot(...zone.direction)-1)<.0001);
+      assert.ok(zone.gust>=.2499&&zone.gust<=1.0001);assert.ok(zone.strength>0&&zone.strength<=3);
+    }
     assert.equal(f.wildlife.filter(a=>a.active).length,1);
     assert.equal(f.catActive,true);assert.equal(f.dogActive,true);
     assert.equal(f.catVisible,true);assert.equal(f.dogVisible,true);
@@ -41,6 +47,7 @@ try{
     assert.ok(f.actorVertices>0&&f.actorVertices<24576,`actor capacity, map ${index+1}: ${f.actorVertices}`);
     const vertices=await a.evaluate(()=>Module.ccall('golf_garden_vertex_count','number',[],[]));assert.ok(vertices>0&&vertices<72000);
     budgets.push({course:index+1,vertices,actors:f.actorVertices,landscapeGap:f.landscapeGap});
+    if(index===10){await a.screenshot({path:'../out/campaign-validation/redesign-mill.png'});await b.screenshot({path:'../out/campaign-validation/redesign-mill-mobile.png'});}
     if(index%8===7){await a.waitForTimeout(500);await a.screenshot({path:`../out/campaign-validation/world-${f.world}.png`});await b.screenshot({path:`../out/campaign-validation/world-${f.world}-mobile.png`});console.log(`World ${f.world}: 8 family courses rendered on desktop and mobile.`);}
     await b.waitForFunction(index=>document.getElementById('campaign-world').textContent.includes(GolfI18n.courseName(GOLF_CAMPAIGN.courses[index])),index);
   }

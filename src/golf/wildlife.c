@@ -37,7 +37,12 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         if(sscanf(e->name,"campaign:%d:%d:%d",&w->world,&w->stage,&w->course)==3)continue;
         if(sscanf(e->name,"animal:%d",&kind)==1&&kind>=0&&kind<3){wanted[kind]=t.position;present[kind]=true;}
         else if(sscanf(e->name,"wind:%f",&strength)==1&&w->wind_count<GOLF_WIND_ZONES)
-            w->wind[w->wind_count++]=(golf_wind_zone_t){t.position,t.scale,strength};
+            w->wind[w->wind_count++]=(golf_wind_zone_t){.pos=t.position,.size=t.scale,.direction=V3(1,0,0),.strength=strength};
+        else if(!strncmp(e->name,"mill:",5)&&w->wind_count<GOLF_WIND_ZONES){
+            float dx,dz,period,phase;
+            if(sscanf(e->name,"mill:%f:%f:%f:%f:%f",&dx,&dz,&strength,&period,&phase)==5&&isfinite(strength)&&isfinite(period)&&isfinite(phase)&&hypotf(dx,dz)>.01f)
+                w->wind[w->wind_count++]=(golf_wind_zone_t){.pos=t.position,.size=t.scale,.direction=vec3_normalize(V3(dx,0,dz)),.strength=golf_clampf(strength,0,3),.period=period>0?fmaxf(2,period):0,.phase=phase,.mill=true};
+        }
         else if(sscanf(e->name,"portal:%d:%d",&pair,&end)==2&&w->portal_count<GOLF_PORTALS)
             w->portals[w->portal_count++]=(golf_portal_t){t.position,pair,end,false};
     }
@@ -164,6 +169,31 @@ static void release(golf_ball_t *b,float time) {
     b->wildlife_protection=time+2.5f;b->cat_cooldown=b->dog_cooldown=time+2.5f;
     b->collision_grace=.3f;
 }
+float golf_wind_gust(const golf_wind_zone_t *z,float time){
+    if(!z->mill)return .55f+.45f*sinf(time*.8f);
+    return z->period>0?.25f+.75f*(.5f+.5f*sinf(time*(2*MF_PI/z->period)+z->phase)):1;
+}
+vec3 golf_wildlife_wind(const golf_wildlife_t *w,vec3 pos,float time){
+    vec3 force=V3(0,0,0);
+    for(int j=0;j<w->wind_count;j++){
+        const golf_wind_zone_t *z=&w->wind[j];vec3 d=vec3_sub(pos,z->pos);
+        if(!z->mill){
+            if(fabsf(d.x)<z->size.x&&fabsf(d.z)<z->size.z&&fabsf(d.y)<z->size.y)
+                force.x+=z->strength*(.55f+.45f*sinf(time*.8f+j));
+            continue;
+        }
+        float along=vec3_dot(d,z->direction),side=fabsf(d.x*z->direction.z-d.z*z->direction.x);
+        float distance=hypotf(d.x,d.z),range=fmaxf(.1f,z->size.x);
+        if(along<0||distance>=range||side>=z->size.z||d.y<-.3f||d.y>z->size.y)continue;
+        float radial=1-distance/range,lateral=1-side/fmaxf(.1f,z->size.z),front=golf_clampf(along/.4f,0,1);
+        float cup=golf_clampf((vec3_distance(pos,w->hole)-.6f)/.8f,0,1);
+        // Continuous bounded acceleration at 120 Hz, with smooth distance and
+        // lateral falloff. A quiet cup prevents environmental endless rolls.
+        float amount=z->strength*golf_wind_gust(z,time)*radial*radial*lateral*lateral*cup*front;
+        force=vec3_add(force,vec3_scale(z->direction,amount));
+    }
+    float length=vec3_length(force);return length>4?vec3_scale(force,4/length):force;
+}
 void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,float time,uint32_t seed,bool enabled) {
     animate(w,time);
     for(int i=0;i<count;i++) {
@@ -173,6 +203,10 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             if(time>=b->capture_until)release(b,time);
             continue;
         }
+        // Environment is independent of pet/Impact switches, including bot
+        // candidate simulations and geometry completion witnesses.
+        if(b->is_moving&&!b->capture_until&&!b->is_out_of_bounds)
+            b->vel=vec3_add(b->vel,vec3_scale(golf_wildlife_wind(w,b->pos,time),1.f/120));
         bool wet=false,slow_applied=false;
         if(enabled)for(int j=0;j<GOLF_PUDDLES;j++)if(w->puddles[j].active&&vec3_distance(b->pos,vec3_add(w->puddles[j].pos,V3(0,b->radius,0)))<.62f)wet=true;
         if(wet&&!b->puddle_contact&&!b->slow_shots){
@@ -209,12 +243,6 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
                 capture(b,4,vec3_add(w->portals[k].pos,V3(0,b->radius,0)),time,.35f);b->portal_cooldown=time+3;break;
             }
             break;
-        }
-        if(b->capture_until>0||!b->is_moving)continue;
-        for(int j=0;j<w->wind_count;j++) {
-            golf_wind_zone_t *z=&w->wind[j];vec3 d=vec3_sub(b->pos,z->pos);
-            if(fabsf(d.x)<z->size.x&&fabsf(d.z)<z->size.z&&fabsf(d.y)<z->size.y)
-                b->vel.x+=z->strength*(.55f+.45f*sinf(time*.8f+j))/120;
         }
     }
     finish_shots(w,players,count);

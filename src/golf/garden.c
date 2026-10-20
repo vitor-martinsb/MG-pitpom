@@ -549,6 +549,32 @@ static void campaign_obstacles(garden_mesh_t *mesh,const golf_wildlife_t *w,floa
         garden.transform=mat4_identity();
     }
     for(int i=0;i<w->wind_count;i++) {
+        const golf_wind_zone_t *zone=&w->wind[i];
+        if(zone->mill){
+            garden.transform=mat4_multiply(mat4_translation(zone->pos),mat4_rotation_y(atan2f(zone->direction.x,zone->direction.z)));
+            vec4 wood=paint(.57f,.39f,.23f,0),sail=paint(.83f,.77f,.55f,0);
+            branch(mesh,V3(0,0,0),V3(0,1.12f,0),.13f,.09f,wood);
+            oval(mesh,V3(0,1.13f,.06f),V3(.12f,.12f,.10f),wood,2,6);
+            float turn=time*4+(zone->period>0?.3f*sinf(time*(2*MF_PI/zone->period)+zone->phase):0);
+            for(int blade=0;blade<4;blade++){
+                float a=turn+blade*MF_PI*.5f,b=a+.26f;
+                vec3 root=V3(cosf(a)*.12f,1.13f+sinf(a)*.12f,.12f);
+                vec3 tip=V3(cosf(a)*.54f,1.13f+sinf(a)*.54f,.12f);
+                branch(mesh,root,tip,.025f,.02f,wood);
+                triangle(mesh,root,tip,V3(cosf(b)*.48f,1.13f+sinf(b)*.48f,.12f),sail);
+            }
+            // Sparse leaves and short strokes show the actual force direction.
+            float gust=golf_wind_gust(zone,time);
+            for(int leaf=0;leaf<7;leaf++){
+                float f=fmodf(time*.24f+leaf/7.f,1),z=.3f+f*(zone->size.x-.3f);
+                float x=sinf(leaf*2.4f)*zone->size.z*.34f;
+                float y=.15f+.12f*sinf(time+leaf);
+                vec4 color=paint(.69f,.75f,.43f,0);
+                branch(mesh,V3(x,y,z),V3(x,y,z+.08f+.15f*gust),.008f,.004f,color);
+                if(leaf%2==0)triangle(mesh,V3(x-.025f,y,z),V3(x+.025f,y,z),V3(x,y+.025f,z+.10f),color);
+            }
+            garden.transform=mat4_identity();continue;
+        }
         vec3 p=w->wind[i].pos;p.x+=(w->wind[i].strength>0?-1:1)*(w->wind[i].size.x+.3f);
         garden.transform=mat4_multiply(mat4_translation(p),mat4_rotation_y(MF_PI*.5f));
         branch(mesh,V3(0,0,0),V3(0,.9f,0),.05f,.035f,paint(.52f,.43f,.32f,0));

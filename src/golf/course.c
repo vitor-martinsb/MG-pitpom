@@ -44,6 +44,11 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         golf_wild_animal_t *a=&m->wildlife.animals[i];
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,(a->active&&i==m->third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
     }
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"wind\":[");
+    for(int i=0;i<m->wildlife.wind_count;i++){
+        golf_wind_zone_t *z=&m->wildlife.wind[i];
+        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"mill\":%s,\"pos\":[%.5g,%.5g,%.5g],\"direction\":[%.5g,%.5g],\"strength\":%.5g,\"period\":%.5g,\"gust\":%.5g}",i?",":"",z->mill?"true":"false",z->pos.x,z->pos.y,z->pos.z,z->direction.x,z->direction.z,z->strength,z->period,golf_wind_gust(z,g->t));
+    }
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"acceptedShots\":%u,\"puddles\":[",m->wildlife.accepted_shots);
     int puddles=0;for(int i=0;i<GOLF_PUDDLES;i++)if(m->wildlife.puddles[i].active){
         golf_puddle_t *p=&m->wildlife.puddles[i];used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g,%.5g],\"remaining\":%d}",puddles++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->remaining);

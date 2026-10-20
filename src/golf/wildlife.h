@@ -12,7 +12,7 @@ typedef struct golf_wild_animal {
     float clock,action_time,stride,speed,gait,presence,patrol_period;
     int action;
 } golf_wild_animal_t;
-typedef struct golf_wind_zone { vec3 pos,size; float strength; } golf_wind_zone_t;
+typedef struct golf_wind_zone { vec3 pos,size,direction; float strength,period,phase; bool mill; } golf_wind_zone_t;
 typedef struct golf_portal { vec3 pos; int pair,end; bool active; } golf_portal_t;
 typedef struct golf_puddle {vec3 pos;uint32_t id,born;int remaining;bool active;} golf_puddle_t;
 typedef struct golf_wild_shot {uint32_t player,sequence;int stroke;bool pending;} golf_wild_shot_t;
@@ -32,5 +32,7 @@ typedef struct golf_wildlife {
 void golf_wildlife_init(golf_wildlife_t *,golf_level_t *,golf_bvh_t *,const golf_navigation_t *,vec3,vec3,vec3,vec3,const golf_bvh_aabb_t *,int);
 void golf_wildlife_tick(golf_wildlife_t *,golf_player_t *,int,float,uint32_t,bool);
 bool golf_wildlife_safe(const golf_wildlife_t *,vec3,float);
+vec3 golf_wildlife_wind(const golf_wildlife_t *,vec3,float);
+float golf_wind_gust(const golf_wind_zone_t *,float);
 void golf_wildlife_shot(golf_wildlife_t *,const golf_player_t *);
 #endif

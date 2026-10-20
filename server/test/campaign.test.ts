@@ -77,3 +77,21 @@ test('resident selection stays fixed for a whole field and never repeats the pre
     }finally{physics.close();}
   }
 });
+
+test('curved river and gusting mill use identical authority physics, including read-only bot forecasts',async()=>{
+  const a=new Physics(root,'data/campaign/family-07-3.level'),b=new Physics(root,'data/campaign/family-07-3.level');
+  try{
+    await Promise.all([a.configure(false,193,.5,1),b.configure(false,193,.5,1)]);
+    await Promise.all([a.add(0,1),b.add(0,1)]);
+    const before=await a.step(0),plan=await a.plan(0,'hard');
+    assert.ok(plan.wait>=0&&plan.wait<=3);assert.deepEqual((await a.step(0)).players,before.players);
+    assert.deepEqual((await a.step(0)).mascots,before.mascots);
+    assert.equal(await a.shot(0,plan.direction,plan.power),true);
+    assert.equal(await b.shot(0,plan.direction,plan.power),true);
+    for(const ticks of [120,240,600,1200]){
+      const [x,y]=await Promise.all([a.step(ticks),b.step(ticks)]);
+      assert.deepEqual(x.players,y.players);assert.deepEqual(x.mascots,y.mascots);
+      assert.ok(x.players[0]!.pos.every(Number.isFinite));
+    }
+  }finally{a.close();b.close();}
+});

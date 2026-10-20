@@ -12,6 +12,31 @@ const config=JSON.parse(fs.readFileSync(path.join(root,'data/config/game.cfg'),'
 const levels=Array.from({length:20},(_,i)=>config[`level${i*4+1}`]);
 function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,send:(data:string)=>messages.push(JSON.parse(data)),close:()=>{},messages} as unknown as WebSocket & {messages:any[]};}
 
+test('a narrow curved course prepares the shared bot graph before starting the match clock',async()=>{
+  let now=0;const room=new Room('BEND',root,['data/campaign/family-04-3.level'],defaults,()=>now);
+  const host=room.join(socket(),'Host','#ffffff',0);
+  try{
+    room.botSettings(host,'add',null,{difficulty:'hard'});await room.start(host,1);
+    assert.equal(room.phase,'loading');assert.equal(room.worldTime,0);
+    const bot=[...room.members.values()].find(m=>m.bot)!;assert.equal(bot.ball!.strokes,0);
+    room.ready(host,0);now=100;await room.tick();
+    assert.equal(room.phase,'playing');assert.equal(bot.ball!.strokes,1);
+  }finally{room.close();}
+});
+
+test('a gust forecast waits once per stroke and then shoots instead of waiting forever',async()=>{
+  let now=0;const room=new Room('GUST',root,levels,defaults,()=>now);
+  const host=room.join(socket(),'Host','#ffffff',0);
+  try{
+    room.botSettings(host,'add',null,{difficulty:'hard'});await room.start(host,1);room.ready(host,0);
+    const bot=[...room.members.values()].find(m=>m.bot)!,physics=(room as any).physics;
+    let plans=0;physics.plan=async()=>{plans++;return {ok:true,safe:true,wait:2,direction:[0,0,-1],power:.01};};
+    now=100;await room.tick();assert.equal(plans,1);assert.equal(bot.ball!.strokes,0);
+    for(let i=0;i<40&&bot.ball!.strokes===0;i++){now+=100;await room.tick();}
+    assert.equal(bot.ball!.strokes,1);assert.equal(plans,2);assert.ok(room.worldTime>=2);
+  }finally{room.close();}
+});
+
 test('field transitions choose a different companion and broadcast the same three residents to both clients',async()=>{
   const room=new Room('PETS',root,levels),a=socket(),b=socket();
   const host=room.join(a,'Host','#ffffff',0);room.join(b,'Guest','#ff0000',1);

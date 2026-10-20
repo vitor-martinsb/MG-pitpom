@@ -48,7 +48,7 @@ export class Physics {
     if (this.child.killed || this.child.exitCode !== null) throw new Error('Physics unavailable');
     const request = ++this.sequence;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(request); reject(new Error('Physics request timed out')); this.close(); }, 5000);
+      const timer = setTimeout(() => { this.pending.delete(request); reject(new Error('Physics request timed out')); this.close(); }, message.cmd==='prepareBots'?30000:5000);
       this.pending.set(request, { resolve, reject, timer });
       this.child.stdin.write(JSON.stringify({ ...message, request }) + '\n');
     });
@@ -59,5 +59,6 @@ export class Physics {
   async shot(slot: number, direction: number[], power: number): Promise<boolean> { return (await this.command({ cmd: 'shot', slot, direction, power })).ok; }
   async step(ticks: number): Promise<Frame> { return this.command({ cmd: 'step', ticks }); }
   plan(slot:number,difficulty:BotDifficulty){return this.command({cmd:'plan',slot,difficulty});}
+  prepareBots(){return this.command({cmd:'prepareBots'});}
   close() { this.child.kill(); }
 }
