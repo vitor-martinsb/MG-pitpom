@@ -46,10 +46,10 @@ try{
   snapshot.players[0].slowShots=remaining;snapshot.players[0].slowUntil=remaining?frame.time+100:0;
   snapshot.players[1].slowShots=0;snapshot.players[1].slowUntil=0;
   for(const p of pages)room.send([...room.members.values()].find(m=>m.nickname===(p===a?'Visual Host':'Mobile')),{...snapshot,type:'snapshot',full:true,hole:0});
-  for(const p of pages)await p.waitForFunction(n=>{
+  for(const p of pages)await p.waitForFunction(({remaining,id,other})=>{
    const f=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
-   return f.players[0].slowShots===n&&f.players[1].slowShots===0&&f.puddles.length===0;
-  },remaining);
+   return f.players.find(p=>p.id===id)?.slowShots===remaining&&f.players.find(p=>p.id===other)?.slowShots===0&&f.puddles.length===0;
+  },{remaining,id:frame.players[0].id,other:frame.players[1].id});
  }
  // Close-up of the same geometry used in play, without changing the animal's
  // physical location. Move only the trusted renderer's observed local ball.
