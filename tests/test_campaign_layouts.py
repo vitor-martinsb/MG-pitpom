@@ -52,4 +52,11 @@ class ReferenceCourses(unittest.TestCase):
             for e in streams:
                 self.assertEqual(e['type'],'water')
                 self.assertTrue(e['geo']['p'])
+                for face in e['geo']['faces']:
+                    # Campo 7's shader extrapolates white foam outside this
+                    # range. Preserve this contract through every later bend.
+                    self.assertEqual(face['uv_gen_type'],'manual')
+                    self.assertEqual(len(face['uvs']),len(face['idxs'])*2)
+                    self.assertTrue(all(0<=u<=1 for u in face['uvs'][::2]),row['label'])
+                    self.assertGreater(max(face['uvs'][::2])-min(face['uvs'][::2]),0)
 if __name__=='__main__':unittest.main()

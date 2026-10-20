@@ -23,7 +23,7 @@ def clip(poly,axis,value,positive):
         da=(a[axis]-value)*(1 if positive else -1);db=(b[axis]-value)*(1 if positive else -1)
         if da>=-1e-8:result.append(a)
         if (da>1e-8 and db<-1e-8)or(da<-1e-8 and db>1e-8):
-            t=da/(da-db);result.append(tuple(a[k]+(b[k]-a[k])*t for k in range(3)))
+            t=da/(da-db);result.append(tuple(a[k]+(b[k]-a[k])*t for k in range(len(a))))
     return result
 
 def normal(p):
@@ -33,7 +33,13 @@ def normal(p):
 def polygons(level,index):
     geo=level['entities'][index]['geo'];p=geo['p']
     pts=[world(level,index,p[k:k+3])for k in range(0,len(p),3)]
-    return [(copy.deepcopy(f),[pts[k]for k in f['idxs']])for f in geo['faces']]
+    result=[]
+    for f in geo['faces']:
+        poly=[pts[k]for k in f['idxs']]
+        if level['entities'][index]['type']=='water'and f.get('uv_gen_type')=='manual'and len(f['uvs'])==len(poly)*2:
+            poly=[(*p,*f['uvs'][i*2:i*2+2])for i,p in enumerate(poly)]
+        result.append((copy.deepcopy(f),poly))
+    return result
 
 def store(level,index,faces):
     entity=level['entities'][index];points=[];out=[];lookup={}
@@ -43,10 +49,15 @@ def store(level,index,faces):
         if sum(v*v for v in n)<1e-14:continue
         ids=[]
         for p in poly:
-            p=tuple(round(v,6)for v in world(level,index,p,True))
+            p=tuple(round(v,6)for v in world(level,index,p[:3],True))
             if p not in lookup:lookup[p]=len(points)//3;points.extend(p)
             ids.append(lookup[p])
-        face['idxs']=ids;face['uvs']=[round(v,6)for p in poly for v in (p[0]*.25,p[2]*.25)];out.append(face)
+        face['idxs']=ids
+        if entity['type']=='water':
+            if all(len(p)>=5 for p in poly):face['uvs']=[round(v,6)for p in poly for v in (min(1,max(0,p[3])),p[4])]
+            face['uv_gen_type']='manual'
+        else:face['uvs']=[round(v,6)for p in poly for v in (p[0]*.25,p[2]*.25)]
+        out.append(face)
     entity['geo']={'p':points,'faces':out}
     vertices=sum((len(f['idxs'])-2)*3 for f in out)
     entity['lightmap_section']={'lightmap_name':'evolution','uvs':base64.b64encode(struct.pack('<ii',50000,50000)*vertices).decode()}
@@ -177,10 +188,15 @@ def stream(level,name,path,width,y):
             for quad in strips:pieces=[part for piece in pieces for part in subtract_strip(piece,quad)]
             faces.extend((copy.deepcopy(f),p)for p in pieces)
         store(level,index,faces)
-    water=[]
+    water=[];travelled=0
     for quad,(a,b)in zip(strips,zip(path,path[1:])):
         if normal(quad)[1]<0:quad.reverse()
-        d=math.hypot(b[0]-a[0],b[1]-a[1]);water.append(face(quad,'evolution-water',((b[0]-a[0])/d,0,(b[1]-a[1])/d)))
+        d=math.hypot(b[0]-a[0],b[1]-a[1]);dx,dz=(b[0]-a[0])/d,(b[1]-a[1])/d
+        f=face(quad,'evolution-water',(dx,0,dz))[0];f['uv_gen_type']='manual'
+        # The existing Campo 7 shader expects U across the stream in [0,1].
+        # World-space grass UVs extrapolate its white edge foam over all water.
+        f['uvs']=[v for p in quad for v in (min(1,max(0,((p[0]-a[0])*-dz+(p[2]-a[1])*dx)/width+.5)),-(travelled+(p[0]-a[0])*dx+(p[2]-a[1])*dz)/3)]
+        water.append((f,quad));travelled+=d
     level['entities'].append(geo_entity(name,water,'water'))
     for a,b in zip(path,path[1:]):
         bank=group('evolution-river-bank',((a[0]+b[0])*.5,y,(a[1]+b[1])*.5))
