@@ -41,6 +41,55 @@ static void validate_bridge(golf_physics_world_t *world){
     }
     if(samples)printf("Bridge: %d ramp/deck rolling samples in both directions passed.\n",samples);
 }
+static void validate_environment(golf_physics_world_t *world,const golf_mechanics_t *m){
+    // Real transport: never pin the probe back into the water between ticks.
+    for(int i=0;i<world->level->entities.length;i++){
+        golf_entity_t *entry=&world->level->entities.data[i];
+        if(strncmp(entry->name,"stream-entry:",13))continue;
+        char name[128];snprintf(name,sizeof(name),"stream-outlet:%s",entry->name+13);
+        golf_entity_t *outlet=NULL;
+        for(int j=0;j<world->level->entities.length;j++)if(!strcmp(world->level->entities.data[j].name,name))outlet=&world->level->entities.data[j];
+        assert(outlet);
+        vec3 from=golf_entity_get_world_transform(world->level,entry).position;
+        vec3 to=golf_entity_get_world_transform(world->level,outlet).position;
+        golf_player_t p;player(&p,92,vec3_add(from,V3(0,.06f,0)));p.ball.is_moving=true;
+        golf_physics_world_t w=*world;w.time=0;int wet=0;float closest=FLT_MAX;
+        for(int tick=0;tick<1200;tick++){
+            w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);
+            wet+=p.ball.is_in_water;
+            float distance=hypotf(p.ball.pos.x-to.x,p.ball.pos.z-to.z);closest=fminf(closest,distance);
+            if(wet>=6&&distance<.45f)break;
+            if(p.ball.is_out_of_bounds||p.ball.pos.y<from.y-.3f)break;
+        }
+        if(wet<6||closest>=.45f)fprintf(stderr,"Current transport %s: wet %d closest %.3f final %.3f %.3f %.3f outlet %.3f %.3f %.3f\n",entry->name,wet,closest,p.ball.pos.x,p.ball.pos.y,p.ball.pos.z,to.x,to.y,to.z);
+        assert(wet>=6&&closest<.45f);
+        assert(p.ball.pos.y>from.y-.3f&&p.stroke_count==1);
+    }
+    for(int i=0;i<m->wildlife.wind_count;i++){
+        const golf_wind_zone_t *z=&m->wildlife.wind[i];if(!z->mill)continue;
+        float peak=z->period>0?(MF_PI*.5f-z->phase)*z->period/(2*MF_PI):0;
+        while(peak<0)peak+=z->period;
+        const golf_navigation_t *nav=golf_mechanics_navigation();float best=0;vec3 start=V3(0,0,0);
+        golf_wildlife_t wind=m->wildlife;wind.wind_count=1;wind.wind[0]=*z;
+        for(int j=0;j<nav->count;j++){
+            vec3 p=vec3_add(nav->nodes[j].pos,V3(0,GOLF_BALL_RADIUS,0));
+            // A ball can cross water or jump between graph components.
+            // Sample every verified floor, not just the walking component.
+            if(vec3_distance(p,m->start)<1.5f)continue;
+            float force=vec3_length(golf_wildlife_wind(&wind,p,peak));
+            if(force>best){best=force;start=p;}
+        }
+        golf_player_t p;player(&p,93,start);golf_physics_world_t w=*world;w.time=peak;
+        wind.time=peak;
+        for(int tick=0;tick<120;tick++){
+            w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);golf_wildlife_tick(&wind,&p,1,w.time,1,false);
+        }
+        vec3 delta=vec3_sub(p.ball.pos,start);delta.y=0;
+        if(vec3_dot(delta,z->direction)<.2f)fprintf(stderr,"Wind transport course %d: force %.3f displacement %.3f %.3f\n",m->wildlife.course,best,delta.x,delta.z);
+        assert(vec3_dot(delta,z->direction)>.2f);
+        assert(p.stroke_count==1&&!p.ball.is_in_hole);
+    }
+}
 static void validate_effect(golf_wildlife_t original,int kind,golf_physics_world_t *world) {
     golf_wildlife_t w=original;
     for(int i=0;i<3;i++)w.animals[i].active=w.animals[i].present=i==kind;
@@ -89,6 +138,7 @@ int main(int argc,char **argv) {
     world.funnel_radius=CFG_NUM(&config,"multiplayer_funnel_radius");world.funnel_force=CFG_NUM(&config,"multiplayer_funnel_force");world.capture_radius=CFG_NUM(&config,"multiplayer_capture_radius");world.capture_max_speed=CFG_NUM(&config,"multiplayer_capture_max_speed");
     golf_physics_build_world(&world,false);golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
     validate_bridge(&world);
+    validate_environment(&world,&m);
     // All three members are present from loading through long idle periods.
     // Repeated seeding here represents separate fields, never a live respawn.
     assert(m.cat_valid&&m.dog_valid);
@@ -144,6 +194,7 @@ int main(int argc,char **argv) {
                 if(wet.ball.is_out_of_bounds){golf_ball_return_before_shot(&wet);break;}
                 if(!wet.ball.is_moving)break;
             }
+            if(wet.ball.is_moving)fprintf(stderr,"Stream never settles %s p %.3f %.3f %.3f v %.3f %.3f %.3f\n",face->entity->name,wet.ball.pos.x,wet.ball.pos.y,wet.ball.pos.z,wet.ball.vel.x,wet.ball.vel.y,wet.ball.vel.z);
             assert(contacted);assert(!wet.ball.is_moving);exposed=true;
         }
         if(!exposed){

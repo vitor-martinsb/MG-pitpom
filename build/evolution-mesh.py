@@ -44,6 +44,18 @@ def polygons(level,index):
 def store(level,index,faces):
     entity=level['entities'][index];points=[];out=[];lookup={}
     for face,poly in faces:
+        # Repeated clipping introduces duplicate / collinear edge points.
+        # They must not make a valid floor polygon look like a zero-area face.
+        poly=list(poly)
+        changed=True
+        while changed and len(poly)>=3:
+            changed=False
+            for i in range(len(poly)):
+                a,b,c=poly[i-1],poly[i],poly[(i+1)%len(poly)]
+                u=[b[k]-a[k] for k in range(3)];v=[c[k]-b[k] for k in range(3)]
+                cross=(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])
+                if sum(q*q for q in cross)<1e-16 and sum(u[k]*v[k] for k in range(3))>=-1e-10:
+                    poly.pop(i);changed=True;break
         if len(poly)<3:continue
         n=normal(poly)
         if sum(v*v for v in n)<1e-14:continue
@@ -187,7 +199,16 @@ def bend(level,axis,center,radius,shift):
                     pieces=[part for piece in pieces for part in
                         ([clip(piece,axis,plane,True),clip(piece,axis,plane,False)]
                         if min(p[axis] for p in piece)<plane-1e-6 and max(p[axis] for p in piece)>plane+1e-6 else [piece])]
-                faces.extend((copy.deepcopy(face),[deform(p) for p in piece]) for piece in pieces)
+                for piece in pieces:
+                    f=copy.deepcopy(face)
+                    if e['type']=='water':
+                        # Carry the current through the same local shear as its
+                        # channel. A stale straight direction pushes into banks.
+                        p=tuple(sum(v[k] for v in piece)/len(piece) for k in range(3))
+                        direction=face.get('water_dir',[0,0,0])
+                        a=deform(p);b=deform(tuple(p[k]+direction[k]*.01 for k in range(3)))
+                        f['water_dir']=[(b[k]-a[k])*100 for k in range(3)]
+                    faces.append((f,[deform(p) for p in piece]))
             store(level,index,faces)
         elif e['type']=='group' and e['name']=='evolution-river-bank':
             # Short bank segments follow the same local tangent as their water.
@@ -205,7 +226,7 @@ def bend(level,axis,center,radius,shift):
                 bank['transform']['scale'][2]=math.hypot(B[0]-A[0],B[2]-A[2])
                 if part==0:level['entities'][index]=bank
                 else:level['entities'].append(bank)
-        elif e['type']=='group' and e['name'].startswith('mill:'):
+        elif e['type']=='group' and e['name'].startswith(('mill:','stream-entry:','stream-outlet:')):
             e['transform']['position']=list(deform(e['transform']['position']))
     return deform
 
@@ -263,32 +284,61 @@ def subtract_strip(poly,quad):
         kept=[];removed=[]
         for p,q in zip(inside,inside[1:]+inside[:1]):
             dp=sign*((b[0]-a[0])*(p[2]-a[2])-(b[2]-a[2])*(p[0]-a[0]));dq=sign*((b[0]-a[0])*(q[2]-a[2])-(b[2]-a[2])*(q[0]-a[0]))
-            (kept if dp>=-1e-8 else removed).append(p)
+            # Boundary vertices belong to both pieces. Giving them only to
+            # the inside cuts holes in a floor when adjacent strips share an edge.
+            if dp>=-1e-8:kept.append(p)
+            if dp<=1e-8:removed.append(p)
             if (dp>1e-8 and dq<-1e-8)or(dp<-1e-8 and dq>1e-8):
-                t=dp/(dp-dq);r=tuple(p[k]+(q[k]-p[k])*t for k in range(3));kept.append(r);removed.append(r)
+                t=dp/(dp-dq);r=tuple(p[k]+(q[k]-p[k])*t for k in range(len(p)));kept.append(r);removed.append(r)
         if len(removed)>=3:outside.append(removed)
         inside=kept
         if len(inside)<3:break
     return outside
 
 def stream(level,name,path,width,y):
-    strips=[]
-    for a,b in zip(path,path[1:]):
-        dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);nx,nz=-dz/length*width*.5,dx/length*width*.5
-        strips.append([(a[0]+nx,y,a[1]+nz),(b[0]+nx,y,b[1]+nz),(b[0]-nx,y,b[1]-nz),(a[0]-nx,y,a[1]-nz)])
+    # Continuous ribbon, including shared mitered corners and shallow entry /
+    # exit ramps. The water's visual surface alone cannot support a ball.
+    distances=[0]
+    for a,b in zip(path,path[1:]):distances.append(distances[-1]+math.dist(a,b))
+    total=distances[-1];ramp=min(.5,total*.2)
+    # Do not insert centimetre-long strips beside an existing path joint:
+    # their mitered banks can cross and leave slivers of grass in the channel.
+    cuts=sorted(set([*distances,*[d for d in [ramp,total-ramp] if min(abs(d-v) for v in distances)>.15]]))
+    bank_top=y+(.12 if any(e['type']=='water' and not e['name'].startswith('evolution-stream-') for e in level['entities']) else .025)
+    refined=[]
+    for distance in cuts:
+        i=next((i for i in range(len(distances)-1) if distance<=distances[i+1]+1e-8),len(distances)-2)
+        t=(distance-distances[i])/(distances[i+1]-distances[i]);a,b=path[i:i+2]
+        refined.append((a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t))
+    path=refined;edges=[]
+    for i,p in enumerate(path):
+        a,b=path[max(0,i-1)],path[min(len(path)-1,i+1)]
+        if i==0 or i==len(path)-1:
+            dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);nx,nz=-dz/length,dx/length;scale=width*.5
+        else:
+            A,B=path[i-1],path[i+1];u=(p[0]-A[0],p[1]-A[1]);v=(B[0]-p[0],B[1]-p[1]);lu,lv=math.hypot(*u),math.hypot(*v)
+            nx,nz=-u[1]/lu-v[1]/lv,u[0]/lu+v[0]/lv;length=math.hypot(nx,nz);nx,nz=nx/length,nz/length
+            scale=min(width,width*.5/max(.5,nx*(-v[1]/lv)+nz*(v[0]/lv)))
+        edges.append(((p[0]+nx*scale,y,p[1]+nz*scale),(p[0]-nx*scale,y,p[1]-nz*scale)))
+    strips=[[edges[i][0],edges[i+1][0],edges[i+1][1],edges[i][1]] for i in range(len(path)-1)]
     for index,e in enumerate(level['entities']):
-        if e['type']!='geo'or e.get('movement',{}).get('type','none')!='none':continue
+        old_water=e['type']=='water' and not e['name'].startswith('evolution-stream-')
+        if (e['type']!='geo' and not old_water)or e.get('movement',{}).get('type','none')!='none':continue
         faces=[]
         for f,poly in polygons(level,index):
             n=normal(poly)
-            if not f['material_name'].startswith('ground')or n[1]<.4*math.sqrt(sum(v*v for v in n))or max(abs(p[1]-(y+.025))for p in poly)>.2:
+            if (not old_water and not f['material_name'].startswith('ground'))or n[1]<.4*math.sqrt(sum(v*v for v in n))or max(abs(p[1]-(y+.025))for p in poly)>.2:
                 faces.append((f,poly));continue
             pieces=[poly]
             for quad in strips:pieces=[part for piece in pieces for part in subtract_strip(piece,quad)]
             faces.extend((copy.deepcopy(f),p)for p in pieces)
         store(level,index,faces)
     water=[];travelled=0
-    for quad,(a,b)in zip(strips,zip(path,path[1:])):
+    for segment,(quad,(a,b))in enumerate(zip(strips,zip(path,path[1:]))):
+        # Water follows the shallow exit ramp, so the ball keeps receiving
+        # current until it has climbed back onto the grass.
+        heights=[y+.065*max(0,1-min(d,total-d)/ramp) for d in cuts[segment:segment+2]]
+        quad=[(p[0],heights[1 if j in [1,2] else 0],p[2]) for j,p in enumerate(quad)]
         if normal(quad)[1]<0:quad.reverse()
         d=math.hypot(b[0]-a[0],b[1]-a[1]);dx,dz=(b[0]-a[0])/d,(b[1]-a[1])/d
         f=face(quad,'evolution-water',(dx,0,dz))[0];f['uv_gen_type']='manual'
@@ -297,6 +347,31 @@ def stream(level,name,path,width,y):
         f['uvs']=[v for p in quad for v in (min(1,max(0,((p[0]-a[0])*-dz+(p[2]-a[1])*dx)/width+.5)),-(travelled+(p[0]-a[0])*dx+(p[2]-a[1])*dz)/3)]
         water.append((f,quad));travelled+=d
     level['entities'].append(geo_entity(name,water,'water'))
+    material='evolution-river-bed'
+    if not any(m['name']==material for m in level['materials']):
+        level['materials'].append(dict(name=material,friction=.015,restitution=.1,vel_scale=1,type='environment',texture='data/textures/environment/slab.jpg'))
+    bed=[]
+    for i,quad in enumerate(strips):
+        # Stay above the original out-of-bounds plane below the fairway while
+        # keeping the ball submerged enough to receive continuous current.
+        heights=[y-.04+.065*max(0,1-min(d,total-d)/ramp) for d in cuts[i:i+2]]
+        # quad order may have been reversed for water winding; use shared edges.
+        A,B=edges[i],edges[i+1];ha,hb=heights
+        floor=[(A[0][0],ha,A[0][2]),(B[0][0],hb,B[0][2]),(B[1][0],hb,B[1][2]),(A[1][0],ha,A[1][2])]
+        if normal(floor)[1]<0:floor.reverse()
+        bed.append(face(floor,material))
+        for side in [0,1]:
+            a,b=A[side],B[side]
+            wall=[(a[0],ha,a[2]),(a[0],bank_top,a[2]),(b[0],bank_top,b[2]),(b[0],hb,b[2])]
+            wall=list(dict.fromkeys(wall))
+            # Face the inside of the channel.
+            if side==1:wall.reverse()
+            bed.append(face(wall,material))
+    level['entities'].append(geo_entity('river-bed:'+name,bed))
+    # Stable authority/test landmarks follow later terrain bends with the bed.
+    entry=path[1]
+    level['entities'].append(group('stream-entry:'+name,(entry[0],y,entry[1])))
+    level['entities'].append(group('stream-outlet:'+name,(path[-1][0],y+.025,path[-1][1])))
     for a,b in zip(path,path[1:]):
         bank=group('evolution-river-bank',((a[0]+b[0])*.5,y,(a[1]+b[1])*.5))
         angle=math.atan2(b[0]-a[0],b[1]-a[1]);bank['transform']['rotation']=[0,math.sin(angle*.5),0,math.cos(angle*.5)]

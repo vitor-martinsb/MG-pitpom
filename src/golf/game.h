@@ -5,8 +5,8 @@
 #include "common/level.h"
 #include "golf/player.h"
 #include "golf/mechanics.h"
+#include "golf/physics.h"
 
-#define MAX_NUM_CONTACTS 8
 #define MAX_AIM_LINE_POINTS 5
 #define GOLF_AIM_ARROW_COUNT 5
 #define MAX_NUM_WATER_RIPPLES 64

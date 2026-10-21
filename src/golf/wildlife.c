@@ -185,14 +185,18 @@ vec3 golf_wildlife_wind(const golf_wildlife_t *w,vec3 pos,float time){
         float along=vec3_dot(d,z->direction),side=fabsf(d.x*z->direction.z-d.z*z->direction.x);
         float distance=hypotf(d.x,d.z),range=fmaxf(.1f,z->size.x);
         if(along<0||distance>=range||side>=z->size.z||d.y<-.3f||d.y>z->size.y)continue;
-        float radial=1-distance/range,lateral=1-side/fmaxf(.1f,z->size.z),front=golf_clampf(along/.4f,0,1);
+        // Keep a useful core across the fairway, then taper at the boundary.
+        // Squaring both falloffs made the authored 2-3 m/s^2 winds weaker than
+        // rolling friction before they reached the ball.
+        float radial=golf_clampf((range-distance)/(range*.35f),0,1);
+        float lateral=1-powf(side/fmaxf(.1f,z->size.z),2),front=golf_clampf(along/.4f,0,1);
         float cup=golf_clampf((vec3_distance(pos,w->hole)-.6f)/.8f,0,1);
         // Continuous bounded acceleration at 120 Hz, with smooth distance and
         // lateral falloff. A quiet cup prevents environmental endless rolls.
-        float amount=z->strength*golf_wind_gust(z,time)*radial*radial*lateral*lateral*cup*front;
+        float amount=3*z->strength*golf_wind_gust(z,time)*radial*lateral*cup*front;
         force=vec3_add(force,vec3_scale(z->direction,amount));
     }
-    float length=vec3_length(force);return length>4?vec3_scale(force,4/length):force;
+    float length=vec3_length(force);return length>8?vec3_scale(force,8/length):force;
 }
 void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,float time,uint32_t seed,bool enabled) {
     animate(w,time);
@@ -205,8 +209,13 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
         }
         // Environment is independent of pet/Impact switches, including bot
         // candidate simulations and geometry completion witnesses.
-        if(b->is_moving&&!b->capture_until&&!b->is_out_of_bounds)
-            b->vel=vec3_add(b->vel,vec3_scale(golf_wildlife_wind(w,b->pos,time),1.f/120));
+        if(!b->capture_until&&!b->is_out_of_bounds){
+            vec3 wind=golf_wildlife_wind(w,b->pos,time);
+            // Strong gusts can restart a stopped shot. Weak edge breezes must
+            // still let it settle, and the tee remains stable before a shot.
+            if(!b->is_moving&&p->stroke_count>0&&vec3_length(wind)>4.5f){b->is_moving=true;b->time_going_slow=0;}
+            if(b->is_moving)b->vel=vec3_add(b->vel,vec3_scale(wind,1.f/120));
+        }
         bool wet=false,slow_applied=false;
         if(enabled)for(int j=0;j<GOLF_PUDDLES;j++)if(w->puddles[j].active&&vec3_distance(b->pos,vec3_add(w->puddles[j].pos,V3(0,b->radius,0)))<.62f)wet=true;
         if(wet&&!b->puddle_contact&&!b->slow_shots){

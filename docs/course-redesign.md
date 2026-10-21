@@ -15,8 +15,13 @@ Os conjuntos móveis recebem regiões de deslocamento uniforme para conservar
 a relação entre geometria, pivôs e movimentos.
 
 Os novos riachos recortam o piso, incluindo plataformas elevadas, com água
-física e margens acompanhando as curvas. Os UVs indicam o fluxo local e a
+física, leito raso contínuo e margens acompanhando as curvas. Rampas nas duas
+extremidades permitem entrar e sair do canal sem prender a bola. O leito fica
+acima do limite de saída do campo. Os UVs indicam o fluxo local e a
 correnteza usa a mesma força compartilhada pelos jogadores e pelos bots.
+O limite de contatos inclui as emendas da água e o apoio do leito, inclusive
+nas curvas subdivididas. Trechos que cruzavam uma parede ou obstáculos foram
+reposicionados dentro de suas fases para manter o canal livre até a saída.
 Uma ponte baixa com rampas permite atravessar o riacho da família Riacho da
 Paz; a água continua sendo uma alternativa de percurso. Os rios e os moinhos
 são distribuídos seletivamente e não aparecem em todos os campos.
@@ -25,8 +30,11 @@ Os moinhos têm torre com colisão, hélices de madeira animadas e pequenos
 traços e folhas indicando o vento. A aceleração horizontal cai suavemente
 com a distância e o afastamento lateral da direção de sopro. Há vento
 contínuo e rajadas senoidais previsíveis, com períodos de cinco a sete segundos.
-A força é aplicada em passos de 120 Hz às bolas em movimento, inclusive na
-água. Não altera gravidade, atrito ou velocidade de lançamento global. O
+A força é aplicada em passos de 120 Hz, inclusive na água. O centro da faixa
+de sopro tem força suficiente para vencer o atrito; rajadas fortes também
+movem bolas paradas depois da primeira tacada. A bola permanece estável na
+saída antes do primeiro lançamento, e as bordas fracas permitem que ela pare.
+Não altera gravidade, atrito ou velocidade de lançamento global. O
 vento enfraquece perto do buraco para permitir que a bola termine seu rolamento.
 
 Os bots simulam a física real com água e vento. Quando o grafo normal não
@@ -42,7 +50,8 @@ composição permanente de Pituca, Pompom e um terceiro companheiro continuam
 preservados. O vento não depende da ativação das interações dos animais.
 
 As verificações incluem hashes dos vinte originais, regeneração determinística
-dos sessenta campos, exposição e contato físico com cada riacho, vento local,
+dos sessenta campos, transporte real da entrada até a saída de cada novo
+riacho sem reposicionar a bola, deslocamento por vento a partir do repouso,
 colisões e conclusão real pelos bots em até 48 tacadas nos oitenta campos.
 Os testes de navegador conferem o catálogo, os três animais e os limites de
 renderização em desktop e celular.

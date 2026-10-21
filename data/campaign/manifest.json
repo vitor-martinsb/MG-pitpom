@@ -203,7 +203,7 @@
       "world": 1,
       "stage": 3,
       "path": "data/campaign/family-01-2.level",
-      "geometryHash": "03678ad2058c6ff7d4aa140265a4ff59df31aab3fe5cfd16c8ca7bd2378181f2",
+      "geometryHash": "b857fe47968a73ad6e85c45794294e9231ab48bfebd96e29d58f69f58639eaf9",
       "baselineHash": "966ceed5fe8e3ba7bfbbc49e111609864d622e98a32e5753ab732d2c19f0a57b",
       "animals": [
         0,
@@ -275,7 +275,7 @@
       "world": 1,
       "stage": 4,
       "path": "data/campaign/family-01-3.level",
-      "geometryHash": "a6b0a6548702ef61913d056f42d18c0d9e72d9a1673e319229f4a1f73472e9d1",
+      "geometryHash": "c33f72085288ab7baa948f71542965e145be70db0d24f5ca291eca5a97613b46",
       "baselineHash": "966ceed5fe8e3ba7bfbbc49e111609864d622e98a32e5753ab732d2c19f0a57b",
       "animals": [
         0,
@@ -445,7 +445,7 @@
       "world": 1,
       "stage": 7,
       "path": "data/campaign/family-02-2.level",
-      "geometryHash": "263c68d32822f092d089ca1b1cdf5b311b363a8d82a42aa26a839deddace595a",
+      "geometryHash": "7a9341169e117181d44ef2402edbb5610a672cad9bbc1cd56b2966d7ca248f0a",
       "baselineHash": "4427b4370c6152828acef4a6a3993500e0503b2b369ef42c633c388b1e0adb80",
       "animals": [
         0,
@@ -529,7 +529,7 @@
       "world": 1,
       "stage": 8,
       "path": "data/campaign/family-02-3.level",
-      "geometryHash": "0e8166e833a721098f376e2852c2895e2cb193327b70da35e8d69559fd39aad1",
+      "geometryHash": "890a33dd04d4d68c2c32ae6808e408aca5103f679d9442fe2330a220ad6b55b4",
       "baselineHash": "4427b4370c6152828acef4a6a3993500e0503b2b369ef42c633c388b1e0adb80",
       "animals": [
         0,
@@ -655,7 +655,7 @@
       "world": 2,
       "stage": 2,
       "path": "data/campaign/family-03-1.level",
-      "geometryHash": "f9dca40a3fdac398042ff28313c8913987afa21ea56ef84802ca6b4d03fd1808",
+      "geometryHash": "5afd8537070bef09df914415469b72bbdf5f500183ba27e6a17192baec8642eb",
       "baselineHash": "993aff31fd3931c98d4320dca6874f12fd65579c4505dd08eb198bb63e5f53ee",
       "animals": [
         0,
@@ -720,7 +720,7 @@
       "world": 2,
       "stage": 3,
       "path": "data/campaign/family-03-2.level",
-      "geometryHash": "7eb687f27090e67cc111165f0cb65cf9246c559d9952bfa711089bc783076a97",
+      "geometryHash": "5d36c00d679718df3cf1d288ae741f4db450be7b4f58288249c39ee61e99e5bb",
       "baselineHash": "993aff31fd3931c98d4320dca6874f12fd65579c4505dd08eb198bb63e5f53ee",
       "animals": [
         0,
@@ -790,16 +790,16 @@
           "S",
           [
             [
-              -2.65,
-              -7.5
+              -2.6,
+              -3.5
             ],
             [
               -2.45,
-              -10
+              -4.5
             ],
             [
-              -2.7,
-              -12.7
+              -2.6,
+              -5.5
             ]
           ],
           0.55,
@@ -837,7 +837,7 @@
       "world": 2,
       "stage": 4,
       "path": "data/campaign/family-03-3.level",
-      "geometryHash": "78f5e4466cc00aa20bd44f1678d814688f3e3fe91ed67d26d9866eaf01914748",
+      "geometryHash": "bc6f6aab9289fdc5d502dc5be1cb273f00e670619debec086545d99511a1a268",
       "baselineHash": "993aff31fd3931c98d4320dca6874f12fd65579c4505dd08eb198bb63e5f53ee",
       "animals": [
         0,
@@ -910,16 +910,16 @@
           "S",
           [
             [
-              -2.65,
-              -7.5
+              -2.6,
+              -3.5
             ],
             [
               -2.45,
-              -10
+              -4.5
             ],
             [
-              -2.7,
-              -12.7
+              -2.6,
+              -5.5
             ]
           ],
           0.55,
@@ -1246,7 +1246,7 @@
       "world": 3,
       "stage": 3,
       "path": "data/campaign/family-05-2.level",
-      "geometryHash": "9a09c66d4add99cab593cf1f9698f1e6cfbf858d3f1877c74d767f72f3034cf2",
+      "geometryHash": "5c826468e977142b6ca88b6142784ec8f54d37a5cd872699105b938a5652dc6d",
       "baselineHash": "975e4868194926ca52bd6fde2208e23e1f4d61418e1a0ed4206c670e9492897e",
       "animals": [
         0,
@@ -1307,7 +1307,7 @@
       "world": 3,
       "stage": 4,
       "path": "data/campaign/family-05-3.level",
-      "geometryHash": "194bda5d04a04a9e4d0cbe5bcaf2606af9bfd450482c4471052b6fc0f3be77b2",
+      "geometryHash": "0aaab22a17b5105d693d77ac1f7914f9bc3cd6a66d3f802d1718dc9e40eb34fa",
       "baselineHash": "975e4868194926ca52bd6fde2208e23e1f4d61418e1a0ed4206c670e9492897e",
       "animals": [
         0,
@@ -1411,7 +1411,7 @@
       "world": 3,
       "stage": 6,
       "path": "data/campaign/family-06-1.level",
-      "geometryHash": "abb3024814d6fa2bd4aae3862624c9b31643ff2656ef6707e0442d91e706524b",
+      "geometryHash": "8ec4cc467251df16a234472d31ee2e9b0ef8d464c76e396207492c46885233bf",
       "baselineHash": "a9d1b757953f3f3841b7bc6f1a9a944d35d46f0a805c03902ac704703633c78b",
       "animals": [
         0,
@@ -1478,7 +1478,7 @@
       "world": 3,
       "stage": 7,
       "path": "data/campaign/family-06-2.level",
-      "geometryHash": "7a32eb88fde1ba2d5b00344aad6c36041c25483b5effa2808921c299f8fd19d5",
+      "geometryHash": "ffcb2761ebb2c078fbc2d1923a12729d6c62917f2cb62e5ca88e0d51dd40af8e",
       "baselineHash": "a9d1b757953f3f3841b7bc6f1a9a944d35d46f0a805c03902ac704703633c78b",
       "animals": [
         0,
@@ -1578,7 +1578,7 @@
       "world": 3,
       "stage": 8,
       "path": "data/campaign/family-06-3.level",
-      "geometryHash": "8af232f062bf6460444b581c724a388316f0a051e4c59b33bc158c3f5fe7f4e5",
+      "geometryHash": "16185fb91835a549008d7f679e02af2ce6724a8ab982c2b17a07360f37090df6",
       "baselineHash": "a9d1b757953f3f3841b7bc6f1a9a944d35d46f0a805c03902ac704703633c78b",
       "animals": [
         0,
@@ -1735,7 +1735,7 @@
       "world": 4,
       "stage": 2,
       "path": "data/campaign/family-07-1.level",
-      "geometryHash": "4a7df6074139ae59bcf4cc828624a3cc1b1dd61d9b6a10093a01328edd2c6d98",
+      "geometryHash": "46e89326481e92304bd3fbe311edcf20bb8d25d5bd74036cdd77866c66d40d9d",
       "baselineHash": "0051251e9a7226c74fc98a7a0bb226b8cf13d2b11bb8c86f519a4152813e6ba2",
       "animals": [
         0,
@@ -1792,7 +1792,7 @@
       "world": 4,
       "stage": 3,
       "path": "data/campaign/family-07-2.level",
-      "geometryHash": "36fa7cf2d26d645c889375c115f3798d558990ae71ce655f4bc9b1d3ec409ee4",
+      "geometryHash": "2a81e2481a70b8afcc8d937a93e496500671d23f329842c1e7d54bc53ae74468",
       "baselineHash": "0051251e9a7226c74fc98a7a0bb226b8cf13d2b11bb8c86f519a4152813e6ba2",
       "animals": [
         0,
@@ -1866,7 +1866,7 @@
       "world": 4,
       "stage": 4,
       "path": "data/campaign/family-07-3.level",
-      "geometryHash": "dae55e452e1674dc2a62108e996776df28ade7a4566672b0c11255c7d3a4ffec",
+      "geometryHash": "9c87f70c6a2f5b000c594496b80fed1558d659a873b76e9d600d219b8ebb0284",
       "baselineHash": "0051251e9a7226c74fc98a7a0bb226b8cf13d2b11bb8c86f519a4152813e6ba2",
       "animals": [
         0,
@@ -2027,7 +2027,7 @@
       "world": 4,
       "stage": 7,
       "path": "data/campaign/family-08-2.level",
-      "geometryHash": "d4e0670bd96f245a7dfa2b911ab213dccdaa3c82baad726a2d183a7af501bf5e",
+      "geometryHash": "9c338f648cf943158c4f0db7437a64d6e34d04234cd58ce588454b22b51c2763",
       "baselineHash": "cca97f9f3c3d453f8624982071b36b5811d3d55c72471648da888cd68c20a04a",
       "animals": [
         0,
@@ -2100,7 +2100,7 @@
       "world": 4,
       "stage": 8,
       "path": "data/campaign/family-08-3.level",
-      "geometryHash": "2cb77fec618cd4e38633dcc465faeb507a451224ffb2115d06ad9f38c3c355a1",
+      "geometryHash": "7a6dbd701800b9b25c51ff85daa03c48c04826ed43e581a304113eb90333ac5d",
       "baselineHash": "cca97f9f3c3d453f8624982071b36b5811d3d55c72471648da888cd68c20a04a",
       "animals": [
         0,
@@ -2256,7 +2256,7 @@
       "world": 5,
       "stage": 3,
       "path": "data/campaign/family-09-2.level",
-      "geometryHash": "ede1569444ecb0379d8e99c9aac69232e886240162bf38cd7665f438d232f1f4",
+      "geometryHash": "ceb52ced1b615ba5d9be9834b849e9c8356901cecb257898cbbace7523e3d705",
       "baselineHash": "6f2fcd668c5a92f07e6cb9094ca66e5e1f842b95cfdb74db03db5e33891637b2",
       "animals": [
         0,
@@ -2336,7 +2336,7 @@
       "world": 5,
       "stage": 4,
       "path": "data/campaign/family-09-3.level",
-      "geometryHash": "8eba05946c25bd13f989e433a590e0f65a5b27a09227d5a9172b6b9f1cca222b",
+      "geometryHash": "fabdca8356f26a0a267a07d175dcfd8140699039556ca9fc4f78754f52f15468",
       "baselineHash": "6f2fcd668c5a92f07e6cb9094ca66e5e1f842b95cfdb74db03db5e33891637b2",
       "animals": [
         0,
@@ -2413,7 +2413,7 @@
         ],
         [
           "R",
-          7.7,
+          8.5,
           -25.3,
           -0.5,
           0.32,
@@ -2498,7 +2498,7 @@
       "world": 5,
       "stage": 7,
       "path": "data/campaign/family-10-2.level",
-      "geometryHash": "ba7536e6ef718f84b97f840a8c4dbb3add6ca399c22b2106c1519c6d46fc8db0",
+      "geometryHash": "e0f6e999c745b1848e6b6e559c81d27af8207bbdec3c089d8ba33fe2a44a7b16",
       "baselineHash": "e83102442877d9e2478c52e6d22e5ca51c59f33a2ad818e378f4071efc82cbdf",
       "animals": [
         0,
@@ -2523,16 +2523,16 @@
           "S",
           [
             [
-              1,
-              -35.8
+              -3.6,
+              -35.6
             ],
             [
-              -1,
-              -35.5
+              -3.8,
+              -34.8
             ],
             [
-              -3,
-              -35.8
+              -3.6,
+              -34
             ]
           ],
           0.55,
@@ -2559,7 +2559,7 @@
       "world": 5,
       "stage": 8,
       "path": "data/campaign/family-10-3.level",
-      "geometryHash": "b930ab0c04564a652cf8dcde02148577d4dbbd0e581bbbf9652a60b67000998f",
+      "geometryHash": "dca54606332c607036db54c93738b19deac3747ef4fad6e5a98928b26c3a583d",
       "baselineHash": "e83102442877d9e2478c52e6d22e5ca51c59f33a2ad818e378f4071efc82cbdf",
       "animals": [
         0,
@@ -2589,16 +2589,16 @@
           "S",
           [
             [
-              1,
-              -35.8
+              -3.6,
+              -35.6
             ],
             [
-              -1,
-              -35.5
+              -3.8,
+              -34.8
             ],
             [
-              -3,
-              -35.8
+              -3.6,
+              -34
             ]
           ],
           0.55,
@@ -2798,7 +2798,7 @@
       "world": 6,
       "stage": 4,
       "path": "data/campaign/family-11-3.level",
-      "geometryHash": "86e62d3b2710bcf9ba77f6979d02e03475a5dbf6604c4ad8126773ba4e726d7b",
+      "geometryHash": "ff2e6ccc69e879dbd8a4b1d94d6630705f87b8236d4c72ce9d0f0775f28573e6",
       "baselineHash": "2e4e579593ff055465c4de7af5c7dc6b831f5f695f08b20f3b47e96bccf6766d",
       "animals": [
         0,
@@ -2976,7 +2976,7 @@
       "world": 6,
       "stage": 7,
       "path": "data/campaign/family-12-2.level",
-      "geometryHash": "de23133795bb263e0c87d41baf5400b2b7642704b4aa2c33e1dd859e4575b891",
+      "geometryHash": "a953d9f7956e06bfcc6cb34a2afaedf131e4e1827f734cb8ece5e1dd681bbc89",
       "baselineHash": "442100bd574beb52a2f336c65125e08cc44dc9484e948b8fe317f82c8ca99ed9",
       "animals": [
         0,
@@ -3013,15 +3013,15 @@
           [
             [
               6,
-              -21.4
+              -22
             ],
             [
-              8,
-              -21.1
+              5.8,
+              -21
             ],
             [
-              10,
-              -21.4
+              6,
+              -20
             ]
           ],
           0.55,
@@ -3048,7 +3048,7 @@
       "world": 6,
       "stage": 8,
       "path": "data/campaign/family-12-3.level",
-      "geometryHash": "b76684906387b942890b45ca45aa6d3f0397918518dde4bda88b3282f2679b9e",
+      "geometryHash": "5070323b43f4cf37a033f8a52f17d4a51e51153f6fb6b92de96d482947d798b6",
       "baselineHash": "442100bd574beb52a2f336c65125e08cc44dc9484e948b8fe317f82c8ca99ed9",
       "animals": [
         0,
@@ -3087,15 +3087,15 @@
           [
             [
               6,
-              -21.4
+              -22
             ],
             [
-              8,
-              -21.1
+              5.8,
+              -21
             ],
             [
-              10,
-              -21.4
+              6,
+              -20
             ]
           ],
           0.55,
@@ -3210,7 +3210,7 @@
       "world": 7,
       "stage": 3,
       "path": "data/campaign/family-13-2.level",
-      "geometryHash": "08210106e3107457cfc847be7d98f0040087c0c99cb8aec8cf55ea01e9dda7b8",
+      "geometryHash": "c1e3a38fada91be8abf0555e0ecb87d686a9242330525e6e48712e9b9560dca7",
       "baselineHash": "7efaf944a385cd2eb02eceee2355c9eb81a4193c87f4bb7aee3f0fbebcfa1637",
       "animals": [
         0,
@@ -3292,7 +3292,7 @@
       "world": 7,
       "stage": 4,
       "path": "data/campaign/family-13-3.level",
-      "geometryHash": "ebdfacd47a74db555e97444dd01dd592294494428189f73d33b3b6b730c027db",
+      "geometryHash": "4d3ea2ca3f4357e7891f2e2aaf077f7c8f31506418e1b9cd191ebe8ecbad494b",
       "baselineHash": "7efaf944a385cd2eb02eceee2355c9eb81a4193c87f4bb7aee3f0fbebcfa1637",
       "animals": [
         0,
@@ -3464,7 +3464,7 @@
       "world": 7,
       "stage": 7,
       "path": "data/campaign/family-14-2.level",
-      "geometryHash": "ab0aa46f385bf5301b4365638dcf8619565401db3b53ddf070676b2509d59539",
+      "geometryHash": "f49eaa30fc2241186ec760b185def28a758cb49de5aecd58a2be6c42f95fdd3e",
       "baselineHash": "959a82c7cc9dce998d490787c4e311376e6f5fcb7bcc3385d91a7f54e9995046",
       "animals": [
         0,
@@ -3525,7 +3525,7 @@
       "world": 7,
       "stage": 8,
       "path": "data/campaign/family-14-3.level",
-      "geometryHash": "94a2b950db7d63f765a16f95c1fd94120ef36210f7c3ff95627761fba71a8756",
+      "geometryHash": "c532d8b3b8dd1a3266b0778367360eff26cffc6ba8dfb1e37821b06369b58d0b",
       "baselineHash": "959a82c7cc9dce998d490787c4e311376e6f5fcb7bcc3385d91a7f54e9995046",
       "animals": [
         0,
@@ -3738,7 +3738,7 @@
       "world": 8,
       "stage": 4,
       "path": "data/campaign/family-15-3.level",
-      "geometryHash": "46e82135e8f710e4e2db1a55b938dde76b974790085422240275302e93072bb7",
+      "geometryHash": "aa7a93a5159b171e5729924d5758e0ed2612ccb17b5f2c07375c300339abd97c",
       "baselineHash": "321581046bcdb1e4b03a3bea2a4699e0c26205688093f461424a40e672ed1e89",
       "animals": [
         0,
@@ -3903,7 +3903,7 @@
       "world": 8,
       "stage": 7,
       "path": "data/campaign/family-16-2.level",
-      "geometryHash": "cec02846fb3785241c1e23b2fdb488de4d9ea8c54819a6fa71e6da22b23bfa57",
+      "geometryHash": "398036718b7934341a8234d57a552949f081c96ea23790168f2beb108b4ecbf2",
       "baselineHash": "9c6a03ea0729727c1a86b8bce102eefbbbf059dde3e4357e6572428bdca8ae56",
       "animals": [
         0,
@@ -3936,15 +3936,39 @@
           "S",
           [
             [
-              3.65,
+              4.3,
               -12
             ],
             [
-              3.9,
+              4.3,
+              -12.5
+            ],
+            [
+              4.3,
+              -13
+            ],
+            [
+              4.3,
+              -13.5
+            ],
+            [
+              4.3,
               -14
             ],
             [
-              3.65,
+              4.3,
+              -14.5
+            ],
+            [
+              4.3,
+              -15
+            ],
+            [
+              4.3,
+              -15.5
+            ],
+            [
+              4.3,
               -16
             ]
           ],
@@ -3982,7 +4006,7 @@
       "world": 8,
       "stage": 8,
       "path": "data/campaign/family-16-3.level",
-      "geometryHash": "d031b920ab86344cdefe4c405aeed2f3b5f4769cbdd7fe6ca8c4f02b1dc5ee08",
+      "geometryHash": "7e457f10abd0e60d224e9cf3f10d3a749b46d73be7c8ef50c1713b061e25a9f5",
       "baselineHash": "9c6a03ea0729727c1a86b8bce102eefbbbf059dde3e4357e6572428bdca8ae56",
       "animals": [
         0,
@@ -4018,15 +4042,39 @@
           "S",
           [
             [
-              3.65,
+              4.3,
               -12
             ],
             [
-              3.9,
+              4.3,
+              -12.5
+            ],
+            [
+              4.3,
+              -13
+            ],
+            [
+              4.3,
+              -13.5
+            ],
+            [
+              4.3,
               -14
             ],
             [
-              3.65,
+              4.3,
+              -14.5
+            ],
+            [
+              4.3,
+              -15
+            ],
+            [
+              4.3,
+              -15.5
+            ],
+            [
+              4.3,
               -16
             ]
           ],
@@ -4158,7 +4206,7 @@
       "world": 9,
       "stage": 3,
       "path": "data/campaign/family-17-2.level",
-      "geometryHash": "633f8529e0c56f252bf430846aad6887df62d00340ff4693313e5d109f8460ca",
+      "geometryHash": "6efc1e42c1d26c5d16845c0f20c66cd796c3217095d6814a9c1a3b36187b787e",
       "baselineHash": "09911b1a15781242c1feeab89c5dc4f8c1197245095ddcef2844ac6f4666bf7a",
       "animals": [
         0,
@@ -4247,7 +4295,7 @@
       "world": 9,
       "stage": 4,
       "path": "data/campaign/family-17-3.level",
-      "geometryHash": "f1e57d25751787ed03cbffb1dff5b5eba1cc5bce022ddf823230fc192c097dd4",
+      "geometryHash": "aa793378ed28e94848de293112b8397d61eb098d1d44885acffddd9a078921ea",
       "baselineHash": "09911b1a15781242c1feeab89c5dc4f8c1197245095ddcef2844ac6f4666bf7a",
       "animals": [
         0,
@@ -4595,7 +4643,7 @@
       "world": 10,
       "stage": 2,
       "path": "data/campaign/family-19-1.level",
-      "geometryHash": "d44fd1146d68a39787d75c5bdb02e681b30bc90d2dafd92491c8d318ceed68b8",
+      "geometryHash": "7ce598e87c65ab3cb974f406fc357ebf7fcc049c1aa982568120ef2ad98b0c90",
       "baselineHash": "fbd32f3abb02f308837554c98c10eb646dd27c1fc6092e9fce0d7e138a901674",
       "animals": [
         0,
@@ -4666,7 +4714,7 @@
       "world": 10,
       "stage": 3,
       "path": "data/campaign/family-19-2.level",
-      "geometryHash": "ace624363feba4a36784fdf40d8c9b5c5dd65cd0e786ef91d8bd7b81d1588c81",
+      "geometryHash": "345604cc977daf2a65fbcece6bb5031a6c9e4fecd7df2dbd8e9c3b6cce7794f0",
       "baselineHash": "fbd32f3abb02f308837554c98c10eb646dd27c1fc6092e9fce0d7e138a901674",
       "animals": [
         0,
@@ -4783,7 +4831,7 @@
       "world": 10,
       "stage": 4,
       "path": "data/campaign/family-19-3.level",
-      "geometryHash": "ef86fa39c7b32ae77371339dd258243fce9d75e1c233aabb2627a6e737f92dcb",
+      "geometryHash": "1da4d112b5c7799eea01047203fc151641166a710211812421d545b865041bdb",
       "baselineHash": "fbd32f3abb02f308837554c98c10eb646dd27c1fc6092e9fce0d7e138a901674",
       "animals": [
         0,
@@ -5104,7 +5152,7 @@
       "world": 10,
       "stage": 8,
       "path": "data/campaign/family-20-3.level",
-      "geometryHash": "736f6b4f3a82a31c6c72fc7dc575e71b331af569eda829818e3d591c8ed7887e",
+      "geometryHash": "82b2b5aba982320f23faa372ec5ba6f02692a178d6d07a5a812249e45c17b109",
       "baselineHash": "7eb4ffb466848016d2671be4b7b8b6eee352d89ebb0dfaa9a4e2d14ba343442c",
       "animals": [
         0,

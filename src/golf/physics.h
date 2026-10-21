@@ -4,7 +4,9 @@
 #include "common/bvh.h"
 #include "golf/player.h"
 
-#define MAX_NUM_CONTACTS 8
+// Curved water, shallow beds and banks can meet many triangles at once.
+// Eight contacts could fill up with water seams before finding solid support.
+#define MAX_NUM_CONTACTS 64
 
 /* The world is updated once per tick; balls never enter its collision tree. */
 typedef struct golf_physics_world {
