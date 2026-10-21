@@ -51,6 +51,45 @@ static golf_physics_world_t world;
 static vec3 spawn;
 static golf_mechanics_t mechanics;
 static const golf_navigation_t *navigation;
+
+/* Internal transfer between two instances of this exact executable. No client
+   accepts or supplies these bytes. Geometry stays local; pointers never cross
+   the pipe, and the receiving planner binds its own immutable floor/navigation.
+   Only the main worker can accept shots or advance the actual match. */
+typedef struct planner_snapshot {
+    unsigned version,level_id;
+    float time;
+    int slot,pending_stroke;
+    golf_player_t player;
+    golf_mechanics_t mechanics;
+    golf_bot_attempt_t pending;
+} planner_snapshot_t;
+static unsigned level_id;
+static bool planner_only;
+static unsigned path_hash(const char *s){unsigned h=2166136261u;while(*s)h=(h^(unsigned char)*s++)*16777619u;return h;}
+static void planner_snapshot_json(int request,int slot){
+    golf_player_t *p=&players[slot];
+    if(!p->id||!p->connected||p->ball.is_moving||p->ball.is_in_hole||p->ball.capture_until){printf("{\"request\":%d,\"ok\":false}\n",request);return;}
+    planner_snapshot_t s={0};s.version=1;s.level_id=level_id;s.time=world.time;s.slot=slot;s.player=*p;s.mechanics=mechanics;
+    s.mechanics.wildlife.floor=NULL;s.mechanics.wildlife.nav=NULL;
+    s.pending=bot_memory[slot].pending;s.pending_stroke=bot_memory[slot].pending_stroke;
+    const char hex[]="0123456789abcdef";char encoded[sizeof(s)*2+1];const unsigned char *bytes=(const unsigned char *)&s;
+    for(size_t i=0;i<sizeof(s);i++){encoded[i*2]=hex[bytes[i]>>4];encoded[i*2+1]=hex[bytes[i]&15];}encoded[sizeof(s)*2]=0;
+    printf("{\"request\":%d,\"ok\":true,\"time\":%.9g,\"state\":\"%s\"}\n",request,world.time,encoded);
+}
+static int unhex(char c){return c>='0'&&c<='9'?c-'0':c>='a'&&c<='f'?c-'a'+10:-1;}
+static bool restore_planner(const char *encoded){
+    planner_snapshot_t s;
+    if(!encoded||strlen(encoded)!=sizeof(s)*2)return false;
+    unsigned char *bytes=(unsigned char *)&s;
+    for(size_t i=0;i<sizeof(s);i++){int a=unhex(encoded[i*2]),b=unhex(encoded[i*2+1]);if(a<0||b<0)return false;bytes[i]=(unsigned char)(a*16+b);}
+    if(s.version!=1||s.level_id!=level_id||s.slot<0||s.slot>=GOLF_MAX_PLAYERS||!isfinite(s.time)||s.time<0||!s.player.id)return false;
+    if(players[s.slot].id!=s.player.id||s.player.stroke_count<players[s.slot].stroke_count)memset(&bot_memory[s.slot],0,sizeof(bot_memory[s.slot]));
+    players[s.slot]=s.player;mechanics=s.mechanics;world.time=s.time;
+    mechanics.wildlife.floor=&static_bvh;mechanics.wildlife.nav=navigation;
+    bot_memory[s.slot].pending=s.pending;bot_memory[s.slot].pending_stroke=s.pending_stroke;
+    return true;
+}
 typedef struct sound_event{unsigned id,player;const char *kind;float strength;} sound_event_t;
 static sound_event_t events[64];static unsigned event_id;static int event_count;static golf_player_t *sound_player;
 static bool incidental(const char *kind){return !strcmp(kind,"wood")||!strcmp(kind,"stone")||!strcmp(kind,"impact");}
@@ -79,7 +118,9 @@ static void wildlife_json(const golf_wildlife_t *w) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) return 2;
+    if(argc<2||argc>3||(argc==3&&strcmp(argv[2],"--planner")))return 2;
+    planner_only=argc==3;
+    level_id=path_hash(argv[1]);
     headless_config_load();
     if (!headless_level_load(&level,argv[1])) return 2;
     golf_bvh_init(&static_bvh); golf_bvh_init(&dynamic_bvh);
@@ -95,7 +136,7 @@ int main(int argc, char **argv) {
     golf_mechanics_init(&mechanics,&level,&static_bvh);
     navigation=golf_mechanics_navigation();
     printf("{\"type\":\"ready\",\"spawn\":[%.9g,%.9g,%.9g]}\n",spawn.x,spawn.y,spawn.z); fflush(stdout);
-    char line[16384];
+    char line[sizeof(planner_snapshot_t)*2+4096];
     while (fgets(line,sizeof(line),stdin)) {
         JSON_Value *value=json_parse_string(line); JSON_Object *o=json_value_get_object(value);
         const char *cmd=json_object_get_string(o,"cmd"); int request=(int)json_object_get_number(o,"request"), slot=(int)json_object_get_number(o,"slot");
@@ -106,6 +147,10 @@ int main(int argc, char **argv) {
             golf_mechanics_seed(&mechanics,(uint32_t)json_object_get_number(o,"seed"),json_object_has_value(o,"previousPet")?(int)json_object_get_number(o,"previousPet"):-1);golf_mechanics_animate(&mechanics,world.time);
             float probability=(float)json_object_get_number(o,"forwardProbability");
             mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;ok=true;
+        } else if(cmd&&!strcmp(cmd,"plannerState")&&!planner_only&&slot>=0&&slot<GOLF_MAX_PLAYERS){
+            planner_snapshot_json(request,slot);fflush(stdout);json_value_free(value);continue;
+        } else if(cmd&&!strcmp(cmd,"restorePlanner")&&planner_only){
+            ok=restore_planner(json_object_get_string(o,"state"));
         } else if(cmd&&!strcmp(cmd,"prepareBots")){
             golf_bot_prepare(&world,&mechanics,navigation);
         } else if(cmd&&!strcmp(cmd,"plan")&&slot>=0&&slot<GOLF_MAX_PLAYERS){

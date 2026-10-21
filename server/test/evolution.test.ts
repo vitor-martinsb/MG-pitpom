@@ -97,7 +97,7 @@ test('a bot decision finishing after the deadline skips the shot without failing
     room.botSettings(host,'add',null,{difficulty:'hard'});await room.start(host,1);room.ready(host,0);
     const physics=(room as any).physics,plan=physics.plan.bind(physics);
     physics.plan=async(...args:any[])=>{const result=await plan(...args);now=room.deadline+1;return result;};
-    await room.tick();assert.equal(room.phase,'playing');assert.equal(room.state().completed,false);
+    await room.tick();await (room as any).botPlanning;assert.equal(room.phase,'playing');assert.equal(room.state().completed,false);
     const bot=[...room.members.values()].find(m=>m.bot)!;assert.equal(bot.ball!.strokes,0);
     await room.tick();assert.equal(room.phase,'settling');
   }finally{room.close();}
@@ -108,7 +108,7 @@ test('49 server bots share one physics world and no sockets, respect readiness, 
     for(let i=0;i<49;i++)room.botSettings(host,'add',null,{difficulty:i%3===0?'hard':i%3===1?'medium':'easy'});
     await room.start(host,1,'impact');await room.tick();assert.ok([...room.members.values()].every(p=>p.ball?.strokes===0));
     assert.equal(room.phase,'loading');room.ready(host,0);assert.equal(room.phase,'playing');
-    for(let i=0;i<180;i++){now+=100;await room.tick();}
+    for(let i=0;i<180;i++){now+=100;await room.tick();await (room as any).botPlanning;}
     const bots=[...room.members.values()].filter(m=>m.bot);assert.equal(bots.length,49);
     assert.ok(bots.every(b=>!b.socket&&b.ball&&b.ball.pos.every(Number.isFinite)&&b.ball.strokes>0));
     assert.ok(bots.every(b=>b.ball!.strokes<=BOT_STROKE_LIMIT));assert.equal(host.ball!.strokes,0);

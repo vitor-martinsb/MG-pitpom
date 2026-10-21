@@ -2,6 +2,7 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 static uint32_t hash(uint32_t x){x^=x>>16;x*=0x7feb352du;x^=x>>15;x*=0x846ca68bu;return x^(x>>16);}
 static const int dx[]={-1,0,1,-1,1,-1,0,1},dz[]={-1,-1,-1,0,0,1,1,1};
@@ -16,6 +17,7 @@ static struct {
     struct {golf_bvh_aabb_t bounds;vec3 normal;} ramps[64];int ramp_count;
     bot_link_t links[BOT_LINKS];int link_count;
     int movers[1024],mover_count;
+    float mover_radius[1024];vec3 mover_center[1024];bool full_movers;
 } route;
 #include "bot_layers.h"
 static float horizontal(vec3 a,vec3 b){float x=a.x-b.x,z=a.z-b.z;return sqrtf(x*x+z*z);}
@@ -49,13 +51,23 @@ static bool route_connected(const golf_navigation_t *nav,vec3 start){
 }
 static void build_route_pass(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav,bool refine){
     memset(&route,0,sizeof(route));route.nav=nav;route.level=world->level;route.base_count=nav->count;route.hole=nav->hole;route.portals=m->enabled;
+    route.full_movers=getenv("GOLF_BOT_FULL_MOVERS")!=NULL;
     bot_layers(nav,refine);nav=&route.navigation;route.count=nav->count;
     for(int i=0;i<world->level->entities.length&&route.mover_count<1024;i++){
         golf_entity_t *e=&world->level->entities.data[i];
         if(e->type!=MODEL_ENTITY&&e->type!=GEO_ENTITY&&e->type!=WATER_ENTITY)continue;
         if(e->type==MODEL_ENTITY&&e->model.ignore_physics)continue;
         golf_movement_t *movement=golf_entity_get_movement(e);
-        if(movement&&movement->type!=GOLF_MOVEMENT_NONE)route.movers[route.mover_count++]=i;
+        if(movement&&movement->type!=GOLF_MOVEMENT_NONE){
+            int n=route.mover_count++;route.movers[n]=i;
+            golf_model_t *model=golf_entity_get_model(e);float radius=0;
+            vec3 lo=V3(FLT_MAX,FLT_MAX,FLT_MAX),hi=V3(-FLT_MAX,-FLT_MAX,-FLT_MAX);
+            for(int j=0;j<model->positions.length;j++){vec3 p=model->positions.data[j];lo=V3(fminf(lo.x,p.x),fminf(lo.y,p.y),fminf(lo.z,p.z));hi=V3(fmaxf(hi.x,p.x),fmaxf(hi.y,p.y),fmaxf(hi.z,p.z));}
+            route.mover_center[n]=model->positions.length?vec3_scale(vec3_add(lo,hi),.5f):V3(0,0,0);
+            for(int j=0;j<model->positions.length;j++)radius=fmaxf(radius,vec3_distance(model->positions.data[j],route.mover_center[n]));
+            golf_transform_t transform=golf_entity_get_world_transform(world->level,e);
+            route.mover_radius[n]=radius*fmaxf(fabsf(transform.scale.x),fmaxf(fabsf(transform.scale.y),fabsf(transform.scale.z)));
+        }
         if(movement&&movement->type==GOLF_MOVEMENT_RAMP&&route.ramp_count<64){
             golf_bvh_t temporary;golf_bvh_init(&temporary);
             golf_bvh_node_info_t info=golf_bvh_node_info(&temporary,i,world->level,e,movement->length*.5f-movement->t0);
@@ -218,11 +230,22 @@ void golf_bot_observe(golf_bot_memory_t *memory,const golf_player_t *p,const gol
     if(memory->count<GOLF_BOT_HISTORY)memory->count++;memory->observed_stroke=memory->pending_stroke;
 }
 typedef struct trial {golf_player_t player;golf_mechanics_t mechanics;float time,cost,peak;bool safe;} trial_t;
-static void moving_world(golf_physics_world_t *w){
+static void moving_world(golf_physics_world_t *w,const golf_ball_t *ball){
     if(w->level->entities.length>1024){golf_physics_build_world(w,true);return;}
     golf_bvh_t *b=w->dynamic_bvh;b->node_infos.length=b->faces.length=0;
     for(int n=0;n<route.mover_count;n++){
-        int i=route.movers[n];vec_push(&b->node_infos,golf_bvh_node_info(b,i,w->level,&w->level->entities.data[i],w->time));
+        int i=route.movers[n];golf_entity_t *e=&w->level->entities.data[i];
+        if(!route.full_movers){
+            // Conservative sphere at the exact simulation time. Distant movers
+            // cannot contact this one candidate ball; avoid rebuilding all of
+            // their triangles at every 120 Hz forecast step.
+            golf_transform_t t=golf_entity_get_world_transform(w->level,e);
+            t=golf_transform_apply_movement(t,*golf_entity_get_movement(e),w->time);
+            vec3 center=vec3_apply_mat4(route.mover_center[n],1,golf_transform_get_model_mat(t));
+            vec3 d=vec3_sub(ball->pos,center);float r=route.mover_radius[n]+ball->radius+.01f;
+            if(vec3_dot(d,d)>r*r)continue;
+        }
+        vec_push(&b->node_infos,golf_bvh_node_info(b,i,w->level,e,w->time));
     }
     golf_bvh_construct(b,b->node_infos);
 }
@@ -231,10 +254,10 @@ static trial_t simulate(golf_physics_world_t *world,golf_bvh_t *dynamic,const go
     golf_physics_world_t w=*world;w.dynamic_bvh=dynamic;w.sound=NULL;w.stop_sound=NULL;w.ripple=NULL;w.contacts=NULL;t.mechanics.impact=false;
     if(!golf_physics_shoot(&w,&t.player,direction,power)){t.cost=100000;return t;}
     golf_wildlife_shot(&t.mechanics.wildlife,&t.player);
-    moving_world(&w);
+    moving_world(&w,&t.player.ball);
     bool danger=false;int water_ticks=0;
     for(int tick=0;tick<horizon;tick++){
-        w.time+=1.f/120;if(route.mover_count)moving_world(&w);
+        w.time+=1.f/120;if(route.mover_count)moving_world(&w,&t.player.ball);
         golf_physics_tick_player(&w,&t.player,1.f/120);golf_mechanics_tick(&t.mechanics,&t.player,1,w.time);
         t.peak=fmaxf(t.peak,t.player.ball.pos.y);
         if(t.player.ball.is_in_hole)break;

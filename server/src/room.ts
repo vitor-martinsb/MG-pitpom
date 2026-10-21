@@ -48,8 +48,10 @@ export class Room {
   private lastPhysicsCpu = 0;
   private generation = 0;
   private botCursor = 0;
+  private botPlanning?: Promise<void>;
+  private nextBotPlanAt = 0;
   private events:SoundEvent[]=[];
-  readonly metrics = { physicsTicks: 0, snapshots: 0, bytes: 0, messages: 0, maxTickMs: 0, physicsCpuMs: 0, physicsPeakRssBytes: 0, physicsPeakTrackedBytes: 0 };
+  readonly metrics = { physicsTicks: 0, snapshots: 0, bytes: 0, messages: 0, maxTickMs: 0, physicsCpuMs: 0, physicsPeakRssBytes: 0, physicsPeakTrackedBytes: 0, botPlans:0, botPlanFailures:0, maxBotPlanMs:0 };
   readonly validLevels:number[];
   constructor(readonly code: string, readonly root: string, readonly levels: string[], readonly options: RoomOptions = defaults, readonly now = () => performance.now()) {
     this.options={...options,penalty:12};
@@ -175,6 +177,7 @@ export class Room {
   }
   private async load() {
     const generation=++this.generation;
+    this.botPlanning=undefined;this.nextBotPlanAt=0;this.botCursor=0;
     this.phase='loading'; this.loading=true; this.deadline=0; this.worldTime=0;this.lastPhysicsCpu=0;this.events=[];this.simulationSpeed=1;
     for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0;m.planRetries=0;m.windWaitStroke=undefined; }
     this.lastSent.clear(); this.physics?.close();
@@ -261,21 +264,42 @@ export class Room {
       this.snapshot(++this.frameNumber % (this.options.snapshotHz*2) === 0);
       const active=[...this.members.values()].filter(m=>m.socket||m.bot);
       if (active.length && active.every(m=>m.ball?.hole||(m.bot&&!m.ball?.moving&&(m.ball?.strokes??0)>=BOT_STROKE_LIMIT)) || this.phase==='settling' && now>=this.deadline) this.finishHole();
-      else if(this.phase==='playing'){
+      else if(this.phase==='playing'&&!this.botPlanning&&this.now()>=this.nextBotPlanAt){
         const clock=frame.time*1000;
         const bots=active.filter(m=>m.bot&&m.ready&&!m.ball?.moving&&!m.ball?.hole&&!m.ball?.captureUntil&&(m.ball?.strokes??0)<BOT_STROKE_LIMIT&&(m.nextDecision??0)<=clock);
-        for(let i=0;i<(speed===5?3:1)&&bots.length;i++){
-          const bot=bots.splice(this.botCursor++%bots.length,1)[0]!;bot.nextDecision=clock+650+((this.physicsSeed^bot.id^(bot.ball?.strokes??0)*197)>>>0)%500;
-          const plan=await physics.plan(bot.slot,bot.bot!);
-          if(generation!==this.generation||physics!==this.physics||this.phase!=='playing')continue;
-          if(plan.wait>0&&bot.windWaitStroke!==bot.ball?.strokes){bot.windWaitStroke=bot.ball?.strokes;bot.nextDecision=clock+Math.min(3,plan.wait)*1000;continue;}
-          if(plan.safe===false&&(bot.planRetries??0)<2){bot.planRetries=(bot.planRetries??0)+1;bot.nextDecision=clock+350;continue;}
-          bot.planRetries=0;
-          if(generation===this.generation&&this.phase==='playing'&&this.now()<this.deadline&&plan.ok)await this.shot(bot,{sequence:bot.lastSequence+1,direction:plan.direction,power:plan.power});
+        if(bots.length){
+          // One shared planner, with a fair turn for each eligible bot. Never
+          // hold the physics/snapshot loop while searching possible shots.
+          const bot=bots.find(b=>b.id>this.botCursor)??bots[0]!;this.botCursor=bot.id;
+          bot.nextDecision=clock+650+((this.physicsSeed^bot.id^(bot.ball?.strokes??0)*197)>>>0)%500;
+          const job=this.decideBot(bot,physics,generation).finally(()=>{
+            if(this.botPlanning===job){this.botPlanning=undefined;this.nextBotPlanAt=this.now()+100;}
+          });
+          this.botPlanning=job;
         }
       }
     } catch(e) { if(generation===this.generation && physics===this.physics)this.fail(e); }
     finally { this.busy=false; }
+  }
+  private async decideBot(bot:Member,physics:Physics,generation:number){
+    const strokes=bot.ball?.strokes,pos=[...bot.ball!.pos],started=performance.now();
+    const current=()=>generation===this.generation&&physics===this.physics&&!this.closed;
+    try{
+      const plan=await physics.plan(bot.slot,bot.bot!);
+      if(!current()||this.phase!=='playing'||this.now()>=this.deadline)return;
+      const ball=bot.ball;
+      if(!ball||ball.strokes!==strokes||ball.moving||ball.hole||ball.captureUntil||Math.hypot(...ball.pos.map((v,i)=>v-pos[i]!))>.025)return;
+      const clock=this.worldTime*1000;
+      if(plan.wait>0&&bot.windWaitStroke!==ball.strokes){bot.windWaitStroke=ball.strokes;bot.nextDecision=clock+Math.min(3,plan.wait)*1000;return;}
+      if(plan.safe===false&&(bot.planRetries??0)<2){bot.planRetries=(bot.planRetries??0)+1;bot.nextDecision=clock+350;return;}
+      bot.planRetries=0;
+      if(plan.ok)await this.shot(bot,{sequence:bot.lastSequence+1,direction:plan.direction,power:plan.power});
+    }catch{
+      // A slow/retired planner may skip a decision; the live match continues.
+      if(current()){this.metrics.botPlanFailures++;bot.nextDecision=this.worldTime*1000+1000;}
+    }finally{
+      if(current()){this.metrics.botPlans++;this.metrics.maxBotPlanMs=Math.max(this.metrics.maxBotPlanMs,performance.now()-started);}
+    }
   }
   private finishHole() {
     if(this.phase==='results'||this.phase==='finished')return;

@@ -9,5 +9,8 @@ export async function freezePhysics(room){
     await delay(1);
   }
   room.busy=true;
+  // Bot searches are independent of ticks. Drain the current decision after
+  // stopping new ticks so it cannot submit a shot into a frozen fixture.
+  await room.botPlanning;
   return room.physics.step(0);
 }

@@ -20,6 +20,7 @@ test('a narrow curved course prepares the shared bot graph before starting the m
     assert.equal(room.phase,'loading');assert.equal(room.worldTime,0);
     const bot=[...room.members.values()].find(m=>m.bot)!;assert.equal(bot.ball!.strokes,0);
     room.ready(host,0);now=100;await room.tick();
+    await (room as any).botPlanning;
     assert.equal(room.phase,'playing');assert.equal(bot.ball!.strokes,1);
   }finally{room.close();}
 });
@@ -31,8 +32,8 @@ test('a gust forecast waits once per stroke and then shoots instead of waiting f
     room.botSettings(host,'add',null,{difficulty:'hard'});await room.start(host,1);room.ready(host,0);
     const bot=[...room.members.values()].find(m=>m.bot)!,physics=(room as any).physics;
     let plans=0;physics.plan=async()=>{plans++;return {ok:true,safe:true,wait:2,direction:[0,0,-1],power:.01};};
-    now=100;await room.tick();assert.equal(plans,1);assert.equal(bot.ball!.strokes,0);
-    for(let i=0;i<40&&bot.ball!.strokes===0;i++){now+=100;await room.tick();}
+    now=100;await room.tick();await (room as any).botPlanning;assert.equal(plans,1);assert.equal(bot.ball!.strokes,0);
+    for(let i=0;i<40&&bot.ball!.strokes===0;i++){now+=100;await room.tick();await (room as any).botPlanning;}
     assert.equal(bot.ball!.strokes,1);assert.equal(plans,2);assert.ok(room.worldTime>=2);
   }finally{room.close();}
 });

@@ -5,7 +5,7 @@ import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
 import {freezePhysics} from './room-fixture.mjs';
 
-const app=createServer(),errors=[];let browser;
+const app=createServer(),errors=[];let browser,releasePlanner;
 try{
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
   browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
@@ -32,8 +32,19 @@ try{
   await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===1&&GolfCourse.inspect().frame.intro)));
   const bots=[...room.members.values()].filter(m=>m.bot),humans=[...room.members.values()].filter(m=>!m.bot);for(const bot of bots)bot.nextDecision=Infinity;
   await Promise.all(pages.map(p=>p.locator('#skip-presentation').click()));await a.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));
+  // Keep a bot search pending while the real server interval and both real
+  // clients continue. This catches awaiting AI inside the live tick loop.
+  const originalPlan=room.physics.plan.bind(room.physics),gate=new Promise(resolve=>releasePlanner=resolve);
+  room.physics.plan=async(...args)=>{await gate;return originalPlan(...args);};bots[0].nextDecision=0;
+  for(let n=0;!room.botPlanning;n++){assert.ok(n<200,'bot search starts');await delay(10);}
+  const pending=room.botPlanning,before=room.worldTime,snapshots=room.metrics.snapshots;
+  await delay(450);
+  assert.ok(room.worldTime>before+.25,'authoritative time advances while the bot thinks');
+  assert.ok(room.metrics.snapshots>=snapshots+3,'snapshots keep arriving while the bot thinks');
+  await Promise.all(pages.map(p=>p.waitForFunction(time=>GolfCourse.inspect().frame.time>time,before)));
+  releasePlanner();await pending;room.physics.plan=originalPlan;for(const bot of bots)bot.nextDecision=Infinity;
   await freezePhysics(room);let clock=room.now();room.now=()=>clock;room.deadline=clock+120000;room.lastStep=clock;room.busy=false;
-  async function advance(ms=100){while(room.busy)await delay(1);clock+=ms;await room.tick();await delay(1);}
+  async function advance(ms=100){while(room.busy)await delay(1);clock+=ms;await room.tick();await room.botPlanning;await delay(1);}
   // Real human intents and real C simulation; no score, hole or ball-position
   // injection. One bot makes three valid short strokes and then times out.
   // Prepare those strokes while both humans are unfinished. Their completion
@@ -62,4 +73,4 @@ try{
   fs.mkdirSync('../out/bots-audio-validation',{recursive:true});
   for(const [page,name]of [[a,'desktop'],[b,'mobile']]){assert.match(await page.locator('#score-body tr').filter({hasText:'GPT-6'}).textContent(),/15 DNF/);await page.screenshot({path:`../out/bots-audio-validation/dnf-bots-${name}.png`});}
   assert.deepEqual(errors,[]);console.log('Host-only bot quantity/difficulty, AI identities, real human completion, synced 5x simulation/reconnect and strokes + 12 DNF passed on desktop/mobile.');
-}finally{await browser?.close();app.close();}
+}finally{releasePlanner?.();await browser?.close();app.close();}
