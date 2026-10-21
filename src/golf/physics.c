@@ -181,6 +181,14 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         golf_bvh_ball_test(world->dynamic_bvh, bp, br, bv, contacts, &num_contacts, MAX_NUM_CONTACTS);
     }
     qsort(contacts, num_contacts, sizeof(golf_ball_contact_t), _ball_contact_cmp);
+    /* A submerged recovery plane is a trigger, not a river bed. Its material
+       can otherwise erase horizontal velocity before the current is applied. */
+    bool water_support=false;
+    for(int i=0;i<num_contacts;i++)if(contacts[i].is_water&&
+        contacts[i].water_dir.x*contacts[i].water_dir.x+
+        contacts[i].water_dir.z*contacts[i].water_dir.z>1.e-10f)water_support=true;
+    if(water_support)for(int i=0;i<num_contacts;i++)
+        if(contacts[i].is_out_of_bounds&&!contacts[i].is_water)contacts[i].is_ignored=true;
 
     // Apply a force to pull the ball towards the hole
     vec3 horizontal = dir_to_hole;
@@ -378,6 +386,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
     player->ball.is_in_water = false;
     vec3 current=V3(0,0,0);
     int water_contacts=0;
+    float water_surface=-FLT_MAX;
     for (int i = 0; i < num_contacts; i++) {
         golf_ball_contact_t *contact = &contacts[i];
         if (contact->is_ignored) {
@@ -395,12 +404,21 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         if(length>.00001f)current=vec3_add(current,vec3_scale(direction,1/length));
         water_contacts++;
         player->ball.is_in_water = true;
+        /* Water must support the ball, including original rivers with no bed.
+           Only face contacts support it; banks retain their solid collisions. */
+        if(length>.00001f&&contact->type==TRIANGLE_CONTACT_FACE&&fabsf(contact->normal.y)>.5f)
+            water_surface=fmaxf(water_surface,contact->position.y);
     }
     if(water_contacts){
         float length=vec3_length(current);
         if(length>.00001f)current=vec3_scale(current,CFG_NUM(world->config,"physics_water_max_speed")/length);
-        float blend=1-expf(-fmaxf(0,CFG_NUM(world->config,"physics_water_speed"))*dt);
+        /* Respond quickly enough to a bend to avoid coasting across its bank. */
+        float blend=1-expf(-3*fmaxf(0,CFG_NUM(world->config,"physics_water_speed"))*dt);
         bv.x+=(current.x-bv.x)*blend;bv.z+=(current.z-bv.z)*blend;
+        if(water_surface>-FLT_MAX&&bv0.y<=.1f){
+            bp.y=fmaxf(bp.y,water_surface+br*.5f);bv.y=0;
+        }
+        if(water_support)player->ball.is_out_of_bounds=false;
     }
 
     if (player->ball.is_moving && num_contacts > 0 && world->contacts) {
@@ -451,7 +469,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         // Check to see if the ball ended up out of bounds
         for (int i = 0; i < num_contacts; i++) {
             golf_ball_contact_t *contact = &contacts[i];
-            if (contact->is_out_of_bounds) {
+            if (!water_support&&!contact->is_ignored&&contact->is_out_of_bounds) {
                 player->ball.time_out_of_bounds = world->time;
                 player->ball.is_out_of_bounds = true;
             }

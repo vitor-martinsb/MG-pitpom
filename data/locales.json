@@ -222,7 +222,8 @@
     "family.20": "Island Sanctuary",
     "courseWord": "Course",
     "worldNavigation": "World trail",
-    "currentCourse": "You are here"
+    "currentCourse": "You are here",
+    "effect.maritaca": "The maritaca is bringing your ball back to the last shot."
   },
   "pt-BR": {
     "settings": "Configurações",
@@ -447,7 +448,8 @@
     "family.20": "Santuário das Ilhas",
     "courseWord": "Campo",
     "worldNavigation": "Trilha dos mundos",
-    "currentCourse": "Você está aqui"
+    "currentCourse": "Você está aqui",
+    "effect.maritaca": "A maritaca está trazendo sua bolinha para a última tacada."
   },
   "es": {
     "settings": "Ajustes",
@@ -672,6 +674,7 @@
     "family.20": "Santuario de las Islas",
     "courseWord": "Campo",
     "worldNavigation": "Ruta de los mundos",
-    "currentCourse": "Estás aquí"
+    "currentCourse": "Estás aquí",
+    "effect.maritaca": "La maritaca lleva tu pelota al lugar del último golpe."
   }
 }

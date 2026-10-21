@@ -172,9 +172,7 @@ int main(int argc, char **argv) {
                     golf_player_t *p=&players[i]; if (!p->id || !p->connected || p->ball.is_in_hole) continue;
                     bool was_hole=p->ball.is_in_hole;sound_player=p;golf_physics_tick_player(&world,p,1.0f/120);sound_player=NULL;
                     if(!was_hole&&p->ball.is_in_hole)event("hole",p,1);
-                    if (p->ball.is_out_of_bounds && (!p->ball.is_moving || p->ball.pos.y < CFG_NUM(&config,"physics_kill_y"))) {
-                        golf_ball_return_before_shot(p);
-                    }
+                    /* Shared mechanics starts the maritaca rescue, also offline. */
                 }
                 uint32_t hits[GOLF_MAX_PLAYERS],effects[GOLF_MAX_PLAYERS];float captures[GOLF_MAX_PLAYERS];vec3 velocities[GOLF_MAX_PLAYERS];
                 for(int i=0;i<GOLF_MAX_PLAYERS;i++){hits[i]=players[i].ball.cat_hits;effects[i]=players[i].ball.effect_serial;captures[i]=players[i].ball.capture_until;velocities[i]=players[i].ball.vel;}
@@ -195,7 +193,7 @@ int main(int argc, char **argv) {
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {
                 golf_player_t *p=&players[i]; golf_ball_t *b=&p->ball;
-                printf("%s{\"id\":%u,\"pos\":[%.9g,%.9g,%.9g],\"vel\":[%.9g,%.9g,%.9g],\"moving\":%s,\"hole\":%s,\"water\":%s,\"strokes\":%d,\"firstComplete\":%s,\"captured\":%s,\"captureUntil\":%.9g,\"slowShots\":%d,\"slowUntil\":%.9g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.9g,\"effectSerial\":%u,\"wildlifeProtection\":%.9g}",comma?",":"",p->id,b->pos.x,b->pos.y,b->pos.z,b->vel.x,b->vel.y,b->vel.z,b->is_moving?"true":"false",b->is_in_hole?"true":"false",b->is_in_water?"true":"false",p->stroke_count,b->first_shot_complete?"true":"false",b->captured?"true":"false",b->capture_until,b->slow_shots,b->slow_until,b->capture_kind,b->effect_kind,b->effect_time,b->effect_serial,b->wildlife_protection); comma=true;
+                printf("%s{\"id\":%u,\"pos\":[%.9g,%.9g,%.9g],\"vel\":[%.9g,%.9g,%.9g],\"moving\":%s,\"hole\":%s,\"water\":%s,\"strokes\":%d,\"firstComplete\":%s,\"captured\":%s,\"captureUntil\":%.9g,\"slowShots\":%d,\"slowUntil\":%.9g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.9g,\"effectSerial\":%u,\"wildlifeProtection\":%.9g,\"rescueStarted\":%.9g,\"rescueFrom\":[%.9g,%.9g,%.9g]}",comma?",":"",p->id,b->pos.x,b->pos.y,b->pos.z,b->vel.x,b->vel.y,b->vel.z,b->is_moving?"true":"false",b->is_in_hole?"true":"false",b->is_in_water?"true":"false",p->stroke_count,b->first_shot_complete?"true":"false",b->captured?"true":"false",b->capture_until,b->slow_shots,b->slow_until,b->capture_kind,b->effect_kind,b->effect_time,b->effect_serial,b->wildlife_protection,b->rescue_started,b->rescue_from.x,b->rescue_from.y,b->rescue_from.z); comma=true;
             }
             printf("],\"events\":[");for(int i=0;i<event_count;i++)printf("%s{\"id\":%u,\"player\":%u,\"kind\":\"%s\",\"strength\":%.5g}",i?",":"",events[i].id,events[i].player,events[i].kind,events[i].strength);
             puts("]}");event_count=0; fflush(stdout); json_value_free(value); continue;

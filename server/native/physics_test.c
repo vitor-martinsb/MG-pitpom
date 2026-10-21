@@ -24,9 +24,35 @@ static vec3 water_velocity(vec3 direction,int triangles,int steps,float dt) {
         // Keep the probe immersed to compare equal contact durations.
         p.ball.pos=V3(0,5.06f,0);p.ball.vel.y=0;
         golf_physics_tick_player(&world,&p,dt);assert(p.ball.is_in_water);
-        assert(fabsf(p.ball.vel.y+9.8f*dt)<.00001f);
+        if(vec3_length(direction)>.00001f){assert(fabsf(p.ball.vel.y)<.00001f);assert(p.ball.pos.y>=5.059f);}
+        else assert(p.ball.vel.y<-.08f); // Still-water hazards retain gravity.
     }
     vec3 result=p.ball.vel;vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);return result;
+}
+static void floating_current(void){
+    golf_level_t level={0};golf_entity_t water={0},kill={0};
+    golf_entity_t parent={0};parent.type=GEO_ENTITY;parent.parent_idx=-1;
+    parent.geo.transform.scale=V3(1,1,1);parent.geo.transform.rotation=QUAT(0,0,0,1);
+    vec_push(&level.entities,parent);
+    water.type=WATER_ENTITY;water.parent_idx=0;kill.type=GEO_ENTITY;kill.parent_idx=0;
+    kill.geo.transform.scale=V3(1,1,1);kill.geo.transform.rotation=QUAT(0,0,0,1);
+    golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);
+    for(int i=0;i<2;i++){
+        golf_bvh_face_t f={0};f.level=&level;f.entity=i?&kill:&water;float y=i?4.96f:5;
+        f.a=V3(-20,y,-20);f.b=V3(0,y,20);f.c=V3(20,y,-20);
+        f.water_dir=V3(1,0,0);f.vel_scale=i?0:1;vec_push(&fixed.faces,f);
+    }
+    golf_bvh_node_t leaf={0};leaf.is_leaf=true;leaf.aabb=(golf_bvh_aabb_t){V3(-20,4.96f,-20),V3(20,5,20)};
+    leaf.leaf_node_info.face_count=2;vec_push(&fixed.nodes,leaf);fixed.parent=0;
+    golf_config_t config={0};golf_physics_world_t w={0};w.level=&level;w.config=&config;w.static_bvh=&fixed;w.dynamic_bvh=&moving;w.multiplayer=true;
+    golf_player_t p;golf_player_init(&p,1,"River",V4(1,1,1,1),0);golf_player_start_level(&p,V3(0,5.06f,0));p.ball.is_moving=true;
+    for(int tick=0;tick<240;tick++){
+        w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);
+        assert(p.ball.is_in_water&&!p.ball.is_out_of_bounds);
+        assert(p.ball.pos.y>5.059f&&p.ball.pos.y<5.2f);
+    }
+    assert(p.ball.pos.x>5&&p.ball.vel.x>3.8f&&p.stroke_count==0);
+    vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);vec_deinit(&level.entities);
 }
 static void currents(void){
     vec3 one=water_velocity(V3(1,0,0),1,120,1.f/120);
@@ -38,6 +64,7 @@ static void currents(void){
     // A bend changes the local push; rotated flow must rotate acceleration.
     vec3 bend=water_velocity(V3(0,0,-3),2,120,1.f/120);
     assert(fabsf(bend.x)<.0001f&&fabsf(bend.z+one.x)<.0001f);
+    vec3 still=water_velocity(V3(0,0,0),1,1,1.f/120);assert(still.x==0&&still.z==0);
 }
 static void curved_stream(void){
     golf_level_t empty={0};golf_entity_t water={0};water.type=WATER_ENTITY;water.parent_idx=-1;
@@ -61,6 +88,7 @@ static void curved_stream(void){
 int main(int argc,char **argv) {
     headless_config_load();
     currents();
+    floating_current();
     curved_stream();
     golf_level_t level={0}; assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
     golf_config_t config={0}; golf_bvh_t fixed,moving; golf_bvh_init(&fixed); golf_bvh_init(&moving);

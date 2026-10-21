@@ -46,6 +46,7 @@ jobs:
           node test/evolution-browser.mjs --url http://localhost:3000
           node test/campaign-browser.mjs
           node test/wildlife-render.mjs
+          node test/rescue-browser.mjs
           node test/loading-audio.mjs
           node test/bot-updates-browser.mjs
           node test/visual-refresh.mjs

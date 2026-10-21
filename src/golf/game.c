@@ -327,19 +327,6 @@ static void _golf_game_update_state_watching_ball(float dt) {
 
         golf_audio_start_sound("ball_in_hole", "data/audio/confirmation_002.ogg", 1, false, true);
     }
-    else if (player->ball.is_out_of_bounds) {
-        player->ball.pos = player->ball.start_pos;
-        player->ball.draw_pos = player->ball.pos;
-        player->ball.is_moving = false;
-        player->ball.vel = V3(0, 0, 0);
-        player->ball.rot_vel = 0;
-        player->ball.orientation = QUAT(0, 0, 0, 1);
-        player->ball.is_out_of_bounds = 0;
-        game.cam.angle = game.cam.start_angle;
-        game.cam.auto_rotate = false;
-        game.state = GOLF_GAME_STATE_WAITING_FOR_AIM;
-        golf_audio_start_sound("ball_out_of_bounds", "data/audio/error_008.ogg", 1, false, true);
-    }
     else if (!player->ball.is_moving) {
         game.state = GOLF_GAME_STATE_WAITING_FOR_AIM;
     }
@@ -501,10 +488,14 @@ void golf_game_update(float dt) {
             }
 
             vec3 cam_delta = vec3_rotate_y(V3(2.6f, 1.5f, 0), game.cam.angle);
-            vec3 wanted_pos = vec3_add(player->ball.draw_pos, cam_delta);
+            // Keep the camera above the course while a ball falls; no sky flash
+            // or plunge below the landscape before the maritaca arrives.
+            vec3 focus=player->ball.draw_pos;
+            focus.y=fmaxf(focus.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f);
+            vec3 wanted_pos = vec3_add(focus, cam_delta);
             vec3 diff = vec3_sub(wanted_pos, graphics->cam_pos);
-            graphics->cam_pos = vec3_add(graphics->cam_pos, vec3_scale(diff, 0.5f));
-            graphics->cam_dir = vec3_normalize(vec3_sub(vec3_add(player->ball.draw_pos, V3(0, 0.3f, 0)), graphics->cam_pos));
+            graphics->cam_pos = vec3_add(graphics->cam_pos, vec3_scale(diff, 1-expf(-7*dt)));
+            graphics->cam_dir = vec3_normalize(vec3_sub(vec3_add(focus, V3(0, 0.3f, 0)), graphics->cam_pos));
             break;
         }
         case GOLF_GAME_STATE_MAIN_MENU:

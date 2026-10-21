@@ -631,6 +631,43 @@ static vec3 dog_facing(golf_game_t *game) {
     forward.y=0;
     return vec3_length(forward)>.01f?vec3_normalize(forward):vec3_scale(game->mechanics.direction,-1);
 }
+static void maritaca(garden_mesh_t *mesh,const golf_player_t *p,float time,bool detailed){
+    const golf_ball_t *b=&p->ball;
+    float age=time-b->rescue_started;
+    vec3 position=vec3_add(b->draw_pos,V3(0,.27f,0));
+    if(age<.6f){float u=golf_clampf(1-age/.6f,0,1);u=u*u*(3-2*u);position=vec3_add(position,V3(-2*u,2.4f*u,-u));}
+    if(age>2.4f){float u=golf_clampf((age-2.4f)/.8f,0,1);u=u*u*(3-2*u);position=vec3_add(position,V3(2*u,3*u,-u));}
+    vec3 heading=vec3_sub(b->pos,b->rescue_from);heading.y=0;
+    if(vec3_length(heading)<.01f)heading=V3(1,0,0);
+    garden.transform=mat4_multiply(mat4_translation(position),mat4_rotation_y(atan2f(heading.x,heading.z)));
+    vec4 green=paint(.37f,.64f,.09f,0),dark=paint(.20f,.43f,.08f,0),red=paint(.89f,.25f,.07f,0);
+    vec4 ivory=paint(.85f,.75f,.57f,0),eye=paint(.06f,.07f,.04f,0);
+    // The nearby bird has rounder forms; distant simultaneous rescues stay cheap.
+    oval(mesh,V3(0,.05f,-.03f),V3(.16f,.20f,.25f),green,detailed?3:2,detailed?8:5);
+    oval(mesh,V3(0,.24f,.16f),V3(.15f,.16f,.16f),green,detailed?3:2,detailed?8:5);
+    if(detailed)oval(mesh,V3(0,.235f,.30f),V3(.065f,.070f,.060f),ivory,2,6);
+    // Hooked ivory beak, pale eye rings and red shoulder patches from the photo.
+    triangle(mesh,V3(-.065f,.26f,.28f),V3(.065f,.26f,.28f),V3(0,.12f,.35f),ivory);
+    triangle(mesh,V3(.065f,.26f,.28f),V3(-.065f,.26f,.28f),V3(0,.12f,.35f),ivory);
+    float flap=sinf(age*15)*.21f;
+    for(int side=-1;side<=1;side+=2){
+        vec3 root=V3(side*.12f,.13f,.02f),tip=V3(side*.49f,.10f+flap,-.14f),back=V3(side*.20f,-.03f,-.30f);
+        triangle(mesh,root,tip,back,dark);triangle(mesh,back,tip,root,dark);
+        triangle(mesh,root,V3(side*.23f,.13f+flap*.3f,-.02f),V3(side*.18f,.06f,.09f),red);
+        vec3 e=V3(side*.135f,.27f,.23f);
+        if(detailed){
+            oval(mesh,e,V3(.012f,.040f,.040f),ivory,2,6);
+            oval(mesh,vec3_add(e,V3(side*.014f,0,.008f)),V3(.009f,.025f,.025f),eye,2,5);
+            oval(mesh,vec3_add(e,V3(side*.023f,.009f,.015f)),V3(.006f,.008f,.008f),ivory,2,5);
+            oval(mesh,V3(side*.145f,.12f,.025f),V3(.030f,.040f,.045f),red,2,5);
+        }else{
+            triangle(mesh,vec3_add(e,V3(0,.04f,-.04f)),vec3_add(e,V3(0,-.04f,-.04f)),vec3_add(e,V3(side*.025f,0,.025f)),ivory);
+            triangle(mesh,vec3_add(e,V3(side*.026f,.023f,-.024f)),vec3_add(e,V3(side*.026f,-.023f,-.024f)),vec3_add(e,V3(side*.035f,0,.012f)),eye);
+        }
+        triangle(mesh,V3(side*.06f,-.04f,-.20f),V3(side*.07f,-.14f,-.62f),V3(0,-.08f,-.23f),dark);
+    }
+    garden.transform=mat4_identity();
+}
 void golf_garden_draw_feedback(float time) {
     garden.transform=mat4_identity();garden_mesh_t shadow={shadows,0,FX_LIMIT},fx={effects,0,FX_LIMIT};
     golf_game_t *game=golf_game_get();
@@ -662,6 +699,10 @@ void golf_garden_draw_feedback(float time) {
                 triangle(&fx,a0,b0,b1,paint(.69f,.91f,1,0));triangle(&fx,a0,b1,a1,paint(.69f,.91f,1,0));
             }
         }
+    }
+    if(golf_get()->state==GOLF_STATE_IN_GAME)for(int i=0;i<game->player_count;i++){
+        golf_player_t *p=&game->players[i];
+        if(p->connected&&p->ball.capture_kind==5&&p->ball.capture_until>time)maritaca(&actor,p,time,p->id==game->local_player_id);
     }
     garden.actor_count=(unsigned)actor.count;
     if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}

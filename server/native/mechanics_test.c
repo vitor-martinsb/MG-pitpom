@@ -54,6 +54,25 @@ int main(int argc,char **argv) {
     golf_mechanics_tick(&m,players,50,11.2f);
     for(int i=0;i<50;i++){assert(vec3_distance(players[i].ball.pos,before)<.001f);assert(vec3_length(players[i].ball.vel)==0);assert(players[i].ball.rot_vel==0);assert(!players[i].ball.capture_until&&!players[i].ball.captured);assert(players[i].stroke_count==7+i);assert(players[i].ball.first_shot_complete);}
     for(int i=0;i<50;i++){assert(players[i].ball.orientation.x==0&&players[i].ball.orientation.y==0&&players[i].ball.orientation.z==0&&players[i].ball.orientation.w==1);}
+    // All 50 rescues are continuous, independent of pets/Impact, and retain
+    // the actual last shot, score and three-shot puddle effect.
+    m.enabled=false;m.impact=false;
+    for(int i=0;i<50;i++){
+        place(&players[i],i+1,before);players[i].stroke_count=7+i;
+        players[i].ball.pos=vec3_add(before,V3(3,-2,2));players[i].ball.is_out_of_bounds=true;
+        players[i].ball.slow_shots=3;
+    }
+    golf_mechanics_tick(&m,players,50,20);
+    for(int tick=1;tick<=384;tick++){
+        vec3 previous[50];for(int i=0;i<50;i++)previous[i]=players[i].ball.pos;
+        golf_mechanics_tick(&m,players,50,20+tick/120.f);
+        for(int i=0;i<50;i++){
+            assert(vec3_distance(previous[i],players[i].ball.pos)<.05f);
+            assert(players[i].stroke_count==7+i&&players[i].ball.slow_shots==3);
+            if(tick<383){assert(players[i].ball.capture_kind==5);assert(!golf_physics_shoot(&world,&players[i],V3(1,0,0),.5f));}
+        }
+    }
+    for(int i=0;i<50;i++){assert(!players[i].ball.capture_until);assert(!players[i].ball.capture_kind);assert(vec3_distance(players[i].ball.pos,before)<.0001f);}
     // A resting first-shot ball is protected until both participants finish.
     place(&players[0],1,V3(0,.12f,0));place(&players[1],2,V3(.2f,.12f,0));
     players[0].ball.vel=V3(6,0,0);players[1].ball.first_shot_complete=true;

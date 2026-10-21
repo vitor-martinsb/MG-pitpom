@@ -137,6 +137,7 @@ void golf_ball_return_before_shot(golf_player_t *p) {
     b->pos=b->draw_pos=b->start_pos;b->vel=b->rot_vec=V3(0,0,0);b->rot_vel=0;
     b->orientation=QUAT(0,0,0,1);b->is_moving=b->is_in_water=b->is_out_of_bounds=b->captured=false;
     b->capture_until=0;b->time_going_slow=0;b->time_out_of_bounds=-1;b->time_out_of_water=1;
+    b->capture_kind=0;
 }
 static uint32_t random_word(uint32_t n) {
     n^=n>>16;n*=0x7feb352du;n^=n>>15;n*=0x846ca68bu;return n^(n>>16);
@@ -146,8 +147,22 @@ void golf_mechanics_tick(golf_mechanics_t *m,golf_player_t *players,int count,fl
     for(int i=0;i<count;i++) {
         golf_player_t *p=&players[i];golf_ball_t *b=&p->ball;
         if(!p->id||!p->connected)continue;
+        if(b->is_out_of_bounds&&!b->capture_until&&!b->is_in_hole){
+            b->capture_kind=5;b->capture_until=time+3.2f;b->rescue_started=time;
+            b->rescue_from=b->pos;
+            b->rescue_from.y=fmaxf(b->rescue_from.y,b->start_pos.y-.25f);
+            b->pos=b->rescue_from;b->is_out_of_bounds=false;b->is_in_water=false;
+            b->time_out_of_bounds=-1;b->captured=false;
+        }
         if(b->capture_until>0) {
-            if(!b->capture_kind) {
+            if(b->capture_kind==5){
+                float u=golf_clampf((time-b->rescue_started-.6f)/1.8f,0,1);
+                float ease=u*u*(3-2*u);
+                b->pos=vec3_add(b->rescue_from,vec3_scale(vec3_sub(b->start_pos,b->rescue_from),ease));
+                b->pos.y+=.65f*sinf(MF_PI*u);
+                b->is_moving=true;b->vel=V3(0,0,0);b->time_going_slow=0;
+                if(time>=b->capture_until){golf_ball_return_before_shot(p);b->wildlife_protection=time+2;}
+            }else if(!b->capture_kind) {
                 if(time>=b->capture_until) {golf_ball_return_before_shot(p);b->dog_cooldown=time+3;}
                 else {b->captured=time>=b->capture_until-.75f;b->is_moving=true;b->vel=V3(0,0,0);}
             }

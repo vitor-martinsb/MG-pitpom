@@ -1281,7 +1281,7 @@ static void _golf_ui_player_labels(void) {
     int count = 0;
     for (int i = 0; i < game->player_count && count < GOLF_MAX_PLAYERS; i++) {
         golf_player_t *player = &game->players[i];
-        if (!golf_game_player_visible(player)) continue;
+        if (!golf_game_player_visible(player)||player->ball.capture_kind==5) continue;
         vec2 pos;
         if (!golf_graphics_world_to_screen_visible(
                     vec3_add(player->ball.draw_pos, V3(0, height, 0)), &pos)) continue;
@@ -1323,7 +1323,6 @@ static void _golf_ui_player_labels(void) {
 }
 
 static void _golf_ui_in_game(float dt) {
-    golf_player_t *player = golf_game_get_local_player();
 
     _golf_ui_player_labels();
     if (golf_online_input_blocked()) return;
@@ -1372,22 +1371,7 @@ static void _golf_ui_in_game(float dt) {
         }
     }
 
-    {
-        float blink_time = CFG_NUM(game_cfg, "out_of_bounds_blink_time");
-        float time_since_out_of_bounds = game->t - player->ball.time_out_of_bounds;
-        if (time_since_out_of_bounds < blink_time) {
-            float alpha = 1 - time_since_out_of_bounds / blink_time;
-            golf_texture_t *texture = golf_data_get_texture("data/textures/colors/black.png");
-            vec2 pos = vec2_scale(V2(graphics->viewport_size.x, graphics->viewport_size.y), 0.5f);
-            vec2 size = graphics->viewport_size;
-            float angle = 0;
-            vec2 uv0 = V2(0, 0);
-            vec2 uv1 = V2(1, 1);
-            float is_font = 0;
-            vec4 overlay_color = V4(1, 1, 1, 1);
-            vec_push(&ui.draw_entities, _golf_ui_draw_entity(texture->sg_image, pos, size, angle, uv0, uv1, is_font, overlay_color, alpha));
-        }
-    }
+    // Out-of-bounds recovery stays in the scene; no full-screen blink.
 
     switch (game->state) {
         case GOLF_GAME_STATE_CELEBRATION:

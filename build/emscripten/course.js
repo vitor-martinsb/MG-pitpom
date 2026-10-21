@@ -3,7 +3,7 @@
   const $=id=>document.getElementById(id),t=key=>GolfI18n.t(key);
   let geometry,level,base,frame,collapsed=false,last=0;
   let lastSlap=-100,lastWake=-100,soloStarted=-1,effectLevel=-1;
-  const heard=new Map(),effectNames=['','romeu','luna','frida','portal'];
+  const heard=new Map(),effectNames=['','romeu','luna','frida','portal','maritaca'];
   const worldLabel=document.createElement('small'),effectLabel=document.createElement('small');
   worldLabel.id='campaign-world';effectLabel.id='wildlife-effect';effectLabel.setAttribute('role','status');
   const status=document.createElement('aside');status.id='course-status';status.append(worldLabel,effectLabel);document.body.append(status);

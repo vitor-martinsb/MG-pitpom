@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 void headless_config_load(void);
 bool headless_level_load(golf_level_t *,const char *);
 static void player(golf_player_t *p,int id,vec3 position) {
@@ -57,6 +58,7 @@ static void validate_environment(golf_physics_world_t *world,const golf_mechanic
         for(int tick=0;tick<1200;tick++){
             w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);
             wet+=p.ball.is_in_water;
+            if(getenv("GOLF_TRACE_STREAM")&&tick%30==0)fprintf(stderr,"%s tick %d wet %d pos %.3f %.3f %.3f vel %.3f %.3f %.3f\n",entry->name,tick,p.ball.is_in_water,p.ball.pos.x,p.ball.pos.y,p.ball.pos.z,p.ball.vel.x,p.ball.vel.y,p.ball.vel.z);
             float distance=hypotf(p.ball.pos.x-to.x,p.ball.pos.z-to.z);closest=fminf(closest,distance);
             if(wet>=6&&distance<.45f)break;
             if(p.ball.is_out_of_bounds||p.ball.pos.y<from.y-.3f)break;

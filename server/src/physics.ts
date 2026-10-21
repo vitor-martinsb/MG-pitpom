@@ -5,7 +5,7 @@ import path from 'node:path';
 import {setPriority,constants} from 'node:os';
 
 export type WildAnimal={kind:number;active:boolean;visible?:boolean;pos:number[];forward:number[];walking:boolean;clock:number;action:number;actionTime:number};
-export type Ball = { id: number; pos: number[]; vel: number[]; moving: boolean; hole: boolean; water: boolean; strokes: number; firstComplete: boolean; captured: boolean; captureUntil: number; slowUntil?:number; slowShots?:number; captureKind?:number; effectKind?:number; effectTime?:number; effectSerial?:number; wildlifeProtection?:number };
+export type Ball = { id: number; pos: number[]; vel: number[]; moving: boolean; hole: boolean; water: boolean; strokes: number; firstComplete: boolean; captured: boolean; captureUntil: number; slowUntil?:number; slowShots?:number; captureKind?:number; effectKind?:number; effectTime?:number; effectSerial?:number; wildlifeProtection?:number; rescueStarted?:number; rescueFrom?:number[] };
 export type Mascots = { enabled: boolean; catActive?:boolean;dogActive?:boolean;catVisible?:boolean;dogVisible?:boolean;thirdKind?:number; cat: number[]; dog: number[]; slapTime: number; wakeTime: number; acceptedShots?:number;puddles?:{id:number;pos:number[];born:number;remaining:number}[];world?:number; stage?:number; course?:number; wildlife?:WildAnimal[] };
 export type SoundEvent={id:number;player:number;kind:string;strength:number};
 export type BotDifficulty='easy'|'medium'|'hard'|'expert';
@@ -57,7 +57,9 @@ export class Physics {
     if (this.closed || this.child.killed || this.child.exitCode !== null) throw new Error('Physics unavailable');
     const request = ++this.sequence;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(request); reject(new Error('Physics request timed out')); this.close(); }, message.cmd==='prepareBots'?30000:5000);
+      // River forecasts can take longer on a small CPU. Only graph/search work
+      // gets this budget; live physics and snapshots keep their short deadline.
+      const timer = setTimeout(() => { this.pending.delete(request); reject(new Error('Physics request timed out')); this.close(); }, message.cmd==='prepareBots'||message.cmd==='plan'?30000:5000);
       this.pending.set(request, { resolve, reject, timer });
       this.child.stdin.write(JSON.stringify({ ...message, request }) + '\n');
     });
