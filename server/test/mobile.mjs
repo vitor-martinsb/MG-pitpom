@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ try {
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:3});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(String(error)));
-  await page.goto(url);
+  await visitMultiplayer(page,url);
   await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   await page.locator('#nickname').tap();
   await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('MobileHost');
@@ -24,7 +25,7 @@ try {
   assert.equal(room.members.get(1).nickname,'MobileHost');
   // A second mobile browser joins using an actual room-code input.
   const guestContext=await browser.newContext({viewport:{width:360,height:640},isMobile:true,hasTouch:true});
-  const guest=await guestContext.newPage();await guest.goto(url);
+  const guest=await guestContext.newPage();await visitMultiplayer(guest,url);
   await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});
   await guest.locator('#join-code').tap();await guest.keyboard.type(room.code);
   await guest.locator('#join').tap();await guest.locator('#lobby').waitFor({state:'visible'});
@@ -66,8 +67,8 @@ try {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.locator('#show-scores').tap();await page.locator('#close-scores').tap();
   await page.screenshot({path:'../out/mobile-validation/landscape.png'});
-  await page.locator('#leave').tap();await page.locator('#connect').waitFor({state:'visible'});
-  await page.locator('#offline').tap();
+  await page.locator('#leave').tap();await page.locator('#main-menu').waitFor({state:'visible'});
+  await openCampaign(page);
   await page.waitForTimeout(500);
   assert.equal((await diagnostics(page)).active,false);
   assert.deepEqual(errors,[]);

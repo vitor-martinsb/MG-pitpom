@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -13,7 +14,7 @@ try{
   const contexts=await Promise.all([browser.newContext({viewport:{width:1100,height:900}}),browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})]);
   const [a,b]=await Promise.all(contexts.map(c=>c.newPage())),errors=[];
   for(const page of [a,b]){page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/\bERROR\b|failed to compile|INVALID_OPERATION/i.test(m.text()))errors.push(m.text());});}
-  await Promise.all([a.goto(url),b.goto(url)]);
+  await Promise.all([visitMultiplayer(a,url),visitMultiplayer(b,url)]);
   await Promise.all([a,b].map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
   await a.locator('#nickname').fill('Pituca');await a.locator('#create').click();
   await a.locator('#lobby').waitFor({state:'visible'});

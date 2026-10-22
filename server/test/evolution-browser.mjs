@@ -1,19 +1,12 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
 import {canvasClick} from './canvas-input.mjs';
 const external=process.argv.includes('--url'),app=external?null:(await import('../dist/index.js')).createServer();
 let browser;
-async function openCourseSelection(page){
-  const viewport=page.viewportSize();
-  for(let attempt=0;attempt<8;attempt++){
-    await canvasClick(page,viewport.width/2,viewport.height*.75);
-    try{
-      await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_ui_level_selection','string',[],[])).open,{},{timeout:1500});
-      await page.locator('#level-selection').waitFor({state:'visible'});return;
-    }catch(error){if(attempt===7)throw error;}
-  }
-}
+const openCourseSelection=openCampaign;
+
 try{
   if(app)await new Promise(r=>app.server.listen(0,'127.0.0.1',r));
   const url=app?`http://127.0.0.1:${app.server.address().port}`:process.argv[process.argv.indexOf('--url')+1];
@@ -21,7 +14,7 @@ try{
   const contexts=await Promise.all([browser.newContext({viewport:{width:1200,height:900}}),browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})]);
   const [a,b]=await Promise.all(contexts.map(c=>c.newPage())),errors=[];
   for(const p of [a,b]){p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(/\bERROR\b|failed to compile|INVALID_OPERATION/i.test(m.text()))errors.push(m.text());});}
-  await Promise.all([a.goto(url),b.goto(url)]);
+  await Promise.all([visitMultiplayer(a,url),visitMultiplayer(b,url)]);
   await Promise.all([a,b].map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
   assert.equal(await a.locator('#connect .adventure-map').count(),0);
   fs.mkdirSync('../out/evolution-validation',{recursive:true});await a.screenshot({path:'../out/evolution-validation/welcome.png'});
@@ -29,7 +22,7 @@ try{
   assert.equal(await a.locator('#loading .mascot-run .run-frame').count(),2);
   assert.equal(await a.locator('#loading .chase-ring').count(),0);
   for(const [page,name]of [[a,'desktop'],[b,'mobile']]){
-    await page.locator('#offline').click();await page.locator('#connect').waitFor({state:'hidden'});
+    await openCampaign(page);
     await openCourseSelection(page);
     assert.equal(await page.locator('#level-adventure .trail-node').count(),80);
     assert.equal(await page.locator('#level-adventure .locked').count(),0);
@@ -49,12 +42,12 @@ try{
     await page.screenshot({path:`../out/evolution-validation/course-selection-${name}.png`});
     await page.locator('#close-level-selection').click();await page.locator('#level-selection').waitFor({state:'hidden'});
     await openCourseSelection(page);
-    await page.locator('#level-adventure [data-level="0"]').click();
+    await page.locator('#level-adventure [data-level="0"]').click();await page.locator('#play-course').click();
     await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();
     await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&GolfCourse.inspect().frame.level===0);
     assert.equal(await page.locator('#level-selection').isHidden(),true);
     assert.equal(await page.evaluate(()=>Module.ccall('golf_ui_choose_level','number',['number'],[0])),0);
-    await page.reload();await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+    await reloadMultiplayer(page);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   }
   await a.locator('#nickname').fill('Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
   const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Guest');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
@@ -75,8 +68,8 @@ try{
   await a.locator('#holes').selectOption('2');await a.locator('#game-mode').selectOption('impact');
   await b.waitForFunction(()=>document.getElementById('holes').value==='2'&&document.getElementById('game-mode').value==='impact');
   await a.locator('#add-bot').click();await a.locator('.bot-controls').waitFor();
-  await a.locator('.bot-controls input:not([type=color])').fill('Garden Bot');await a.locator('.bot-controls select').selectOption('hard');
-  await a.locator('.bot-row button').first().click();await b.waitForFunction(()=>document.getElementById('members').textContent.includes('Garden Bot'));
+  await a.locator('.bot-controls select').selectOption('hard');await b.waitForFunction(()=>document.getElementById('members').textContent.includes(GolfI18n.t('difficulty.hard')));await a.locator('.bot-cosmetics summary').click();await a.locator('.bot-cosmetics input:not([type=color])').fill('Garden Bot');
+  await a.locator('.bot-cosmetics button').click();await b.waitForFunction(()=>document.getElementById('members').textContent.includes('Garden Bot'));
   await a.locator('#music-controls').click();for(const [id,value]of [['master-volume','61'],['effects-volume','37'],['ui-volume','19']])await a.locator('#'+id).evaluate((e,value)=>{e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));},value);
   await a.locator('#music-controls summary').click();
   await a.locator('#start').click();await a.locator('#loading').waitFor({state:'visible'});await a.screenshot({path:'../out/evolution-validation/loading.png'});
@@ -102,7 +95,7 @@ try{
     await a.locator('#play-again').click();await Promise.all([a,b].map(p=>p.locator('#lobby').waitFor({state:'visible'})));
     assert.equal(room.phase,'lobby');assert.equal(await b.locator('#start').isDisabled(),true);
   }
-  await a.reload();await a.waitForFunction(()=>window.GolfAudio);const audio=await a.evaluate(()=>GolfAudio.status());assert.equal(audio.master,.61);assert.equal(audio.effects,.37);assert.equal(audio.ui,.19);
+  await reloadMultiplayer(a);await a.waitForFunction(()=>window.GolfAudio);const audio=await a.evaluate(()=>GolfAudio.status());assert.equal(audio.master,.61);assert.equal(audio.effects,.37);assert.equal(audio.ui,.19);
   assert.deepEqual(errors,[]);await Promise.all(contexts.map(c=>c.close()));
   console.log('Evolution browser: host/guest configuration, bot CRUD, visible protection, shared adventure order, mobile layout, independent audio preferences and final-only celebration passed.');
 }finally{await browser?.close();app?.close();}

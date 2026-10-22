@@ -59,7 +59,7 @@
     }
     lastSlap=frame.slapTime;lastWake=frame.wakeTime;
     status.hidden=!frame.active;$('minimap').hidden=!frame.active;$('presentation').hidden=!frame.active||!frame.intro;
-    if(!frame.active)return;
+    if(!frame.active){soloStarted=-1;return;}
     matchLabels();
     const mapBounds=$('minimap').getBoundingClientRect();
     status.style.left=mapBounds.left+'px';status.style.bottom=(innerHeight-mapBounds.top+8)+'px';status.style.maxWidth=Math.min(260,innerWidth-mapBounds.left-8)+'px';

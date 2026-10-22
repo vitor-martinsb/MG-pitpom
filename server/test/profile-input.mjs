@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ try {
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
   const page=await browser.newPage();
-  await page.goto(`http://127.0.0.1:${app.server.address().port}`);
+  await visitMultiplayer(page,`http://127.0.0.1:${app.server.address().port}`);
   await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   // fill() bypasses key events and cannot catch the engine swallowing typing.
   const nickname=page.locator('#nickname');

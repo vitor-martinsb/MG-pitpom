@@ -83,15 +83,19 @@ static void _golf_ui_start_fade_out(bool to_main_menu, bool to_loading_level, in
 }
 
 #ifdef GOLF_PLATFORM_EMSCRIPTEN
-/* The browser trail uses the same saved scores and sequential locks as the native grid. */
+/* Browser navigation uses the existing saved scores and native course loader. */
+EMSCRIPTEN_KEEPALIVE int golf_ui_open_level_selection(void) {
+    if(golf->state!=GOLF_STATE_MAIN_MENU||ui.fade_out.active||golf_online_active())return 0;
+    ui.main_menu.is_level_select_open=true;return 1;
+}
 EMSCRIPTEN_KEEPALIVE void golf_ui_set_progression(int enabled){solo_progression=enabled!=0;}
 EMSCRIPTEN_KEEPALIVE const char *golf_ui_level_selection(void) {
     static char text[4096];
     int count = (int)CFG_NUM(game_cfg, "num_levels");
     bool open = golf->state == GOLF_STATE_MAIN_MENU && ui.main_menu.is_level_select_open
         && !ui.fade_out.active && !golf_online_active();
-    int used = snprintf(text, sizeof(text), "{\"open\":%s,\"loading\":%s,\"progression\":%s,\"current\":%d,\"levels\":[",
-        open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false",solo_progression?"true":"false",golf->level_num);
+    int used = snprintf(text, sizeof(text), "{\"menu\":%s,\"open\":%s,\"loading\":%s,\"progression\":%s,\"current\":%d,\"levels\":[",
+        golf->state==GOLF_STATE_MAIN_MENU?"true":"false", open ? "true" : "false", golf->state == GOLF_STATE_LOADING_LEVEL ? "true" : "false",solo_progression?"true":"false",golf->level_num);
     for (int i = 0; i < count && used < (int)sizeof(text) - 40; i++) {
         char key[64]; float best;
         golf_progress_key(key,sizeof(key),game_cfg,i);
@@ -1069,6 +1073,9 @@ static void _golf_ui_title_screen(float dt) {
 }
 
 static void _golf_ui_main_menu(float dt) {
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+    if(EM_ASM_INT({return !!window.GolfHome;}))return;
+#endif
     golf_ui_layout_t *layout = golf_data_get_ui_layout("data/ui/ui.ui");
     _golf_ui_text_name(layout, "main_text", 1);
     _golf_ui_text_name(layout, "main2_text", 1);

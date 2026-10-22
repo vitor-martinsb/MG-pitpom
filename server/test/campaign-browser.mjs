@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -12,7 +13,7 @@ try{
   const contexts=await Promise.all([browser.newContext({viewport:{width:1200,height:900}}),browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})]);
   const pages=await Promise.all(contexts.map(c=>c.newPage())),[a,b]=pages,errors=[];
   for(const p of pages){p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(/\bERROR\b|INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});}
-  await Promise.all(pages.map(p=>p.goto(url)));await Promise.all(pages.map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
+  await Promise.all(pages.map(p=>visitMultiplayer(p,url)));await Promise.all(pages.map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
   assert.equal(await a.locator('#holes option').count(),80);
   await a.locator('#nickname').fill('Campaign Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
   const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Mobile Guest');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});

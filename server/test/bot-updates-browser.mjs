@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -12,7 +13,7 @@ try{
   const contexts=await Promise.all([browser.newContext({viewport:{width:1200,height:900}}),browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})]);
   const pages=await Promise.all(contexts.map(c=>c.newPage())),[a,b]=pages;
   for(const page of pages){
-    page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+    page.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(page,url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
     await page.evaluate(()=>{const call=Module.ccall;Module.ccall=function(...args){if(args[0]==='golf_online_receive'){const m=JSON.parse(args[3][0]);if(m.type==='room')window.nativeRoster=m.players;}return call.apply(Module,args);};});
   }
   await a.locator('#nickname').fill('Human Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
@@ -23,7 +24,7 @@ try{
   assert.deepEqual([...room.members.values()].filter(m=>m.bot).map(m=>m.nickname),['GPT-6','Claude','Gemini']);
   await b.evaluate(()=>{document.getElementById('bot-count').value='20';document.getElementById('apply-bot-count').disabled=false;document.getElementById('apply-bot-count').click();});
   await b.locator('#toast').waitFor({state:'visible'});assert.match(await b.locator('#toast').textContent(),/anfitrião/);assert.equal([...room.members.values()].filter(m=>m.bot).length,3);
-  await a.locator('.bot-controls select').first().selectOption('easy');await a.locator('.bot-row button').first().click();
+  await a.locator('.bot-controls select').first().selectOption('easy');
   await b.waitForFunction(()=>document.getElementById('members').textContent.includes('Fácil'));
   await a.waitForFunction(()=>window.nativeRoster?.filter(p=>p.nickname.startsWith('[BOT] ')).length===3);
   const roster=await a.evaluate(()=>window.nativeRoster);assert.equal(roster.find(p=>p.nickname==='Human Host').bot,undefined);assert.equal(roster.filter(p=>p.nickname.startsWith('[BOT] ')).length,3);
@@ -43,8 +44,12 @@ try{
   assert.ok(room.metrics.snapshots>=snapshots+3,'snapshots keep arriving while the bot thinks');
   await Promise.all(pages.map(p=>p.waitForFunction(time=>GolfCourse.inspect().frame.time>time,before)));
   releasePlanner();await pending;room.physics.plan=originalPlan;for(const bot of bots)bot.nextDecision=Infinity;
-  await freezePhysics(room);let clock=room.now();room.now=()=>clock;room.deadline=clock+120000;room.lastStep=clock;room.busy=false;
-  async function advance(ms=100){while(room.busy)await delay(1);clock+=ms;await room.tick();await room.botPlanning;await delay(1);}
+  await freezePhysics(room);
+  // Real-time responsiveness was checked above. From here the fixture owns
+  // the clock: the server interval must not race a manual advance/forecast.
+  const tickRoom=room.tick.bind(room);room.tick=async()=>{};
+  let clock=room.now();room.now=()=>clock;room.deadline=clock+120000;room.lastStep=clock;room.busy=false;
+  async function advance(ms=100){while(room.busy)await delay(1);clock+=ms;await tickRoom();await room.botPlanning;await delay(1);}
   // Real human intents and real C simulation; no score, hole or ball-position
   // injection. One bot makes three valid short strokes and then times out.
   // Prepare those strokes while both humans are unfinished. Their completion
@@ -62,7 +67,7 @@ try{
   assert.ok(humans.every(m=>m.ball.hole),'both real human balls complete the course');assert.equal(bots[0].ball.strokes,3);await advance();
   assert.equal(room.simulationSpeed,5);await Promise.all(pages.map(p=>p.waitForFunction(()=>!document.getElementById('bot-speed').hidden)));
   assert.match(await b.locator('#bot-speed').textContent(),/Acelerando/);assert.match(await a.locator('#bot-speed').textContent(),/Speeding/);
-  await b.reload();await b.locator('#presentation').waitFor({state:'visible',timeout:90000});await b.locator('#skip-presentation').click();
+  await reloadMultiplayer(b);await b.locator('#presentation').waitFor({state:'visible',timeout:90000});await b.locator('#skip-presentation').click();
   await b.waitForFunction(()=>GolfOnline.active()&&GolfCourse.inspect().frame?.course===1&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden);
   await b.waitForFunction(()=>!document.getElementById('bot-speed').hidden);assert.match(await b.locator('#bot-speed').textContent(),/Acelerando/);
   for(const bot of bots.slice(1))bot.nextDecision=0;

@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
 import assert from 'node:assert/strict';
@@ -15,7 +16,7 @@ try{
   for(let i=0;i<5;i++){
     const context=await browser.newContext({viewport:{width:1100,height:720}}),page=await context.newPage();pages.push(page);
     page.on('pageerror',error=>{errors.push(String(error));console.log('PAGE ERROR:',String(error));});page.on('console',message=>{if(process.env.GOLF_BROWSER_VERBOSE||message.type()==='error'||message.text().includes('WARNING'))console.log('BROWSER:',message.type(),message.text());});
-    await page.goto(url);await page.locator('#create').waitFor({state:'visible'});await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+    await visitMultiplayer(page,url);await page.locator('#create').waitFor({state:'visible'});await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
     await page.locator('#nickname').fill(`Browser${i+1}`);await page.locator('#color').fill(['#ff0000','#0000ff','#00ff00','#ffff00','#ff00ff'][i]);
     if(!i)await page.locator('#create').click();else{await page.locator('#join-code').fill([...app.rooms.keys()][0]);await page.locator('#join').click();}
     await page.locator('#lobby').waitFor({state:'visible'});console.log('Joined browser',i+1);
@@ -36,7 +37,7 @@ try{
   await pages[0].setViewportSize({width:850,height:600});
   fs.mkdirSync(path.resolve('../out/multiplayer-validation'),{recursive:true});
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/five-players.png')});
-  await pages[0].reload();await pages[0].waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:90000});
+  await reloadMultiplayer(pages[0]);await pages[0].waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:90000});
   assert.equal(room.members.size,5);assert.equal(room.members.get(1).nickname,'Browser1');assert.equal(room.members.get(1).ball.strokes,1);
   assert.deepEqual(errors,[]);
   console.log('Five real WebGL clients: loaded, ready, authoritative shot, scoreboard, resize and reconnect passed.');
@@ -60,12 +61,12 @@ try{
   await pages[0].keyboard.down('Tab');assert.equal(await pages[0].locator('#score-body tr').count(),50);await pages[0].keyboard.up('Tab');
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/fifty-overlapping.png')});
   assert.deepEqual(errors,[]);console.log('One WebGL client plus 49 WebSocket clients: 50 balls, coincident labels and scrolling scoreboard passed.');
-  await pages[0].locator('#leave').click();await pages[0].locator('#offline').click();
+  await pages[0].locator('#leave').click();await openCampaign(pages[0]);
   await pages[0].setViewportSize({width:850,height:650});
   assert.equal(await pages[0].evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).active),false);
   await new Promise(resolve=>setTimeout(resolve,1000));
   await pages[0].screenshot({path:path.resolve('../out/multiplayer-validation/offline-return.png')});
-  await pages[0].mouse.click(425,450);await new Promise(resolve=>setTimeout(resolve,300));await pages[0].locator('#level-adventure [data-level="0"]').click();
+  await pages[0].mouse.click(425,450);await new Promise(resolve=>setTimeout(resolve,300));await pages[0].locator('#level-adventure [data-level="0"]').click();await pages[0].locator('#play-course').click();
   await pages[0].waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===2,{},{timeout:15000});
   const offline=await pages[0].evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])));
   assert.equal(offline.players.length,1);

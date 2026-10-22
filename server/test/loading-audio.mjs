@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -13,7 +14,7 @@ try{
   const pages=[];
   for(const [name,width,height,mobile]of [['desktop',1200,900,false],['mobile',390,844,true]]){
     const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile}),page=await context.newPage();pages.push(page);
-    page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});
+    page.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(page,url);await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});
     await page.evaluate(()=>{document.getElementById('connect').hidden=true;document.getElementById('loading').hidden=false;});
     await page.waitForTimeout(150);
     const seen=[new Set(),new Set()];let last;
@@ -62,6 +63,6 @@ try{
   await page.evaluate(()=>GolfMusic.world(2));assert.ok((await page.evaluate(()=>GolfMusic.status())).layers>=2,'crossfade retains the outgoing layer');
   await page.waitForTimeout(2000);assert.ok(await page.evaluate(()=>GolfMusic.level()>0.00001));
   await page.locator('#toggle-music').click();await page.waitForFunction(()=>GolfMusic.level()<.00001);assert.equal(await page.evaluate(()=>GolfMusic.status().enabled),false);
-  await page.reload();await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});assert.equal(await page.evaluate(()=>GolfMusic.status().enabled),false);
+  await reloadMultiplayer(page);await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});assert.equal(await page.evaluate(()=>GolfMusic.status().enabled),false);
   assert.deepEqual(errors,[]);console.log('Ten distinct original soundtracks: audible balanced waveforms, continuous loops, crossfade, persistent mute and no same-world restart passed.');
 }finally{await browser?.close();app.close();}

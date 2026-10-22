@@ -87,8 +87,86 @@
     '<path d="M-16 13V-5H16V13Z" fill="#f3dbab"/><path d="M-21-5L0-22L21-5Z" fill="#bd8865"/><path d="M-3 13V2H5V13" fill="#997357"/><path d="M9-2H13V3H9Z" fill="#92babb"/>',
     '<circle cx="12" cy="-13" r="8" fill="#ecc780"/><path d="M-25 13L-9-20L7 13ZM-4 13L11-10L25 13Z" fill="#879b96"/><path d="M-16-7L-9-20L-2-7L-10-10Z" fill="#f6ebda"/>'
   ];
+  let pickedCourse=-1,knownCompleted;
+  function paintCampaign(container,order,selection){
+    const narrow=innerWidth<600,width=narrow?440:960,height=narrow?680:520;
+    const completed=new Set(order.filter(map=>Number.isFinite(selection.levels[map])));
+    const next=order.find(map=>!completed.has(map))??order[order.length-1];
+    const unlocked=new Set(knownCompleted?order.filter(map=>map>0&&completed.has(map-1)&&!knownCompleted.has(map-1)):[]);
+    const progressed=knownCompleted&&completed.has(pickedCourse)&&!knownCompleted.has(pickedCourse);
+    knownCompleted=completed;
+    if(pickedCourse<0||!order.includes(pickedCourse)||progressed)pickedCourse=next;
+    const locked=map=>!!selection.progression&&order.some(before=>before<map&&!completed.has(before));
+    const choose=map=>{
+      pickedCourse=map;const course=GOLF_CAMPAIGN.courses[map],world=GOLF_CAMPAIGN.worlds[course.world-1];
+      $('selected-course-world').textContent=`${world.names[GolfI18n.language]??world.names.en} · ${t('courseNumber',{number:map+1})}`;
+      $('selected-course-name').textContent=GolfI18n.courseName(course);
+      $('selected-course-info').textContent=locked(map)?t('levelLocked'):completed.has(map)?t('levelBest',{number:selection.levels[map]}):t('readyForAdventure');
+      $('play-course').disabled=locked(map);$('play-course').onclick=()=>{
+        if(Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;window.GolfHome?.show('game',false);$('canvas').focus();}
+      };
+      for(const node of container.querySelectorAll('.trail-node')){
+        node.classList.toggle('selected',Number(node.dataset.level)===map);
+        node.setAttribute('aria-pressed',String(Number(node.dataset.level)===map));
+      }
+    };
+    container.replaceChildren();
+    $('campaign-progress').textContent=t('campaignProgress',{complete:completed.size,total:order.length});
+    const navigation=document.createElement('nav');navigation.className='world-navigation';navigation.setAttribute('aria-label',t('worldNavigation'));
+    const activeWorld=GOLF_CAMPAIGN.courses[pickedCourse].world;
+    for(const world of GOLF_CAMPAIGN.worlds){
+      const maps=order.filter(map=>GOLF_CAMPAIGN.courses[map].world===world.id);if(!maps.length)continue;
+      const section=document.createElement('section');section.className='campaign-world';section.dataset.world=world.id;section.style.setProperty('--world-color',world.color);
+      const title=document.createElement('h3');title.textContent=world.names[GolfI18n.language]??world.names.en;
+      const caption=document.createElement('p');for(const family of [...new Set(maps.map(map=>GOLF_CAMPAIGN.courses[map].family))]){const name=document.createElement('span');name.className='family-title';name.textContent=GolfI18n.familyName(family);if(caption.children.length)caption.append(' · ');caption.append(name);}
+      section.append(title,caption);
+      const s=svg('svg',{viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':title.textContent});
+      const points=narrow?[[76,575],[228,538],[360,434],[240,354],[81,325],[100,182],[267,210],[366,102]]:[[100,402],[255,383],[230,224],[412,211],[539,363],[714,349],[759,191],[866,99]];
+      const foliage=world.id===7||world.id===8?'#8fa6a3':world.id===6?'#a4a980':world.id===9?'#92a18a':'#91aa77';
+      s.innerHTML=`<defs><linearGradient id="biome-${world.id}" x2="0" y2="1"><stop stop-color="${world.color}"/><stop offset="1" stop-color="${foliage}"/></linearGradient></defs>
+        <path d="M0 0H${width}V${height}H0Z" fill="url(#biome-${world.id})"/>
+        <path d="M-10 ${height*.22}Q${width*.24} ${height*.04} ${width*.5} ${height*.23}T${width+20} ${height*.14}V${height}H0Z" fill="${foliage}" opacity=".38"/>
+        <path d="M${width*.73} -30C${width*.45} ${height*.25} ${width*.92} ${height*.44} ${width*.55} ${height*.64}S${width*.4} ${height*.9} ${width*.65} ${height+30}" fill="none" stroke="#76a7af" stroke-width="48"/>
+        <path class="map-current" d="M${width*.73} -30C${width*.45} ${height*.25} ${width*.92} ${height*.44} ${width*.55} ${height*.64}S${width*.4} ${height*.9} ${width*.65} ${height+30}" fill="none" stroke="#c8e1d7" stroke-width="2" stroke-dasharray="18 44"/>`;
+      // Clusters leave the playable path and its labels clear.
+      for(const [j,x,y]of [[0,width*.09,height*.10],[1,width*.43,height*.12],[2,width*.89,height*.61],[3,width*.25,height*.91],[4,width*.91,height*.91]]){
+        const group=svg('g',{transform:`translate(${x} ${y}) scale(${narrow?1.1:1.5})`,class:'map-decoration','aria-hidden':'true'});
+        group.innerHTML=previews[world.id===7||world.id===8?5:world.id===6?3:world.id===9?4:j%2?0:1];s.append(group);
+      }
+      // A windmill and a bridge belong to the terrain rather than a list card.
+      const mill=svg('g',{transform:`translate(${width*.42} ${height*.66}) scale(${narrow?.75:1})`,'aria-hidden':'true'});
+      mill.innerHTML='<path d="M-17 39L-12-6H12L19 39Z" fill="#eddfbc" stroke="#947657" stroke-width="2"/><path d="M-21-6L0-27L21-6Z" fill="#bb876a"/><g class="map-mill"><path d="M0 0L-5-42H5Z M0 0L42-5V5Z M0 0L5 42H-5Z M0 0L-42 5V-5Z" fill="#fff2d2" stroke="#9e835e" stroke-width="2"/><circle r="5" fill="#8c7354"/></g>';s.append(mill);
+      for(let i=1;i<maps.length;i++){
+        const a=points[i-1],b=points[i],middle=(a[1]+b[1])/2;
+        const d=`M${a[0]} ${a[1]}C${a[0]} ${middle} ${b[0]} ${middle} ${b[0]} ${b[1]}`;
+        const open=!locked(maps[i]);
+        s.append(svg('path',{d,fill:'none',stroke:'#536b4435','stroke-width':34,'stroke-linecap':'round'}),svg('path',{d,fill:'none',stroke:open?'#e8d4a0':'#b9b69a','stroke-width':24,'stroke-linecap':'round',class:unlocked.has(maps[i])?'unlocked-route':'','stroke-dasharray':open?'none':'4 10'}));
+        s.append(svg('path',{d,fill:'none',stroke:'#fff2cd','stroke-width':2,opacity:open?.6:.2,'stroke-dasharray':'2 15'}));
+      }
+      const bridge=svg('g',{transform:`translate(${(points[3][0]+points[4][0])/2} ${(points[3][1]+points[4][1])/2}) rotate(-18)`,'aria-hidden':'true'});
+      bridge.innerHTML='<path d="M-22-24V24M22-24V24" stroke="#735f43" stroke-width="5"/><path d="M-21-18H21M-21-6H21M-21 6H21M-21 18H21" stroke="#b68b5d" stroke-width="9"/>';s.append(bridge);
+      maps.forEach((map,i)=>{
+        const course=GOLF_CAMPAIGN.courses[map],current=map===next,isLocked=locked(map),done=completed.has(map);
+        const g=svg('g',{transform:`translate(${points[i][0]} ${points[i][1]})`,class:`trail-node ${current?'current':done?'completed':'next'} ${isLocked?'locked':'selectable'}${unlocked.has(map)?' just-unlocked':''}`,'data-level':map,role:'button',tabindex:0,'aria-disabled':String(isLocked),'aria-label':`${GolfI18n.courseName(course)}, ${isLocked?t('levelLocked'):done?t('levelBest',{number:selection.levels[map]}):t('currentCourse')}`});
+        g.append(svg('ellipse',{cy:7,rx:29,ry:24,fill:'#536b4440'}),svg('circle',{r:25,fill:done?'#57794d':current?'#f2ce7d':isLocked?'#b7b59b':'#fff1cd',stroke:'#8f7851','stroke-width':3}));
+        const number=svg('text',{'text-anchor':'middle',y:7,fill:done?'#fff7e6':'#354831','font-size':19,'font-weight':700});number.textContent=done?'✓':isLocked?'·':String(map+1);g.append(number);
+        if(isLocked){const lock=svg('path',{d:'M-5-5V-9A5 5 0 0 1 5-9V-5M-8-5H8V8H-8Z',fill:'none',stroke:'#52634a','stroke-width':2.5});g.append(lock);number.textContent='';}
+        const label=svg('text',{'text-anchor':'middle',y:48,'font-size':narrow?14:15,'font-weight':600,fill:'#344a30'});label.textContent=t('courseName',{number:course.revision+1});g.append(label);
+        const subtitle=svg('text',{'text-anchor':'middle',y:65,'font-size':11,fill:'#4c6241'});subtitle.textContent=course.revision===0?GolfI18n.familyName(course.family):'';g.append(subtitle);
+        const select=()=>{choose(map);window.GolfAudio?.play('ui');};g.addEventListener('click',select);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}});
+        if(current){g.setAttribute('aria-current','step');const pets=svg('g',{transform:'translate(-38 -66)',class:'trail-pets','aria-hidden':'true'});pets.innerHTML='<use href="#pitpom-dog" width="52" height="39"/><use href="#pitpom-cat" x="35" y="-5" width="52" height="39"/>';g.append(pets);}
+        s.append(g);
+      });
+      section.append(s);container.append(section);
+      const button=document.createElement('button');button.type='button';button.textContent=title.textContent;button.style.setProperty('--world-color',world.color);
+      if(world.id===activeWorld)button.setAttribute('aria-current','location');
+      button.onclick=()=>{section.scrollIntoView({block:'start',behavior:reduced.matches?'instant':'smooth'});for(const b of navigation.children)b.removeAttribute('aria-current');button.setAttribute('aria-current','location');};navigation.append(button);
+    }
+    container.prepend(navigation);choose(pickedCourse);
+  }
   function paint(container,order,room,selection){
     if(!container)return;
+    if(selection){paintCampaign(container,order,selection);return;}
     const narrow=selection&&innerWidth<600,width=narrow?400:720;
     const grouped=!!selection&&order.length===80,rowHeight=narrow?82:65;
     container.replaceChildren();const h=Math.max(600,order.length*rowHeight+120+(grouped?1400:0)),s=svg('svg',{viewBox:`0 0 ${width} ${h}`,role:selection?'group':'img','aria-label':t(selection?'levelSelection':'adventureTitle')});
@@ -164,13 +242,13 @@
   try{progression=localStorage.getItem('pitpom-progression')==='true';}catch{}
   $('solo-progression').checked=progression;
   $('solo-progression').onchange=()=>{progression=$('solo-progression').checked;try{localStorage.setItem('pitpom-progression',String(progression));}catch{}Module.ccall('golf_ui_set_progression',null,['number'],[Number(progression)]);selectionSignature='';};
-  $('close-level-selection').onclick=()=>{Module.ccall('golf_ui_close_level_selection',null,[],[]);$('level-selection').hidden=true;$('canvas').focus();};
+  $('close-level-selection').onclick=()=>{Module.ccall('golf_ui_close_level_selection',null,[],[]);$('level-selection').hidden=true;window.GolfHome?.show('menu');};
   $('level-selection').addEventListener('keydown',e=>{if(e.key==='Escape')$('close-level-selection').click();});
   function select(selection){
     if(selection.progression!==progression){Module.ccall('golf_ui_set_progression',null,['number'],[Number(progression)]);selection.progression=progression;}
-    lastSelection=selection;const visible=selection.open&&$('connect').hidden&&!GolfOnline.active();const panel=$('level-selection'),opening=panel.hidden&&visible;panel.hidden=!visible;
+    window.GolfHome?.native(selection);lastSelection=selection;const visible=selection.open&&$('connect').hidden&&!GolfOnline.active();const panel=$('level-selection'),opening=panel.hidden&&visible;panel.hidden=!visible;
     $('solo-loading').hidden=!selection.loading||!$('connect').hidden||GolfOnline.active();
-    const key=JSON.stringify([selection.levels,selection.progression,GolfI18n.language,innerWidth<600]);if(visible&&(selectionSignature!==key||opening)){selectionSignature=key;paint($('level-adventure'),selection.levels.map((_,i)=>i),null,selection);if(opening)$('level-adventure .current')?.scrollIntoView({block:'center'});}
+    const key=JSON.stringify([selection.levels,selection.progression,GolfI18n.language,innerWidth<600,selection.current]);if(visible&&(selectionSignature!==key||opening)){selectionSignature=key;paint($('level-adventure'),selection.levels.map((_,i)=>i),null,selection);if(opening)requestAnimationFrame(()=>$('level-adventure').querySelector('.current')?.closest('.campaign-world')?.scrollIntoView({block:'start'}));}
     if(opening)$('close-level-selection').focus({preventScroll:true});
   }
   window.addEventListener('languagechange',()=>{signature='';render(lastRoom);if(lastSelection)select(lastSelection);});

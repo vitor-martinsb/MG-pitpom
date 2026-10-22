@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -13,7 +14,7 @@ try{
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/\bERROR\b|INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});
-  await page.goto(url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+  await visitMultiplayer(page,url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   await page.locator('#nickname').fill('Wildlife Host');await page.locator('#create').click();
   await page.locator('#lobby').waitFor({state:'visible'});const room=[...app.rooms.values()][0];
   for(let i=1;i<50;i++)await new Promise((resolve,reject)=>{

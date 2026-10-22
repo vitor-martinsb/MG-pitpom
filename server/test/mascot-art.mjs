@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -18,7 +19,7 @@ try{
   for(const [name,viewport,touch] of [['desktop',{width:1100,height:900},false],['portrait',{width:390,height:844},true],['landscape',{width:844,height:390},true]]){
     const context=await browser.newContext({viewport,isMobile:touch,hasTouch:touch}),page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
-    await page.goto(url);
+    await visitMultiplayer(page,url);
     await page.waitForFunction(()=>{const image=document.querySelector('.garden-header img');return image?.complete&&image.naturalWidth===1774;});
     const image=page.locator('.garden-header img');
     assert.equal(await image.evaluate(e=>e.naturalHeight),887);

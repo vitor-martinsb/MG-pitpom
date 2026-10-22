@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -9,7 +10,7 @@ try{
  browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
  const contexts=await Promise.all([browser.newContext({viewport:{width:1200,height:900}}),browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})]);
  const pages=await Promise.all(contexts.map(c=>c.newPage())),[a,b]=pages;
- for(const p of pages){p.on('pageerror',e=>errors.push(e.message));await p.goto(url);await p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+ for(const p of pages){p.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(p,url);await p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   await p.evaluate(async()=>{for(const weight of [400,500,600,700])await document.fonts.load(`${weight} 16px Poppins`);});
   assert.ok(await p.evaluate(()=>[...document.fonts].filter(f=>f.family==='Poppins').every(f=>f.status==='loaded')));
   for(const selector of ['body','#create','#nickname','#music-controls'])assert.match(await p.locator(selector).evaluate(e=>getComputedStyle(e).fontFamily),/Poppins/);

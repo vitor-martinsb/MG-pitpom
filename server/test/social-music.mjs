@@ -1,3 +1,4 @@
+import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ try {
   const desktop=await browser.newContext({viewport:{width:1100,height:720}});
   const host=await mobile.newPage(),guest=await desktop.newPage(),errors=[];
   for(const page of [host,guest])page.on('pageerror',error=>errors.push(String(error)));
-  await host.goto(url);await host.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+  await visitMultiplayer(host,url);await host.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   assert.equal(await host.evaluate(()=>GolfMusic.status().state),'idle');
   await host.locator('#nickname').fill('MusicHost');await host.locator('#create').tap();await host.locator('#lobby').waitFor({state:'visible'});
   const room=[...app.rooms.values()][0];
@@ -22,14 +23,14 @@ try {
   await host.locator('#music-controls summary').tap();await host.locator('#toggle-music').tap();
   await host.waitForFunction(()=>GolfMusic.status().enabled===false);
   assert.equal(await host.evaluate(()=>GolfMusic.status().enabled),false);
-  await host.reload();await host.locator('#lobby').waitFor({state:'visible',timeout:90000});
+  await reloadMultiplayer(host);await host.locator('#lobby').waitFor({state:'visible',timeout:90000});
   assert.equal(await host.evaluate(()=>GolfMusic.status().enabled),false);
   await host.locator('#music-controls summary').tap();await host.locator('#toggle-music').tap();
   await host.waitForFunction(()=>GolfMusic.status().state==='running'&&GolfMusic.level()>0.000001);
   await host.locator('#music-volume').focus();await host.keyboard.press('ArrowLeft');
   assert.ok(await host.evaluate(()=>GolfMusic.status().volume<.24));
   await host.locator('#music-controls summary').tap();
-  await guest.goto(url);await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});
+  await visitMultiplayer(guest,url);await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});
   await guest.locator('#nickname').fill('Guest');await guest.locator('#join-code').fill(room.code);await guest.locator('#join').click();await guest.locator('#lobby').waitFor({state:'visible'});
   await host.locator('#open-chat').tap();
   await host.keyboard.type('Olá, vamos jogar? ⛳');await host.keyboard.press('Enter');
@@ -41,7 +42,7 @@ try {
   await host.waitForFunction(()=>document.getElementById('chat-messages').textContent.includes('<img'));
   assert.equal(await host.locator('#chat-messages img').count(),0);
   assert.equal(await host.evaluate(()=>window.chatInjected),undefined);
-  await host.reload();await host.locator('#lobby').waitFor({state:'visible',timeout:90000});
+  await reloadMultiplayer(host);await host.locator('#lobby').waitFor({state:'visible',timeout:90000});
   assert.equal(await host.locator('#chat-messages .chat-message').count(),2);
   await guest.locator('#close-chat').click();
   await guest.locator('#start').click();
