@@ -31,6 +31,9 @@ typedef struct golf_ball {
     /* Maritaca rescue is simulated by the authority, never by a client timer. */
     vec3 rescue_from;
     float rescue_started;
+    bool resting_static;
+    vec3 resting_pos,resting_vel;
+    float resting_dt;
 } golf_ball_t;
 
 typedef struct golf_player {

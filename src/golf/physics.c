@@ -97,8 +97,24 @@ static bool _capture_in_cup(golf_physics_world_t *world, golf_entity_t *hole,
     return true;
 }
 
+static bool moving_contact(golf_physics_world_t *world,const golf_ball_t *ball){
+    golf_ball_contact_t contacts[1];int count=0;
+    golf_bvh_ball_test(world->dynamic_bvh,ball->pos,ball->radius+.05f,ball->vel,contacts,&count,1);
+    return count>0;
+}
 void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player, float dt) {
     if (player->ball.is_in_hole || player->ball.capture_until>0) return;
+    golf_ball_t *ball=&player->ball;
+    static int full_rest=-1;if(full_rest<0)full_rest=getenv("GOLF_PHYSICS_FULL_REST")!=NULL;
+    if(ball->resting_static&&dt==ball->resting_dt&&!ball->is_moving&&!ball->is_in_water&&!ball->is_out_of_bounds&&
+       ball->pos.x==ball->resting_pos.x&&ball->pos.y==ball->resting_pos.y&&ball->pos.z==ball->resting_pos.z&&
+       ball->vel.x==ball->resting_vel.x&&ball->vel.y==ball->resting_vel.y&&ball->vel.z==ball->resting_vel.z&&
+       !full_rest&&!moving_contact(world,ball)){
+        ball->time_going_slow+=dt;ball->time_since_impact_sound+=dt;ball->time_out_of_water+=dt;
+        return;
+    }
+    ball->resting_static=false;
+    bool started_moving=ball->is_moving;
     float EPS = 0.001f;
 
     vec3 bp = player->ball.pos;
@@ -503,6 +519,24 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
     }
     else {
         if (world->stop_sound) world->stop_sound("ball_in_water", 0.2f);
+    }
+    /* Sleep at a static fixed point, away from the cup. Moving geometry,
+       shots, wind, pets, water and position changes all invalidate this cache. */
+    if(!full_rest&&!started_moving&&!ball->is_moving&&!ball->is_in_water&&!ball->is_out_of_bounds&&
+       ball->pos.x==bp0.x&&ball->pos.y==bp0.y&&ball->pos.z==bp0.z&&
+       ball->vel.x==bv0.x&&ball->vel.y==bv0.y&&ball->vel.z==bv0.z&&
+       dist_to_hole>fmaxf(CFG_NUM(world->config,"physics_hole_force_distance"),world->funnel_radius)+.3f&&
+       !moving_contact(world,ball)){
+        // A tee can be exactly tangent to its floor and have no strict-radius
+        // contact. Probe a 2 mm margin without changing position or velocity.
+        int support_count=0;
+        golf_bvh_ball_test(world->static_bvh,ball->pos,ball->radius+.002f,ball->vel,contacts,&support_count,MAX_NUM_CONTACTS);
+        for(int i=0;i<support_count;i++){
+            golf_ball_contact_t *c=&contacts[i];
+            if(!c->is_ignored&&!c->is_water&&!c->is_out_of_bounds&&c->type==TRIANGLE_CONTACT_FACE&&c->normal.y>.5f){
+                ball->resting_static=true;ball->resting_pos=ball->pos;ball->resting_vel=ball->vel;ball->resting_dt=dt;break;
+            }
+        }
     }
 }
 

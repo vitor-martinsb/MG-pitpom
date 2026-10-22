@@ -87,4 +87,10 @@ if(BUILD_TESTING)
             set_tests_properties(family_${PREFIX}_${REVISION} PROPERTIES WORKING_DIRECTORY ${ROOT} TIMEOUT 480)
         endforeach()
     endforeach()
+    # Resource targets must not strand bots on ramps or complex corridors.
+    foreach(FAMILY 04 11 17 20)
+        add_test(NAME budget_family_${FAMILY}_3 COMMAND golf_campaign_test "data/campaign/family-${FAMILY}-3.level" --solve)
+        set_tests_properties(budget_family_${FAMILY}_3 PROPERTIES WORKING_DIRECTORY ${ROOT} TIMEOUT 480
+            ENVIRONMENT "GOLF_BOT_SEARCH_MS=150;GOLF_BOT_CPU_FRACTION=1")
+    endforeach()
 endif()

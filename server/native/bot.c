@@ -1,4 +1,5 @@
 #include "bot.h"
+#include "budget.h"
 #include <float.h>
 #include <math.h>
 #include <string.h>
@@ -257,8 +258,13 @@ static trial_t simulate(golf_physics_world_t *world,golf_bvh_t *dynamic,const go
     moving_world(&w,&t.player.ball);
     bool danger=false;int water_ticks=0;
     for(int tick=0;tick<horizon;tick++){
+        if((tick&15)==0)bot_budget_yield();
         w.time+=1.f/120;if(route.mover_count)moving_world(&w,&t.player.ball);
-        golf_physics_tick_player(&w,&t.player,1.f/120);golf_mechanics_tick(&t.mechanics,&t.player,1,w.time);
+        golf_physics_tick_player(&w,&t.player,1.f/120);
+        // A failed forecast ends before the rescue clears the out-of-bounds
+        // flag. Imaginary maritaca flights are neither valid landings nor work.
+        if(t.player.ball.is_out_of_bounds){danger=true;break;}
+        golf_mechanics_tick(&t.mechanics,&t.player,1,w.time);
         t.peak=fmaxf(t.peak,t.player.ball.pos.y);
         if(t.player.ball.is_in_hole)break;
         if(t.player.ball.is_in_water)water_ticks++;
@@ -278,6 +284,7 @@ static float repeated(const golf_bot_memory_t *memory,const golf_player_t *p,vec
     }return penalty;
 }
 golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav,const golf_player_t *p,int difficulty,const golf_bot_memory_t *memory){
+    bot_budget_begin();
     difficulty=difficulty<0?0:difficulty>3?3:difficulty;build_route(world,m,nav);nav=&route.navigation;
     float speed=0,unused;vec3 aim=target(nav,p->ball.pos,2.2f,&speed),far=target(nav,p->ball.pos,4.8f,&unused),delta=vec3_sub(aim,p->ball.pos);
     float heading=atan2f(delta.x,delta.z),far_heading=atan2f(far.x-p->ball.pos.x,far.z-p->ball.pos.z),hole_heading=atan2f(m->hole.x-p->ball.pos.x,m->hole.z-p->ball.pos.z);
@@ -289,8 +296,25 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     golf_bot_plan_t plan={.direction=V3(sinf(heading),0,cosf(heading)),.power=base};float best=FLT_MAX,initial_cost=route_cost(nav,p->ball.pos);
     golf_bvh_t dynamic;golf_bvh_init(&dynamic);
     trial_t beams[4];golf_bot_plan_t first[4];int beam_count=0;
-    for(int candidate=0;candidate<counts[difficulty];candidate++){
-        float angle=angles[candidate/12],power=powers[candidate%12];vec3 direction=V3(sinf(angle),0,cosf(angle));
+    static struct {const golf_level_t *level;vec3 pos,direction;float power;uint32_t owner,seed;int slow;} warm[16];
+    static unsigned warm_next;
+    bool reused=false;
+    if(bot_budget.enabled)for(int i=0;i<16;i++){
+        if(warm[i].level!=world->level||warm[i].owner==p->id||warm[i].seed!=m->seed||warm[i].slow!=p->ball.slow_shots||vec3_distance(warm[i].pos,p->ball.pos)>.08f)continue;
+        trial_t t=simulate(world,&dynamic,m,nav,p,warm[i].direction,warm[i].power,horizons[difficulty]);plan.candidates++;
+        if(t.safe&&t.cost<initial_cost-1.5f){
+            plan.direction=warm[i].direction;plan.power=warm[i].power;plan.landing=t.player.ball.pos;plan.safe=true;plan.peak=t.peak;plan.launch_speed=speed;best=t.cost;reused=true;
+        }
+        break;
+    }
+    int warm_trials=plan.candidates;
+    for(int candidate=0;!reused&&candidate<counts[difficulty]-warm_trials;candidate++){
+        // A CPU target may stop only after a full heading/power sweep has
+        // found useful safe progress. Recovery and ramp searches keep their
+        // original quality even if they need longer in the background.
+        if(candidate>=12&&bot_budget_expired()&&plan.safe&&best<initial_cost-1.5f&&speed==0&&(!memory||!memory->stalled))break;
+        int choice=candidate;
+        float angle=angles[choice/12],power=powers[choice%12];vec3 direction=V3(sinf(angle),0,cosf(angle));
         trial_t t=simulate(world,&dynamic,m,nav,p,direction,power,horizons[difficulty]);plan.candidates++;
         float score=t.cost+repeated(memory,p,direction,power);
         if(score<best){best=score;plan.direction=direction;plan.power=power;plan.landing=t.player.ball.pos;plan.safe=t.safe;plan.peak=t.peak;plan.launch_speed=speed;}
@@ -305,12 +329,13 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
         if(difficulty==2&&candidate>=47&&speed==0&&(!memory||!memory->stalled)&&best<initial_cost-1.5f)break;
     }
     /* A bounded second ply resolves staged ramp approaches and obstructed exits. */
-    if(difficulty>=2&&best>-9999&&(speed>0||(memory&&memory->stalled)||difficulty==3)){
+    bool recovery=speed>0||(memory&&memory->stalled)||!plan.safe||best>=initial_cost-1.5f;
+    if(!reused&&(!bot_budget_expired()||recovery)&&difficulty>=2&&best>-9999&&(speed>0||(memory&&memory->stalled)||difficulty==3)){
         int width=difficulty==3?beam_count:(beam_count<2?beam_count:2);
-        for(int i=0;i<width;i++){
+        for(int i=0;i<width&&(!bot_budget_expired()||recovery);i++){
             float launch;vec3 q=target(nav,beams[i].player.ball.pos,3.3f,&launch),d=vec3_sub(q,beams[i].player.ball.pos);float length=horizontal(q,beams[i].player.ball.pos);
             float power=power_for_speed(world,launch>0?launch:sqrtf(5.88f*length+19.6f*fmaxf(0,d.y)));
-            for(int k=0;k<(difficulty==3?6:3);k++){
+            for(int k=0;k<(difficulty==3?6:3)&&(!bot_budget_expired()||recovery);k++){
                 float a=atan2f(d.x,d.z)+(k>=3?(k%2?.13f:-.13f):0),scale=k%3==0?.85f:k%3==1?1:1.2f;
                 golf_physics_world_t w=*world;w.time=beams[i].time;
                 trial_t t=simulate(&w,&dynamic,&beams[i].mechanics,nav,&beams[i].player,V3(sinf(a),0,cosf(a)),golf_clampf(power*scale,0,1),1440);plan.lookahead++;
@@ -323,8 +348,8 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     // compensation. The room permits one wait per stroke, then plans again at
     // the actual authority time so a gust cannot keep a bot waiting forever.
     bool gusts=false;for(int j=0;j<m->wildlife.wind_count;j++)if(m->wildlife.wind[j].mill&&m->wildlife.wind[j].period>0)gusts=true;
-    if(gusts&&difficulty>=1&&best>-9999){
-        for(int delay=1;delay<=3;delay++){
+    if(!reused&&!bot_budget_expired()&&gusts&&difficulty>=1&&best>-9999){
+        for(int delay=1;delay<=3&&!bot_budget_expired();delay++){
             golf_physics_world_t future=*world;future.time+=delay;
             golf_mechanics_t later=*m;
             for(int k=1;k<=delay*120;k++)golf_mechanics_tick(&later,NULL,0,world->time+k/120.f);
@@ -333,11 +358,19 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
         }
     }
     vec_deinit(&dynamic.faces);vec_deinit(&dynamic.node_infos);vec_deinit(&dynamic.nodes);
+    if(bot_budget.enabled&&plan.safe&&plan.wait==0&&best<initial_cost-1.5f){
+        unsigned at=warm_next++%16;
+        warm[at].level=world->level;warm[at].pos=p->ball.pos;warm[at].direction=plan.direction;warm[at].power=plan.power;
+        warm[at].owner=p->id;warm[at].seed=m->seed;warm[at].slow=p->ball.slow_shots;
+    }
+    bot_budget_yield();
     uint32_t seed=hash(m->seed^p->id^(p->stroke_count*0x9e3779b9u));
     const float errors[]={.10f,.035f,.004f,0},force_errors[]={.06f,.02f,.003f,0};
     float adapt=memory&&memory->stalled>1?.35f:1;
     float angle=atan2f(plan.direction.x,plan.direction.z)+((seed&65535)/32767.5f-1)*errors[difficulty]*adapt;
     plan.direction=V3(sinf(angle),0,cosf(angle));plan.power=golf_clampf(plan.power+((seed>>16)/32767.5f-1)*force_errors[difficulty]*adapt,0,1);
+    plan.reused=reused;
+    if(bot_budget.enabled){plan.cpu_ms=bot_cpu_ms()-bot_budget.cpu;plan.wall_ms=bot_wall_ms()-bot_budget.wall;}
     return plan;
 }
 golf_bot_plan_t golf_bot_plan(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav,const golf_player_t *p,int difficulty){return golf_bot_plan_adaptive(world,m,nav,p,difficulty,NULL);}

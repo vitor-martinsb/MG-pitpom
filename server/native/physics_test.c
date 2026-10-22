@@ -85,8 +85,31 @@ static void curved_stream(void){
     assert(bvh.faces.data[0].water_dir.z==1&&bvh.faces.data[1].water_dir.x==2&&bvh.faces.data[1].water_dir.z==0);
     vec_deinit(&bvh.faces);vec_deinit(&model->positions);vec_deinit(&model->texcoords);vec_deinit(&model->groups);vec_deinit(&model->water_dir);
 }
+static void resting_cache(void){
+    golf_level_t level={0};golf_entity_t ground={0};ground.type=GEO_ENTITY;ground.parent_idx=-1;
+    ground.geo.transform.scale=V3(1,1,1);ground.geo.transform.rotation=QUAT(0,0,0,1);
+    golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);
+    golf_bvh_face_t f={0};f.level=&level;f.entity=&ground;f.a=V3(-20,5,-20);f.b=V3(0,5,20);f.c=V3(20,5,-20);f.vel_scale=1;f.friction=.6f;
+    vec_push(&fixed.faces,f);golf_bvh_node_t n={0};n.is_leaf=true;n.leaf_node_info.face_count=1;n.aabb=(golf_bvh_aabb_t){V3(-20,5,-20),V3(20,5,20)};
+    vec_push(&fixed.nodes,n);fixed.parent=0;
+    golf_config_t config={0};golf_physics_world_t w={0};w.level=&level;w.config=&config;w.static_bvh=&fixed;w.dynamic_bvh=&moving;w.multiplayer=true;
+    golf_player_t p;golf_player_init(&p,1,"Rest",V4(1,1,1,1),0);golf_player_start_level(&p,V3(0,5.12f,0));
+    golf_physics_tick_player(&w,&p,1.f/120);assert(p.ball.resting_static);vec3 before=p.ball.pos;
+    for(int i=0;i<120;i++)golf_physics_tick_player(&w,&p,1.f/120);
+    assert(vec3_distance(before,p.ball.pos)==0&&!p.ball.is_moving);
+    // A moving obstacle entering the cached ball's area forces normal collision processing.
+    f.a=V3(.1f,4,-1);f.b=V3(.1f,6,0);f.c=V3(.1f,4,1);vec_push(&moving.faces,f);
+    n.aabb=(golf_bvh_aabb_t){V3(.1f,4,-1),V3(.1f,6,1)};vec_push(&moving.nodes,n);moving.parent=0;
+    golf_physics_tick_player(&w,&p,1.f/120);assert(!p.ball.resting_static);
+    moving.parent=-1;p.ball.vel=V3(1,0,0);golf_physics_tick_player(&w,&p,1.f/120);
+    assert(p.ball.is_moving&&p.ball.pos.x>before.x);
+    p.ball.is_moving=false;p.ball.resting_static=true;p.ball.resting_pos=p.ball.pos;p.ball.resting_vel=p.ball.vel;p.ball.pos.x=40;
+    golf_physics_tick_player(&w,&p,1.f/120);assert(!p.ball.resting_static);
+    vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);vec_deinit(&moving.faces);vec_deinit(&moving.nodes);
+}
 int main(int argc,char **argv) {
     headless_config_load();
+    resting_cache();
     currents();
     floating_current();
     curved_stream();

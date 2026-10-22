@@ -1,3 +1,4 @@
+import {loadingBudget} from './resources.js';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { existsSync } from 'node:fs';
@@ -31,7 +32,7 @@ export class Physics {
     if(isPlanner)this.child.once('spawn',()=>{try{setPriority(this.child.pid!,constants.priority.PRIORITY_BELOW_NORMAL);}catch{/* Some hosts disallow changing process priority. */}});
     let resolveReady!: () => void, rejectReady!: (e: Error) => void;
     this.ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
-    const startup = setTimeout(() => { rejectReady(new Error('Physics loading timed out')); this.close(); }, 10000);
+    const startup = setTimeout(() => { rejectReady(new Error('Physics loading timed out')); this.close(); }, loadingBudget()||10000);
     this.child.stderr.on('data', data => process.stderr.write(data));
     createInterface({ input: this.child.stdout }).on('line', line => {
       try {
@@ -59,7 +60,7 @@ export class Physics {
     return new Promise((resolve, reject) => {
       // River forecasts can take longer on a small CPU. Only graph/search work
       // gets this budget; live physics and snapshots keep their short deadline.
-      const timer = setTimeout(() => { this.pending.delete(request); reject(new Error('Physics request timed out')); this.close(); }, message.cmd==='prepareBots'||message.cmd==='plan'?30000:5000);
+      const timer = setTimeout(() => { this.pending.delete(request); reject(new Error('Physics request timed out')); this.close(); }, message.cmd==='prepareBots'?(loadingBudget()||30000):message.cmd==='plan'?(loadingBudget()?300000:30000):5000);
       this.pending.set(request, { resolve, reject, timer });
       this.child.stdin.write(JSON.stringify({ ...message, request }) + '\n');
     });

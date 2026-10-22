@@ -10,6 +10,12 @@ services:
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
+      - key: GOLF_CPU_BUDGET
+        value: "0.1"
+      - key: GOLF_BOT_CPU_FRACTION
+        value: "0.02"
+      - key: GOLF_BOT_SEARCH_MS
+        value: "150"
       - key: PORT
         value: 10000
       - key: NODE_ENV

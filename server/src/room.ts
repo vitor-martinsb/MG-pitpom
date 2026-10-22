@@ -1,3 +1,4 @@
+import {cpuBudget} from './resources.js';
 import { randomBytes, randomInt } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -46,6 +47,8 @@ export class Room {
   private chatSequence = 0;
   readonly chatHistory: ChatMessage[] = [];
   private lastPhysicsCpu = 0;
+  private cpuSample=0;private sampleTicks=0;private cpuRate=0;private cpuSamples=0;
+  private readonly cpuLimit=cpuBudget();
   private generation = 0;
   private botCursor = 0;
   private botPlanning?: Promise<void>;
@@ -178,6 +181,7 @@ export class Room {
   private async load() {
     const generation=++this.generation;
     this.botPlanning=undefined;this.nextBotPlanAt=0;this.botCursor=0;
+    this.cpuSample=this.sampleTicks=this.cpuRate=this.cpuSamples=0;
     this.phase='loading'; this.loading=true; this.deadline=0; this.worldTime=0;this.lastPhysicsCpu=0;this.events=[];this.simulationSpeed=1;
     for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0;m.planRetries=0;m.windWaitStroke=undefined; }
     this.lastSent.clear(); this.physics?.close();
@@ -194,7 +198,7 @@ export class Room {
       // bots. Narrow-course refinement must not pause the live match timer.
       if([...this.members.values()].some(m=>m.bot)){await physics.prepareBots();if(!current())return;}
       this.loading=false; this.deadline=this.now()+this.options.loadingTimeout; this.lastStep=this.now(); this.accumulated=0;
-      const frame=await physics.step(0);if(!current())return; this.mascots=frame.mascots; for (const b of frame.players) this.members.get(b.id)!.ball=b;
+      const frame=await physics.step(0);if(!current())return; this.lastPhysicsCpu=frame.cpuMs;this.mascots=frame.mascots; for (const b of frame.players) this.members.get(b.id)!.ball=b;
       this.snapshot(true); this.publish(); this.maybeBegin();
     } catch(e) { if(current())this.fail(e); }
   }
@@ -245,7 +249,8 @@ export class Room {
     if (this.phase==='finished' || !this.physics) return;
     const humans=[...this.members.values()].filter(m=>!m.bot);
     const botsRemain=[...this.members.values()].some(m=>m.bot&&!m.ball?.hole&&(m.ball?.strokes??0)<BOT_STROKE_LIMIT);
-    const speed=humans.length>0&&humans.every(m=>m.ball?.hole||m.dnf[this.hole]===true)&&botsRemain?5:1;
+    const capacity=!this.cpuLimit||(this.cpuSamples>0&&this.cpuRate*5<=this.cpuLimit*(this.simulationSpeed===5?.7:.55));
+    const speed=capacity&&humans.length>0&&humans.every(m=>m.ball?.hole||m.dnf[this.hole]===true)&&botsRemain?5:1;
     const elapsed=Math.max(0,now-this.lastStep);
     if(this.phase==='playing'||this.phase==='settling')this.deadline-=elapsed*(speed-1);
     if(speed!==this.simulationSpeed){this.simulationSpeed=speed;this.publish();}
@@ -258,7 +263,15 @@ export class Room {
       const started=performance.now(), frame=await physics.step(ticks);
       if(generation!==this.generation || physics!==this.physics)return;
       this.worldTime=frame.time; this.mascots=frame.mascots;this.events=frame.events; this.metrics.physicsTicks+=ticks; this.metrics.maxTickMs=Math.max(this.metrics.maxTickMs,performance.now()-started);
-      this.metrics.physicsCpuMs+=Math.max(0,frame.cpuMs-this.lastPhysicsCpu);this.lastPhysicsCpu=frame.cpuMs;
+      const cpu=Math.max(0,frame.cpuMs-this.lastPhysicsCpu);this.metrics.physicsCpuMs+=cpu;this.lastPhysicsCpu=frame.cpuMs;
+      if(ticks>0){
+        this.cpuSample+=cpu;this.sampleTicks+=ticks;
+        if(this.sampleTicks>=120){
+          const rate=this.cpuSample/(this.sampleTicks/120*1000);
+          this.cpuRate=this.cpuSamples?this.cpuRate*.5+rate*.5:rate;this.cpuSamples++;
+          this.cpuSample=this.sampleTicks=0;
+        }
+      }
       this.metrics.physicsPeakRssBytes=Math.max(this.metrics.physicsPeakRssBytes,frame.rssBytes);this.metrics.physicsPeakTrackedBytes=Math.max(this.metrics.physicsPeakTrackedBytes,frame.memoryBytes);
       for (const b of frame.players) this.members.get(b.id)!.ball=b;
       this.snapshot(++this.frameNumber % (this.options.snapshotHz*2) === 0);
