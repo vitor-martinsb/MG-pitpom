@@ -3,10 +3,11 @@
 The browser always starts with a welcome screen. Click, touch, Enter or Space
 opens a main menu with Campaign, Multiplayer and Exit. Exit returns to the
 welcome screen in the browser. Settings remain available from the corner.
-The welcome screen reuses the exact Pituca/Pompom loading sprite artwork;
-companion vector illustrations retain Romeu's grey/blue/red sweater, Luna's
-dark coat, Frida's white/grey markings and the green maritaca. The animals used
-in gameplay and all map/model assets are unchanged.
+The welcome screen and main menu use the user-supplied garden reference, with
+text removed and a portrait adaptation for mobile. Title, language controls
+and all menu buttons remain real HTML. Artwork and the exact edit prompts
+are documented in `build/emscripten/art/menu-garden.md`. Gameplay animals and
+all map/model assets remain unchanged.
 
 Campaign keeps the existing 80 courses, 20 families, 10 world names and score
 keys. Each illustrated world has eight interactive nodes on a winding path.

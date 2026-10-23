@@ -175,3 +175,14 @@ body[data-home=campaign] .music-controls{display:none}
 #connect-settings-slot .music-controls summary{padding:10px 14px;font-size:14px}
 #connect-settings-slot .music-panel{left:0;right:auto;max-height:min(460px,55dvh);max-width:calc(100vw - 72px)}
 .lobby-panel>.chat-heading{grid-template-columns:1fr auto auto}.room-route{border-top:1px solid #96724d33;padding:8px 0;font-size:.8rem}.room-route>summary{cursor:pointer;min-height:32px;padding:4px 0;font-weight:500}
+
+/* User-provided garden artwork, with real localized title and controls. */
+.home-screen{background:#83ae52}.home-scenery picture,.home-scenery .home-art{display:block;width:100%;height:100%}
+.home-scenery .home-art{object-fit:cover;object-position:center}.home-vignette{background:none}
+.home-screen .home-brand,.home-screen[data-screen=splash] .home-brand,.home-screen[data-screen=menu] .home-brand{left:50%;top:6%;transform:translateX(-50%);text-align:center;width:76%;transition:none}
+.home-brand h1{font-size:clamp(3rem,6.5vw,7rem);color:#173f26;text-shadow:0 2px 0 #d5f3d540;margin-top:22px}
+.home-brand h1 span{font-weight:600;font-size:.52em;letter-spacing:0;margin-top:8px}.home-kicker{color:#17452f;font-weight:600;font-size:clamp(.55rem,.8vw,.82rem)}
+.continue-home{bottom:max(3%,calc(16px + var(--safe-bottom)));font-size:clamp(.9rem,1.1vw,1.1rem);padding:12px 32px;min-height:48px;background:#fff7e1;color:#234c30;box-shadow:0 5px 12px #33563233}
+.main-menu{right:3.5%;top:auto;bottom:8%;left:auto;width:min(270px,22vw);transform:none;gap:12px}.main-menu button{min-height:60px;font-size:1rem}.main-menu .menu-exit{min-height:48px}
+@media(orientation:portrait){.home-brand h1{font-size:clamp(3rem,13vw,5rem)}.home-screen .home-brand,.home-screen[data-screen=splash] .home-brand,.home-screen[data-screen=menu] .home-brand{top:9%;width:90%}.home-kicker{font-size:.57rem;letter-spacing:.12em}.main-menu{left:50%;right:auto;bottom:max(3%,calc(16px + var(--safe-bottom)));width:min(340px,84vw);transform:translateX(-50%);gap:9px}.main-menu button{min-height:54px;padding:11px 18px}.main-menu .menu-exit{min-height:44px}.continue-home{bottom:max(5%,calc(16px + var(--safe-bottom)))}}
+@media(max-height:550px) and (orientation:landscape){.home-screen[data-screen=splash] .home-scenery{bottom:54px}.home-screen[data-screen=menu] .home-scenery{right:33%}.home-scenery .home-art{object-fit:contain}.home-screen .home-brand,.home-screen[data-screen=splash] .home-brand{top:3%;left:50%;width:80%}.home-screen[data-screen=menu] .home-brand{top:7%;left:33.5%;width:60%}.home-brand h1{font-size:2.5rem;margin-top:10px}.home-brand h1 span{margin-top:4px}.home-kicker{font-size:.5rem}.main-menu{left:auto;right:4%;bottom:12%;width:28%;transform:none;gap:8px}.main-menu button{min-height:46px;font-size:.85rem;padding:8px 12px}.main-menu .menu-exit{min-height:44px}.continue-home{bottom:7px;min-height:42px;padding:8px 24px;font-size:.8rem}}

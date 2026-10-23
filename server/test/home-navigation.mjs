@@ -16,13 +16,15 @@ try{
     await page.goto(url);await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});
     assert.equal(await page.locator('#home').isVisible(),true);assert.equal(await page.locator('#connect').isHidden(),true);
     assert.equal(await page.locator('#main-menu').isHidden(),true);assert.equal(await page.locator('html').getAttribute('lang'),'en');
-    assert.equal(await page.locator('#home-pets .home-companion').count(),3);assert.equal(await page.locator('#home-pets .home-lead').count(),2);assert.equal(await page.locator('#home-pets .home-bird').count(),1);
+    await page.waitForFunction(()=>document.querySelector('.home-art')?.complete&&document.querySelector('.home-art').naturalWidth>900);
+    assert.equal(await page.locator('.home-art').getAttribute('alt'),'Pituca, Pompom, Romeu, Luna, Frida, Maritaca');
+    assert.ok((await page.locator('.home-art').evaluate(e=>e.currentSrc)).endsWith(touch?'menu-garden-portrait.png':'menu-garden.png'));
     await page.screenshot({path:`../out/home-navigation/welcome-${name}.png`});
     if(touch)await page.locator('#continue-home').tap();else await page.keyboard.press('Enter');
     await page.locator('#main-menu').waitFor({state:'visible'});
     assert.equal(await page.locator('#main-menu button').count(),3);assert.equal(await page.locator('#home .adventure-map').count(),0);
     await page.waitForFunction(()=>!document.getElementById('offline').disabled);
-    await page.screenshot({path:`../out/home-navigation/menu-${name}.png`});
+    await page.waitForTimeout(400);await page.screenshot({path:`../out/home-navigation/menu-${name}.png`});
     await page.locator('#exit-game').click();assert.equal(await page.locator('#continue-home').isVisible(),true);
     await page.keyboard.press('Space');await page.locator('#main-menu').waitFor({state:'visible'});
     await page.locator('#music-controls summary').click();await page.locator('#language').selectOption('pt-BR');await page.locator('#music-controls summary').click();
@@ -43,7 +45,7 @@ try{
       assert.equal(await page.locator('#play-course').textContent(),await page.evaluate(()=>GolfI18n.t('playCourse')));
     }
     await page.locator('#close-level-selection').click();await page.locator('#main-menu').waitFor({state:'visible'});
-    if(touch){await page.setViewportSize({width:844,height:390});await page.screenshot({path:'../out/home-navigation/menu-landscape.png'});await page.setViewportSize({width,height});}
+    if(touch){await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>document.querySelector('.home-art').complete&&document.querySelector('.home-art').currentSrc.endsWith('menu-garden.png'));await page.waitForTimeout(400);await page.screenshot({path:'../out/home-navigation/menu-landscape.png'});await page.setViewportSize({width,height});}
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     // Seed actual legacy/new records on IDBFS, then verify the new menu reads
     // them without changing keys, scores or sequential native validation.
@@ -86,7 +88,7 @@ try{
   for(const [page,name]of [[a,'desktop'],[b,'mobile']])await page.screenshot({path:`../out/home-navigation/lobby-${name}.png`});
   await reloadMultiplayer(b);await b.locator('#lobby').waitFor({state:'visible',timeout:90000});assert.equal(room.members.size,7);
   await a.locator('#lobby-leave').click();await a.locator('#main-menu').waitFor({state:'visible'});
-  await a.emulateMedia({reducedMotion:'reduce'});assert.equal(await a.locator('.home-mill').evaluate(e=>getComputedStyle(e).animationName),'none');
+  await a.emulateMedia({reducedMotion:'reduce'});assert.equal(await a.locator('#continue-home').evaluate(e=>getComputedStyle(e).animationName),'none');
   assert.deepEqual(errors,[]);
   console.log('Welcome click/touch/Enter/Space, three choices, 80 courses/10 worlds, native saved scores/locks, real solo loading, EN/PT/ES, bot CRUD/host permissions and reconnect passed on desktop/mobile.');
 }finally{await browser?.close();app.close();}

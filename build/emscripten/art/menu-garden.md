@@ -1,0 +1,13 @@
+# Menu artwork
+
+Desktop: `menu-garden.png` (landscape). Mobile portrait: `menu-garden-portrait.png`.
+
+Created with the built-in image_gen tool from the user's supplied menu image. Text and painted button were removed so translated HTML controls remain real. The mobile composition reframes the same six animals with space for the title and controls. Gameplay character models and campaign content are unchanged.
+
+## Landscape edit prompt
+
+Use case: precise-object-edit. Asset type: existing PitPom Minigolfe game welcome/menu illustration. Input image 1 is the EDIT TARGET, the user's attached landscape illustration. Remove ONLY all lettering (the small top tagline, large PitPom, and Minigolfe) and the cream 'Pressione para continuar' button at bottom; seamlessly fill these areas with the existing sky or grass. Keep the full composition, aspect ratio, bright colors, trees, mountains, lake, windmill, golf course/flag, bridge, flowers and all SIX animals EXACTLY as in the target image: black-and-white dog and orange-white cat seated in foreground, black/tan dog, black curly poodle in striped bib, white/grey cat, green bird behind them. Do NOT redesign, replace, move or add animals. Preserve their faces, coats, poses, proportions, and arrangement. The result must have NO text, logos, controls, letters or buttons anywhere, with clean blank sky at top center and plain grass at bottom center for real HTML title and controls. Return a high quality wide 16:9 image faithful to this original.
+
+## Portrait edit prompt
+
+Use case: precise-object-edit. Asset type: MOBILE PORTRAIT 9:16 responsive welcome/menu background for PitPom Minigolfe. Edit the supplied illustration into a tall PORTRAIT 9:16 image. Preserve the exact cute character designs, expressions, colors and poses of ALL SIX animals: foreground seated black-and-white dog and orange-and-white cat; behind them black/tan small dog, curly black poodle with blue white red striped bib, smiling white/grey cat and green bird on its perch. All six must fit completely, uncropped and unobstructed, arranged together around the middle-lower part (roughly 48% to 72% of the portrait height). Keep the illustrated sunny mini golf garden style, stream, wooden bridge, red windmill, mountains, trees, flowers, golf hole and flag. Reframe and extend the garden vertically rather than stretching. Leave upper 35% mostly open bright blue sky for a real HTML game title. Leave bottom 25% a quiet clear grassy foreground with no animals or important objects, for actual HTML menu controls. No text, lettering, logos or button graphics anywhere. Deliver a polished tall portrait 9:16 image.
