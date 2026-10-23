@@ -213,3 +213,9 @@ body.match-info-hidden #hud,body.match-info-hidden #actions,body.match-info-hidd
 .home-screen .main-menu .menu-icon{font-size:1rem}
 .home-screen .continue-home{bottom:max(20px,var(--safe-bottom));min-height:48px}
 @media(max-width:480px){.home-screen .main-menu button{gap:5px;padding:10px 8px}.home-screen .main-menu .menu-icon{display:none}}
+/* Keep the artwork and controls together, including on tall portrait screens. */
+.home-screen{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.home-screen[data-screen] .home-scenery{position:relative;inset:auto;width:min(100%,calc((100dvh - 110px)*16/9));height:auto;aspect-ratio:16/9;flex:none}
+.home-screen[data-screen] .main-menu{position:relative;inset:auto;transform:none;padding:16px 8px;margin:0;width:min(620px,100%)}
+.home-screen .continue-home{position:relative;inset:auto;transform:none;margin:16px 0;flex:none}
+.home-screen .continue-home:active{transform:translateY(1px)}

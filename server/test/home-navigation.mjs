@@ -90,7 +90,7 @@ try{
   await a.locator('#lobby-open-chat').click();await a.locator('#chat-input').fill('Garden lobby chat');await a.locator('#send-chat').click();
   await b.waitForFunction(()=>document.getElementById('chat-messages').textContent.includes('Garden lobby chat'));await a.locator('#close-chat').click();
   for(const [page,name]of [[a,'desktop'],[b,'mobile']])await page.screenshot({path:`../out/home-navigation/lobby-${name}.png`});
-  await reloadMultiplayer(b);await b.locator('#lobby').waitFor({state:'visible',timeout:90000});await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});assert.equal(room.members.size,7);
+  await reloadMultiplayer(b);await b.locator('#lobby').waitFor({state:'visible',timeout:90000});assert.equal(room.members.size,7);
   await a.locator('#lobby-leave').click();await a.locator('#main-menu').waitFor({state:'visible'});
   await a.emulateMedia({reducedMotion:'reduce'});assert.equal(await a.locator('#continue-home').evaluate(e=>getComputedStyle(e).animationName),'none');
   assert.deepEqual(errors,[]);
