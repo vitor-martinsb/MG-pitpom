@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById(id),home=$('home');
-  let route='splash',ready=false,lastNativeMenu=false;
+  let route='splash',ready=false,nativeReady=false,assetsReady=false,bootComplete=false,lastNativeMenu=false;
   const connectSettings=document.createElement('span');connectSettings.id='connect-settings-slot';$('back-main').before(connectSettings);
   const lobbyChat=document.createElement('button');lobbyChat.id='lobby-open-chat';lobbyChat.className='secondary';lobbyChat.dataset.i18n='chat';lobbyChat.textContent=GolfI18n.t('chat');$('lobby-leave').before(lobbyChat);
   const trail=$('lobby-adventure'),journey=document.createElement('details'),journeyTitle=document.createElement('summary');
@@ -14,9 +14,19 @@
     if(settings.parentElement!==parent)parent.append(settings);
   }
   const scene=$('home-scenery');
-  scene.innerHTML='<picture><source media="(orientation:portrait)" srcset="art/menu-garden-portrait.png"><img class="home-art" src="art/menu-garden.png" alt="Pituca, Pompom, Romeu, Luna, Frida, Maritaca" width="1672" height="941" fetchpriority="high"></picture>';
+  scene.innerHTML='<img class="home-art" src="art/menu-supplied.jpg" alt="Pituca, Pompom, Romeu, Luna, Frida, Maritaca" width="1280" height="720" fetchpriority="high">';
+  Promise.all([scene.querySelector('img').decode(),document.fonts.ready]).then(()=>{
+    assetsReady=true;finishBoot();
+  }).catch(()=>{$('home-loading').setAttribute('role','alert');$('home-loading').textContent=GolfI18n.t('engineLoading');});
+  function finishBoot(){
+    if(bootComplete||!ready||!nativeReady||!assetsReady)return;
+    bootComplete=true;
+    for(const button of $('main-menu').querySelectorAll('button'))button.disabled=false;
+    requestAnimationFrame(()=>{$('home-loading').hidden=true;show('splash',false);});
+  }
   $('home-pets').hidden=true;
   function show(next,focus=true){
+    if(['splash','menu'].includes(next)&&!bootComplete)return;
     route=next;home.hidden=!['splash','menu'].includes(next);home.dataset.screen=next;
     if(next!=='game')roomPhase('');
     document.body.dataset.home=next;
@@ -25,7 +35,7 @@
     if(!home.hidden){window.GolfAudio?.phase('menu');$('music-controls').open=false;}
     if(focus)requestAnimationFrame(()=>{(next==='menu'?$('offline'):next==='splash'?$('continue-home'):next==='multiplayer'?$('nickname'):null)?.focus({preventScroll:true});});
   }
-  function proceed(){if(route!=='splash')return;window.GolfAudio?.play('ui');show('menu');}
+  function proceed(){if(!bootComplete||route!=='splash')return;window.GolfAudio?.play('ui');show('menu');}
   home.addEventListener('click',e=>{if(route==='splash'&&!e.target.closest('summary,input,select')&&(!e.target.closest('button')||e.target.closest('button').id==='continue-home'))proceed();});
   window.addEventListener('keydown',e=>{
     if(home.hidden||e.target.closest?.('input,select,summary'))return;
@@ -41,11 +51,11 @@
   for(const button of $('main-menu').querySelectorAll('button'))button.addEventListener('pointerenter',()=>window.GolfAudio?.play('ui',.15));
   window.GolfHome={
     get route(){return route;},
-    ready(){ready=true;},
+    ready(){ready=true;finishBoot();},
     show,
     roomPhase,
     native(selection){
-      $('offline').disabled=!ready||!selection.menu;
+      nativeReady=!!selection.menu;finishBoot();
       if(selection.menu&&!selection.open&&!lastNativeMenu&&route==='game'&&!window.GolfOnline?.active())show('menu');
       if(selection.loading&&route==='campaign')show('game',false);
       lastNativeMenu=!!selection.menu;

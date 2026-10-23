@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PitPom Minigolfe · Multiplayer</title><link rel="stylesheet" href="multiplayer.css"></head><body>
 <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
-<section id="home" class="home-screen" data-screen="splash" aria-label="PitPom Minigolfe">
+<section id="home-loading" class="overlay"><div class="panel"><div class="real-loading"><span data-i18n="engineLoading">Loading the game…</span></div></div></section>
+<section id="home" hidden class="home-screen" data-screen="splash" aria-label="PitPom Minigolfe">
 <div id="home-scenery" class="home-scenery"></div><div class="home-vignette"></div>
 <header class="home-brand"><span class="home-kicker" data-i18n="homeKicker">A little adventure, together</span><h1>PitPom <span>Minigolfe</span></h1></header>
 <div id="home-pets" class="home-pets"></div>
@@ -11,7 +12,7 @@
 <button id="open-multiplayer"><span class="menu-icon" aria-hidden="true">♧</span><span data-i18n="multiplayer">Multiplayer</span><span aria-hidden="true">↗</span></button>
 <button id="exit-game" class="menu-exit"><span class="menu-icon" aria-hidden="true">↶</span><span data-i18n="exitGame">Exit</span></button>
 </nav></section>
-<div id="connect" class="overlay" hidden><div class="welcome-wrap"><main class="panel"><header class="chat-heading"><h2 data-i18n="multiplayer">Multiplayer</h2><button id="back-main" class="secondary" data-i18n="back">Back</button></header><div class="garden-header" aria-hidden="true">@GOLF_MASCOT_IMAGE@</div><p class="muted" data-i18n="tagline">MINIGOLF · UP TO 50 PLAYERS</p><h1>PitPom Minigolfe</h1><p data-i18n="intro">Join the same room and play together. Every ball follows its own path.</p>
+<div id="connect" class="overlay" hidden><div class="welcome-wrap"><main class="panel"><header class="chat-heading"><h2 data-i18n="multiplayer">Multiplayer</h2><button id="back-main" class="secondary" data-i18n="back">Back</button></header><p class="muted" data-i18n="tagline">MINIGOLF · UP TO 50 PLAYERS</p><h1>PitPom Minigolfe</h1><p data-i18n="intro">Join the same room and play together. Every ball follows its own path.</p>
 <label for="nickname" data-i18n="nickname">Nickname</label><input id="nickname" maxlength="24" data-i18n-placeholder="yourName" placeholder="Your name" value="Player" autocomplete="nickname">
 <div class="row"><div><label for="color" data-i18n="ballColor">Ball color</label><input id="color" type="color" value="#ee6255"></div><div><label for="avatar" data-i18n="avatar">Avatar</label><select id="avatar"><option value="0" data-i18n="avatar0">⛳ Golf</option><option value="1" data-i18n="avatar1">🏌️ Golfer</option><option value="2" data-i18n="avatar2">⭐ Star</option><option value="3" data-i18n="avatar3">🌙 Moon</option><option value="4" data-i18n="avatar4">🍀 Clover</option><option value="5" data-i18n="avatar5">🔥 Fire</option><option value="6" data-i18n="avatar6">🌊 Water</option><option value="7" data-i18n="avatar7">🎯 Target</option></select></div></div>
 <button id="create" disabled data-i18n="create">Create room</button><p class="muted" data-i18n="joinPrompt">Or enter a room code:</p><input id="join-code" placeholder="RD7K2" maxlength="5"><div class="row"><button id="join" disabled data-i18n="join">Join room</button></div><div id="engine-loader" class="real-loading compact"><span data-i18n="loading">Loading…</span><progress id="engine-progress" max="1"></progress></div><p id="engine-status" class="muted" role="status" data-i18n="engineLoading">Loading the game…</p></main></div></div>

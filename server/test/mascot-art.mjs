@@ -20,12 +20,9 @@ try{
     const context=await browser.newContext({viewport,isMobile:touch,hasTouch:touch}),page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await visitMultiplayer(page,url);
-    await page.waitForFunction(()=>{const image=document.querySelector('.garden-header img');return image?.complete&&image.naturalWidth===1672;});
-    const image=page.locator('.garden-header img');
-    assert.equal(await image.evaluate(e=>e.naturalHeight),941);
-    assert.equal(await image.evaluate(e=>getComputedStyle(e).objectFit),'contain');
-    const bounds=await image.boundingBox();assert.ok(bounds.width>100&&bounds.height>60);
-    assert.ok(bounds.x>=0&&bounds.x+bounds.width<=viewport.width);
+    assert.equal(await page.locator('#connect .garden-header,#connect img').count(),0);
+    const panel=await page.locator('#connect .panel').boundingBox();
+    assert.ok(panel.width>100&&panel.x>=0&&panel.x+panel.width<=viewport.width);
     await page.screenshot({path:`../out/mascot-validation/${name}.png`});
     await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
     await page.locator('#nickname').fill('Pituca & Pompom');
@@ -33,5 +30,5 @@ try{
     await page.locator('#create').click();await page.locator('#lobby').waitFor({state:'visible'});
     assert.deepEqual(errors,[]);await context.close();
   }
-  console.log('Mascot artwork: identical served PNG, complete image, desktop/mobile layout and accessible nickname/create controls passed.');
+  console.log('Multiplayer: existing art asset preserved, decorative header removed, desktop/mobile layout and accessible nickname/create controls passed.');
 }finally{await browser?.close();app?.close();}

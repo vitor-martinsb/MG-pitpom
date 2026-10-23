@@ -41,6 +41,7 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           node test/clean-play.mjs
+          node test/menu-readiness.mjs
           node test/home-navigation.mjs
           node test/visual-shaders.mjs
           node test/mascot-art.mjs --url http://localhost:3000

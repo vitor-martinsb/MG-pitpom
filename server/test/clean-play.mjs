@@ -14,8 +14,8 @@ try{
     const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile}),page=await context.newPage();pages.push(page);
     page.on('pageerror',error=>errors.push(error.message));await visitMultiplayer(page,url);
     await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
-    await page.waitForFunction(()=>document.querySelector('.garden-header img').complete);
-    assert.ok((await page.locator('.garden-header img').getAttribute('src')).includes('menu-garden.png'));
+    assert.equal(await page.locator('#connect .garden-header,#connect img').count(),0);
+
     assert.equal(await page.locator('#toggle-match-info').isHidden(),true);
   }
   const [a,b]=pages;
