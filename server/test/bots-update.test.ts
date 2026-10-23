@@ -38,6 +38,9 @@ test('the host configures an exact integer bot count and unique AI names without
     room.botSettings(host,'count',null,{count:48,difficulty:'expert'});
     let bots=[...room.members.values()].filter(m=>m.bot);
     assert.equal(bots.length,48);assert.equal(room.members.size,50);
+    assert.equal(new Set(bots.map(m=>m.color)).size,48);
+    assert.ok(bots.every(m=>/^#[0-9a-f]{6}$/.test(m.color)&&m.color!==host.color&&m.color!==guest.color));
+    const colorBefore=bots[0]!.color;room.botSettings(host,'update',bots[0]!.id,{difficulty:'expert'});assert.equal(bots[0]!.color,colorBefore);
     assert.equal(new Set(bots.map(m=>m.nickname)).size,48);assert.ok(bots.some(m=>m.nickname.endsWith(' 2')));
     assert.ok(bots.every(m=>m.bot==='expert'&&!['Claude','GPT-6'].includes(m.nickname)));
     assert.equal(host.nickname,'Claude');assert.equal(guest.nickname,'GPT-6');

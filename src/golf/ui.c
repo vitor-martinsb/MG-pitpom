@@ -1278,6 +1278,9 @@ static void _golf_ui_in_game_finished(float dt) {
 }
 
 static void _golf_ui_player_labels(void) {
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+    if(EM_ASM_INT({return document.body.classList.contains('match-info-hidden');},0))return;
+#endif
     if (CFG_NUM(game_cfg, "player_labels_enabled") == 0) return;
     golf_font_t *font = golf_data_get_font("data/font/poppins/Poppins-SemiBold.ttf");
     if (!font || font->atlases.length == 0) return;

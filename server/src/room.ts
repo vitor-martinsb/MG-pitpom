@@ -146,7 +146,17 @@ export class Room {
     const used=new Set([...this.members.values()].map(p=>p.nickname.toLowerCase()));
     for(let i=0;;i++){const name=botNames[i%botNames.length]!+(i>=botNames.length?` ${Math.floor(i/botNames.length)+1}`:'');if(!used.has(name.toLowerCase()))return name;}
   }
-  private addBot(difficulty:BotDifficulty,nickname=this.nextBotName(),color='#d8a951'){
+  private randomBotColor(){
+    const used=new Set([...this.members.values()].map(m=>m.color.toLowerCase()));
+    for(let attempt=0;attempt<128;attempt++){
+      const rgb=[randomInt(45,231),randomInt(45,231),randomInt(45,231)];
+      if(Math.max(...rgb)-Math.min(...rgb)<70)continue;
+      const color='#'+rgb.map(value=>value.toString(16).padStart(2,'0')).join('');
+      if(!used.has(color))return color;
+    }
+    for(let value=0x407080;;value++){const color='#'+value.toString(16).padStart(6,'0');if(!used.has(color))return color;}
+  }
+  private addBot(difficulty:BotDifficulty,nickname=this.nextBotName(),color=this.randomBotColor()){
     const slots=new Set([...this.members.values()].map(p=>p.slot));let slot=0;while(slots.has(slot))slot++;
     const bot:Member={id:this.nextId++,slot,nickname,color,avatar:0,token:'',ready:true,lastSequence:0,scores:[],dnf:[],bot:difficulty};this.members.set(bot.id,bot);return bot;
   }
@@ -169,7 +179,7 @@ export class Room {
     if(action==='update'&&!bot?.bot)throw Error('Bot não encontrado.');
     const difficulty=settings.difficulty ?? bot?.bot ?? 'medium';
     const nickname=settings.nickname ?? bot?.nickname ?? this.nextBotName();
-    const color=settings.color ?? bot?.color ?? '#d8a951';
+    const color=settings.color ?? bot?.color ?? this.randomBotColor();
     if(!['easy','medium','hard','expert'].includes(difficulty)||typeof nickname!=='string'||!/^[\x20-\x7e]{1,24}$/.test(nickname.trim())||typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw Error('Configuração de bot inválida.');
     if([...this.members.values()].some(p=>p.id!==bot?.id&&p.nickname.toLowerCase()===nickname.trim().toLowerCase()))throw Error('Nome de bot já utilizado.');
     if(!bot){

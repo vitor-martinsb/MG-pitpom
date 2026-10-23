@@ -237,7 +237,11 @@
     "readyForAdventure": "A new little adventure awaits.",
     "campaignProgress": "{complete} / {total} courses completed",
     "courseNumber": "Course {number}",
-    "editBot": "Edit appearance"
+    "editBot": "Edit appearance",
+    "botsSummary": "{count} bots · manage individually",
+    "botRosterHint": "The lineup is ready. Expand only to edit or remove a specific bot.",
+    "hideMatchInfo": "Hide match information",
+    "showMatchInfo": "Show match information"
   },
   "pt-BR": {
     "settings": "Configurações",
@@ -477,7 +481,11 @@
     "readyForAdventure": "Uma nova pequena aventura espera por você.",
     "campaignProgress": "{complete} / {total} campos concluídos",
     "courseNumber": "Campo {number}",
-    "editBot": "Editar aparência"
+    "editBot": "Editar aparência",
+    "botsSummary": "{count} bots · gerenciar individualmente",
+    "botRosterHint": "A equipe está pronta. Expanda apenas para editar ou remover um bot específico.",
+    "hideMatchInfo": "Ocultar informações da partida",
+    "showMatchInfo": "Mostrar informações da partida"
   },
   "es": {
     "settings": "Ajustes",
@@ -717,6 +725,10 @@
     "readyForAdventure": "Una nueva pequeña aventura te espera.",
     "campaignProgress": "{complete} / {total} campos completados",
     "courseNumber": "Campo {number}",
-    "editBot": "Editar apariencia"
+    "editBot": "Editar apariencia",
+    "botsSummary": "{count} bots · gestionar individualmente",
+    "botRosterHint": "El equipo está listo. Despliega solo para editar o eliminar un bot específico.",
+    "hideMatchInfo": "Ocultar información de la partida",
+    "showMatchInfo": "Mostrar información de la partida"
   }
 }

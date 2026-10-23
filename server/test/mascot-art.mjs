@@ -20,9 +20,9 @@ try{
     const context=await browser.newContext({viewport,isMobile:touch,hasTouch:touch}),page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await visitMultiplayer(page,url);
-    await page.waitForFunction(()=>{const image=document.querySelector('.garden-header img');return image?.complete&&image.naturalWidth===1774;});
+    await page.waitForFunction(()=>{const image=document.querySelector('.garden-header img');return image?.complete&&image.naturalWidth===1672;});
     const image=page.locator('.garden-header img');
-    assert.equal(await image.evaluate(e=>e.naturalHeight),887);
+    assert.equal(await image.evaluate(e=>e.naturalHeight),941);
     assert.equal(await image.evaluate(e=>getComputedStyle(e).objectFit),'contain');
     const bounds=await image.boundingBox();assert.ok(bounds.width>100&&bounds.height>60);
     assert.ok(bounds.x>=0&&bounds.x+bounds.width<=viewport.width);

@@ -20,12 +20,13 @@ try{
   const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Jogador PT');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});await b.evaluate(()=>GolfI18n.setLanguage('pt-BR'));
   for(const id of ['bot-count','bot-difficulty-all','apply-bot-count'])assert.equal(await b.locator('#'+id).isDisabled(),true);
   await a.locator('#bot-count').fill('3');await a.locator('#bot-difficulty-all').selectOption('expert');await a.locator('#apply-bot-count').click();
-  await b.waitForFunction(()=>document.querySelectorAll('#members .bot-badge').length===3);
+  await b.locator('#bot-roster').waitFor({state:'visible'});await a.locator('#bot-roster>summary').click();await b.locator('#bot-roster>summary').click();
+  await b.waitForFunction(()=>document.querySelectorAll('#bot-members .bot-badge').length===3);
   assert.deepEqual([...room.members.values()].filter(m=>m.bot).map(m=>m.nickname),['GPT-6','Claude','Gemini']);
   await b.evaluate(()=>{document.getElementById('bot-count').value='20';document.getElementById('apply-bot-count').disabled=false;document.getElementById('apply-bot-count').click();});
   await b.locator('#toast').waitFor({state:'visible'});assert.match(await b.locator('#toast').textContent(),/anfitrião/);assert.equal([...room.members.values()].filter(m=>m.bot).length,3);
   await a.locator('.bot-controls select').first().selectOption('easy');
-  await b.waitForFunction(()=>document.getElementById('members').textContent.includes('Fácil'));
+  await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes('Fácil'));
   await a.waitForFunction(()=>window.nativeRoster?.filter(p=>p.nickname.startsWith('[BOT] ')).length===3);
   const roster=await a.evaluate(()=>window.nativeRoster);assert.equal(roster.find(p=>p.nickname==='Human Host').bot,undefined);assert.equal(roster.filter(p=>p.nickname.startsWith('[BOT] ')).length,3);
   await a.locator('#holes').selectOption('1');await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));

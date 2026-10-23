@@ -67,9 +67,9 @@ try{
   await b.waitForFunction(()=>[...document.getElementById('holes').options].filter(option=>!option.disabled).length===2);
   await a.locator('#holes').selectOption('2');await a.locator('#game-mode').selectOption('impact');
   await b.waitForFunction(()=>document.getElementById('holes').value==='2'&&document.getElementById('game-mode').value==='impact');
-  await a.locator('#add-bot').click();await a.locator('.bot-controls').waitFor();
-  await a.locator('.bot-controls select').selectOption('hard');await b.waitForFunction(()=>document.getElementById('members').textContent.includes(GolfI18n.t('difficulty.hard')));await a.locator('.bot-cosmetics summary').click();await a.locator('.bot-cosmetics input:not([type=color])').fill('Garden Bot');
-  await a.locator('.bot-cosmetics button').click();await b.waitForFunction(()=>document.getElementById('members').textContent.includes('Garden Bot'));
+  await a.locator('#add-bot').click();await b.locator('#bot-roster').waitFor({state:'visible'});await a.locator('#bot-roster>summary').click();await b.locator('#bot-roster>summary').click();await a.locator('.bot-controls').waitFor();
+  await a.locator('.bot-controls select').selectOption('hard');await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes(GolfI18n.t('difficulty.hard')));await a.locator('.bot-cosmetics summary').click();await a.locator('.bot-cosmetics input:not([type=color])').fill('Garden Bot');
+  await a.locator('.bot-cosmetics button').click();await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes('Garden Bot'));
   await a.locator('#music-controls').click();for(const [id,value]of [['master-volume','61'],['effects-volume','37'],['ui-volume','19']])await a.locator('#'+id).evaluate((e,value)=>{e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));},value);
   await a.locator('#music-controls summary').click();
   await a.locator('#start').click();await a.locator('#loading').waitFor({state:'visible'});await a.screenshot({path:'../out/evolution-validation/loading.png'});
