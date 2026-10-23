@@ -18,7 +18,7 @@ try{
     assert.equal(await page.locator('#main-menu').isHidden(),true);assert.equal(await page.locator('html').getAttribute('lang'),'en');
     await page.waitForFunction(()=>document.querySelector('.home-art')?.complete&&document.querySelector('.home-art').naturalWidth>900);
     assert.equal(await page.locator('.home-art').getAttribute('alt'),'Pituca, Pompom, Romeu, Luna, Frida, Maritaca');
-    assert.ok((await page.locator('.home-art').evaluate(e=>e.currentSrc)).endsWith('menu-supplied.jpg'));
+    assert.ok((await page.locator('.home-art').evaluate(e=>e.currentSrc)).endsWith(touch?'menu-garden-portrait.png':'menu-garden.png'));
     await page.screenshot({path:`../out/home-navigation/welcome-${name}.png`});
     if(touch)await page.locator('#continue-home').tap();else await page.keyboard.press('Enter');
     await page.locator('#main-menu').waitFor({state:'visible'});
@@ -45,7 +45,7 @@ try{
       assert.equal(await page.locator('#play-course').textContent(),await page.evaluate(()=>GolfI18n.t('playCourse')));
     }
     await page.locator('#close-level-selection').click();await page.locator('#main-menu').waitFor({state:'visible'});
-    if(touch){await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>document.querySelector('.home-art').complete&&document.querySelector('.home-art').currentSrc.endsWith('menu-supplied.jpg'));await page.waitForTimeout(400);await page.screenshot({path:'../out/home-navigation/menu-landscape.png'});await page.setViewportSize({width,height});}
+    if(touch){await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>document.querySelector('.home-art').complete&&document.querySelector('.home-art').currentSrc.endsWith(touch?'menu-garden-portrait.png':'menu-garden.png'));await page.waitForTimeout(400);await page.screenshot({path:'../out/home-navigation/menu-landscape.png'});await page.setViewportSize({width,height});}
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     // Seed actual legacy/new records on IDBFS, then verify the new menu reads
     // them without changing keys, scores or sequential native validation.

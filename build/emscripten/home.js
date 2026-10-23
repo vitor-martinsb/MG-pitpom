@@ -14,8 +14,14 @@
     if(settings.parentElement!==parent)parent.append(settings);
   }
   const scene=$('home-scenery');
-  scene.innerHTML='<img class="home-art" src="art/menu-supplied.jpg" alt="Pituca, Pompom, Romeu, Luna, Frida, Maritaca" width="1280" height="720" fetchpriority="high">';
-  Promise.all([scene.querySelector('img').decode(),document.fonts.ready]).then(()=>{
+  scene.innerHTML='<picture><source media="(orientation:portrait)" srcset="art/menu-garden-portrait.png"><img class="home-art" src="art/menu-garden.png" alt="Pituca, Pompom, Romeu, Luna, Frida, Maritaca" width="1672" height="941" fetchpriority="high"></picture>';
+  // Prepare both compositions before exposing controls, including after rotation.
+  const decodeArt=src=>{const image=new Image();image.src=src;return image.decode();};
+  Promise.all([
+    decodeArt('art/menu-garden.png'),decodeArt('art/menu-garden-portrait.png'),
+    ...[400,500,600,700].map(weight=>document.fonts.load(`${weight} 16px Poppins`)),
+    document.fonts.ready
+  ]).then(()=>{
     assetsReady=true;finishBoot();
   }).catch(()=>{$('home-loading').setAttribute('role','alert');$('home-loading').textContent=GolfI18n.t('engineLoading');});
   function finishBoot(){

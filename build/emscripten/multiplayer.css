@@ -202,20 +202,25 @@ body[data-home=campaign] .music-controls{display:none}
 body.match-info-hidden #hud,body.match-info-hidden #actions,body.match-info-hidden #help,body.match-info-hidden #minimap,body.match-info-hidden #course-status,body.match-info-hidden #music-controls{display:none!important}
 @media(max-width:600px),(pointer:coarse){#toggle-match-info{right:calc(8px + var(--safe-right));bottom:calc(62px + var(--safe-bottom))}body.match-info-hidden #toggle-match-info{bottom:calc(12px + var(--safe-bottom))}}
 
-/* Preserve the supplied artwork and expose all menu choices in one group. */
+/* Full-viewport scenery; every label and control remains real HTML. */
 #home-loading{z-index:8;background:#edf4e3}
-.home-screen[data-screen] .home-brand{display:none}
-.home-screen[data-screen] .home-scenery{inset:0 0 90px}
-.home-screen .home-scenery .home-art{object-fit:contain;object-position:center}
-.home-screen{background:#284b35}
-.home-screen[data-screen] .main-menu{top:auto;bottom:max(14px,var(--safe-bottom));left:50%;right:auto;transform:translateX(-50%);width:min(620px,96%);display:flex;justify-content:center;gap:10px;animation:none}
-.home-screen .main-menu button,.home-screen .main-menu .menu-exit{flex:1;min-width:0;min-height:50px;font-size:clamp(.75rem,2.7vw,1rem);padding:10px 14px}
-.home-screen .main-menu .menu-icon{font-size:1rem}
-.home-screen .continue-home{bottom:max(20px,var(--safe-bottom));min-height:48px}
-@media(max-width:480px){.home-screen .main-menu button{gap:5px;padding:10px 8px}.home-screen .main-menu .menu-icon{display:none}}
-/* Keep the artwork and controls together, including on tall portrait screens. */
-.home-screen{display:flex;flex-direction:column;align-items:center;justify-content:center}
-.home-screen[data-screen] .home-scenery{position:relative;inset:auto;width:min(100%,calc((100dvh - 110px)*16/9));height:auto;aspect-ratio:16/9;flex:none}
-.home-screen[data-screen] .main-menu{position:relative;inset:auto;transform:none;padding:16px 8px;margin:0;width:min(620px,100%)}
-.home-screen .continue-home{position:relative;inset:auto;transform:none;margin:16px 0;flex:none}
-.home-screen .continue-home:active{transform:translateY(1px)}
+.home-screen{display:block;background:#83ae52}
+.home-screen[data-screen] .home-scenery{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
+.home-screen .home-scenery .home-art{object-fit:cover;object-position:center}
+.home-screen[data-screen] .main-menu{position:absolute;top:auto;right:3.5%;bottom:max(5%,calc(16px + var(--safe-bottom)));left:auto;transform:none;width:min(270px,24vw);display:grid;gap:12px;animation:none}
+.home-screen .main-menu button{min-height:54px;padding:12px 18px}
+.home-screen .continue-home{position:absolute;bottom:max(3%,calc(16px + var(--safe-bottom)));left:50%;transform:translateX(-50%);margin:0;min-height:48px}
+.home-screen .continue-home:active{transform:translateX(-50%) translateY(1px)}
+@media(orientation:portrait){
+ .home-screen[data-screen] .main-menu{left:50%;right:auto;bottom:max(3%,calc(16px + var(--safe-bottom)));width:min(340px,84vw);transform:translateX(-50%);gap:9px}
+ .home-screen .main-menu button{min-height:50px;padding:10px 18px}
+ .home-screen .main-menu .menu-exit{min-height:44px}
+}
+@media(max-height:550px) and (orientation:landscape){
+ .home-screen[data-screen] .home-scenery{inset:0}
+ .home-screen[data-screen] .home-brand{left:33.5%;width:60%;top:3%}
+ .home-screen[data-screen] .main-menu{left:auto;right:4%;bottom:max(12%,var(--safe-bottom));width:28%;transform:none;gap:8px}
+ .home-screen .main-menu button{min-height:44px;font-size:.85rem;padding:8px 12px}
+ .home-screen .continue-home{left:auto;right:4%;bottom:max(8%,var(--safe-bottom));max-width:40%;transform:none;padding:8px 20px;font-size:.8rem;min-height:44px}
+ .home-screen .continue-home:active{transform:translateY(1px)}
+}
