@@ -3,30 +3,22 @@
   'use strict';
   const NS='http://www.w3.org/2000/svg';
   const el=(tag,attrs={},children=[])=>{const e=document.createElementNS(NS,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);e.append(...children);return e;};
-  // A closed original ink outline separates fur from lawn. Trace it once on
-  // decode, inside each anatomical guide, so transformed pixels have no green
-  // rectangular edges. This is a small, cached runtime sprite, never per frame.
-  function sprite(original,p){
+  // Cached vector silhouettes remove scenery fragments without changing the art.
+  // Supersampling keeps the contour smooth at desktop and mobile display scales.
+  function sprite(original,p,contour){
     const x=Math.max(0,Math.floor(p.head[0]-p.head[2]-35)),y=Math.max(0,Math.floor(p.head[1]-p.head[3]-25));
-    const w=Math.min(original.naturalWidth-x,Math.ceil(p.head[2]*2+115)),h=Math.ceil(p.anchor[1]-y+18);
-    const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(original,x,y,w,h,0,0,w,h);const pixels=ctx.getImageData(0,0,w,h);
-    ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(-x,-y);const path=new Path2D(p.body);ctx.fill(path);ctx.lineWidth=16;ctx.lineJoin='round';ctx.stroke(path);ctx.restore();const guide=ctx.getImageData(0,0,w,h).data;
-    ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(-x,-y);ctx.fill(path);ctx.globalCompositeOperation='destination-out';ctx.lineWidth=14;ctx.stroke(path);ctx.restore();const core=ctx.getImageData(0,0,w,h).data;
-    const seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let first=0,last=0;
-    function visit(i){if(seen[i])return;const k=i*4,a=pixels.data;const ink=guide[k+3]&&((Math.max(a[k],a[k+1],a[k+2])<130&&a[k]+a[k+1]+a[k+2]<245)||(core[k+3]&&(a[k+2]>a[k+1]*.8||a[k]>a[k+1]*1.08)));if(ink)return;seen[i]=1;queue[last++]=i;}
-    for(let i=0;i<w*h;i++)if(!guide[i*4+3]||i<w||i>=w*(h-1)||i%w===0||i%w===w-1)visit(i);
-    while(first<last){const i=queue[first++];if(i%w)visit(i-1);if(i%w<w-1)visit(i+1);if(i>=w)visit(i-w);if(i<w*(h-1))visit(i+w);}
-    if(p.id==='maritaca'){ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(-x,-y);ctx.fill(path);ctx.restore();const bird=ctx.getImageData(0,0,w,h).data;for(let i=0;i<w*h;i++)if(!bird[i*4+3])pixels.data[i*4+3]=0;}
-    else for(let i=0;i<w*h;i++)if(seen[i]||!guide[i*4+3])pixels.data[i*4+3]=0;
-    ctx.clearRect(0,0,w,h);ctx.putImageData(pixels,0,0);
-    if(p.id==='frida'){const [a,b,cw,ch]=original.naturalWidth===1672?[919,600,28,47]:[554,990,29,50];ctx.clearRect(a-x,b-y,cw,ch);}
+    const w=Math.min(original.naturalWidth-x,Math.ceil(p.head[2]*2+115)),h=Math.ceil(p.anchor[1]-y+18),scale=2;
+    const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const ctx=c.getContext('2d');
+    ctx.scale(scale,scale);ctx.drawImage(original,x,y,w,h,0,0,w,h);
+    ctx.globalCompositeOperation='destination-in';ctx.save();ctx.translate(-x,-y);ctx.fill(new Path2D(contour),'evenodd');ctx.restore();ctx.globalCompositeOperation='source-over';
+    ctx.save();ctx.translate(-x,-y);ctx.strokeStyle='#202024';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke(new Path2D(contour));ctx.restore();
     const tails=original.naturalWidth===1672?{luna:[550,587,40,51],romeu:[731,586,43,53],frida:[1043,585,38,55],maritaca:[1148,535,38,23],pompom:[1021,723,70,103]}:{luna:[231,984,43,52],romeu:[392,982,43,53],frida:[664,987,34,50],maritaca:[752,942,35,41],pompom:[635,1108,64,95]};
     const bounds=tails[p.id];let tail;
-    if(bounds){const [a,b,cw,ch]=bounds,t=document.createElement('canvas');t.width=w;t.height=h;const tc=t.getContext('2d');tc.drawImage(c,0,0);tc.globalCompositeOperation='destination-in';tc.fillRect(a-x,b-y,cw,ch);tail={url:t.toDataURL(),x,y,w,h};ctx.clearRect(a-x,b-y,cw,ch);}
-    return {url:c.toDataURL(),tail,x,y,w,h,canvas:c};
+    if(bounds){const [a,b,cw,ch]=bounds,t=document.createElement('canvas');t.width=w*scale;t.height=h*scale;const tc=t.getContext('2d');tc.scale(scale,scale);tc.drawImage(c,0,0,w,h);tc.globalCompositeOperation='destination-in';tc.fillRect(a-x,b-y,cw,ch);tail={url:t.toDataURL(),x,y,w,h};ctx.clearRect(a-x,b-y,cw,ch);}
+    return {url:c.toDataURL(),tail,x,y,w,h,canvas:c,scale};
   }
   function without(source,paths){
-    const c=document.createElement('canvas'),mask=document.createElement('canvas');c.width=mask.width=source.w;c.height=mask.height=source.h;const m=mask.getContext('2d');m.translate(-source.x,-source.y);for(const path of paths)m.fill(new Path2D(path));m.globalCompositeOperation='destination-out';m.lineWidth=2.4;for(const path of paths)m.stroke(new Path2D(path));
+    const c=document.createElement('canvas'),mask=document.createElement('canvas');c.width=mask.width=source.canvas.width;c.height=mask.height=source.canvas.height;const m=mask.getContext('2d');m.scale(source.scale,source.scale);m.translate(-source.x,-source.y);for(const path of paths)m.fill(new Path2D(path));m.globalCompositeOperation='destination-out';m.lineWidth=2.4;for(const path of paths)m.stroke(new Path2D(path));
     const ctx=c.getContext('2d');ctx.drawImage(source.canvas,0,0);ctx.globalCompositeOperation='destination-out';ctx.drawImage(mask,0,0);return {...source,url:c.toDataURL(),canvas:c};
   }
   const oval=([x,y,rx,ry])=>`M${x-rx} ${y}a${rx} ${ry} 0 1 0 ${rx*2} 0a${rx} ${ry} 0 1 0 -${rx*2} 0`;
@@ -60,7 +52,7 @@
       ]}
   };
   function mount(container,home){
-    let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0;const originals={};
+    let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0;const originals={};let contours;
     const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)');
     function image(file,w,h){return el('image',{href:`art/${file}`,width:w,height:h});}
     function build(){
@@ -105,7 +97,7 @@
       for(const [path,x,y]of d.vegetation){const leaf=cut(path,daylight,'wind'),foliage=leaf.querySelector('image');foliage.setAttribute('href',`art/menu-sky-clean${suffix}.png`);foliage.style.transformOrigin=`${x}px ${y}px`;animate(foliage,[{transform:'skewX(-.35deg) rotate(-.28deg)'},{transform:'skewX(.45deg) rotate(.3deg)',offset:.43},{transform:'skewX(-.35deg) rotate(-.28deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});}
       const pets=el('g',{filter:'url(#menu-character-light)'});root.append(pets);
       for(const [index,p]of d.pets.entries()){
-        const source=sprite(originals[original],p),rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
+        const source=sprite(originals[original],p,contours[layout][p.id].path),rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
         if(p.id!=='maritaca')pets.append(el('ellipse',{cx:p.anchor[0],cy:p.anchor[1]+1,rx:p.head[2]*.85,ry:12,fill:'#224a31',opacity:'.24'}));
         const animal=el('g',{'data-pet':p.id});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
         animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
@@ -154,7 +146,7 @@
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
     const images=['menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
-    const ready=Promise.all(images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
+    const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
     return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,lastClock};}});
   }
   window.GolfMenuScene=Object.freeze({mount});

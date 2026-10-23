@@ -1,5 +1,25 @@
 # Desktop animation repair
 
+## Character contour repair
+
+`menu-contours.json` stores smooth quadratic vector silhouettes in original
+image coordinates for all six animals in both orientations. The cached sprite
+uses these masks instead of runtime color flood filling, which admitted isolated
+lawn and path pixels around the ears, shoulders and paws. Original character
+colors remain raster pixels; only their cutout boundaries are vector paths.
+The masks preserve Frida's single right tail, Pituca's absence of a tail and
+the opening between Pompom's body and tail.
+
+Sprites and rig subtraction masks render at twice their logical resolution,
+with antialiased edges and a thin outline matching the original ink. This work
+happens only at scene initialization/orientation changes, never per frame.
+The existing part transforms, positions, lighting and navigation are retained.
+The motion regression checks supersampling, partial edge alpha, and absence
+of the former path fragment between Romeu's ear and shoulder in both layouts.
+
+Day/night desktop screenshots and a portrait browser rendering were inspected
+alongside the actual motion comparisons described below.
+
 The desktop diagnosis reproduced an actual stopped scene: under
 `prefers-reduced-motion: reduce`, all 45 existing WAAPI animations were paused
 by `visibility()`. The mill's computed transform stayed at the identity matrix
