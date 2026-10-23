@@ -34,6 +34,8 @@
 <script>var Module={canvas:document.getElementById('canvas'),print:console.log,printErr:console.error,setStatus:function(text){if(window.GolfCourse?.initialized)return;document.getElementById('engine-status').textContent=window.GolfI18n.t('enginePreparing');const p=document.getElementById('engine-progress'),m=text.match(/\((\d+(?:\.\d+)?)\/(\d+)\)/);if(m&&Number(m[2])>Number(m[1]))p.value=Number(m[1])/Number(m[2]);else p.removeAttribute('value');}};</script>
 <script src="campaign-data.js"></script>
 <script src="adventure.js"></script>
+<script src="menu-clock.js"></script>
+<script src="menu-scene.js"></script>
 <script src="home.js"></script>
 <script src="multiplayer.js"></script>
 <script src="course.js"></script>

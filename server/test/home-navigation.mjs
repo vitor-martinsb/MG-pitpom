@@ -45,7 +45,7 @@ try{
       assert.equal(await page.locator('#play-course').textContent(),await page.evaluate(()=>GolfI18n.t('playCourse')));
     }
     await page.locator('#close-level-selection').click();await page.locator('#main-menu').waitFor({state:'visible'});
-    if(touch){await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>document.querySelector('.home-art').complete&&document.querySelector('.home-art').currentSrc.endsWith(touch?'menu-garden-portrait.png':'menu-garden.png'));await page.waitForTimeout(400);await page.screenshot({path:'../out/home-navigation/menu-landscape.png'});await page.setViewportSize({width,height});}
+    if(touch){await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>document.querySelector('.home-art').complete&&document.querySelector('.home-art').currentSrc.endsWith('menu-garden.png'));await page.waitForTimeout(400);await page.screenshot({path:'../out/home-navigation/menu-landscape.png'});await page.setViewportSize({width,height});}
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     // Seed actual legacy/new records on IDBFS, then verify the new menu reads
     // them without changing keys, scores or sequential native validation.

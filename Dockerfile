@@ -34,7 +34,7 @@ WORKDIR /app
 COPY --chown=node:node --from=server /app/server /app/server
 COPY --chown=node:node --from=native /app/out/server-native/golf_physics_worker /app/out/server-native/golf_physics_worker
 COPY --chown=node:node --from=web /app/out/web/golf.html /app/out/web/golf.js /app/out/web/golf.wasm /app/out/web/golf.wasm.gz /app/out/web/
-COPY --chown=node:node --from=web /app/out/web/multiplayer.js /app/out/web/multiplayer.css /app/out/web/course.js /app/out/web/adventure.js /app/out/web/home.js /app/out/web/music.js /app/out/web/lofi.js /app/out/web/i18n.js /app/out/web/i18n-data.js /app/out/web/
+COPY --chown=node:node --from=web /app/out/web/multiplayer.js /app/out/web/multiplayer.css /app/out/web/course.js /app/out/web/adventure.js /app/out/web/home.js /app/out/web/menu-clock.js /app/out/web/menu-scene.js /app/out/web/music.js /app/out/web/lofi.js /app/out/web/i18n.js /app/out/web/i18n-data.js /app/out/web/
 COPY --chown=node:node --from=web /app/out/web/campaign-data.js /app/out/web/
 COPY --chown=node:node --from=web /app/out/web/art/ /app/out/web/art/
 COPY --chown=node:node data/ /app/data/

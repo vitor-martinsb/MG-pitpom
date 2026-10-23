@@ -38,7 +38,7 @@ try {
   await page.setViewportSize({width,height});
   await page.waitForFunction(portrait=>{const img=document.querySelector('.home-art');return img.complete&&img.currentSrc.endsWith(portrait?'menu-garden-portrait.png':'menu-garden.png');},height>width);
   assert.equal(await page.locator('.home-art').evaluate(e=>getComputedStyle(e).objectFit),'cover');
-  const bounds=await page.locator('.home-art').boundingBox();
+  const bounds=await page.locator('.living-menu-art').boundingBox();
   assert.equal(bounds.x,0);assert.equal(bounds.y,0);assert.equal(bounds.width,width);assert.equal(bounds.height,height);
   assert.equal(await page.locator('#continue-home').isHidden(),true);
   for(const button of await page.locator('#main-menu button').all()){
