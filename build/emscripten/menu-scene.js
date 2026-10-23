@@ -18,7 +18,22 @@
     while(first<last){const i=queue[first++];if(i%w)visit(i-1);if(i%w<w-1)visit(i+1);if(i>=w)visit(i-w);if(i<w*(h-1))visit(i+w);}
     if(p.id==='maritaca'){ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(-x,-y);ctx.fill(path);ctx.restore();const bird=ctx.getImageData(0,0,w,h).data;for(let i=0;i<w*h;i++)if(!bird[i*4+3])pixels.data[i*4+3]=0;}
     else for(let i=0;i<w*h;i++)if(seen[i]||!guide[i*4+3])pixels.data[i*4+3]=0;
-    ctx.clearRect(0,0,w,h);ctx.putImageData(pixels,0,0);return {url:c.toDataURL(),x,y,w,h};
+    ctx.clearRect(0,0,w,h);ctx.putImageData(pixels,0,0);
+    if(p.id==='frida'){const [a,b,cw,ch]=original.naturalWidth===1672?[919,600,28,47]:[554,990,29,50];ctx.clearRect(a-x,b-y,cw,ch);}
+    const tails=original.naturalWidth===1672?{luna:[550,587,40,51],romeu:[731,586,43,53],frida:[1043,585,38,55],maritaca:[1148,535,38,23],pompom:[1021,723,70,103]}:{luna:[231,984,43,52],romeu:[392,982,43,53],frida:[664,987,34,50],maritaca:[752,942,35,41],pompom:[635,1108,64,95]};
+    const bounds=tails[p.id];let tail;
+    if(bounds){const [a,b,cw,ch]=bounds,t=document.createElement('canvas');t.width=w;t.height=h;const tc=t.getContext('2d');tc.drawImage(c,0,0);tc.globalCompositeOperation='destination-in';tc.fillRect(a-x,b-y,cw,ch);tail={url:t.toDataURL(),x,y,w,h};ctx.clearRect(a-x,b-y,cw,ch);}
+    return {url:c.toDataURL(),tail,x,y,w,h,canvas:c};
+  }
+  function without(source,paths){
+    const c=document.createElement('canvas'),mask=document.createElement('canvas');c.width=mask.width=source.w;c.height=mask.height=source.h;const m=mask.getContext('2d');m.translate(-source.x,-source.y);for(const path of paths)m.fill(new Path2D(path));m.globalCompositeOperation='destination-out';m.lineWidth=2.4;for(const path of paths)m.stroke(new Path2D(path));
+    const ctx=c.getContext('2d');ctx.drawImage(source.canvas,0,0);ctx.globalCompositeOperation='destination-out';ctx.drawImage(mask,0,0);return {...source,url:c.toDataURL(),canvas:c};
+  }
+  const oval=([x,y,rx,ry])=>`M${x-rx} ${y}a${rx} ${ry} 0 1 0 ${rx*2} 0a${rx} ${ry} 0 1 0 -${rx*2} 0`;
+  function cloudSprite(original,[x,y,w,h]){
+    const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(original,x,y,w,h,0,0,w,h);const pixels=ctx.getImageData(0,0,w,h);
+    for(let k=0;k<pixels.data.length;k+=4)if(pixels.data[k]<210||pixels.data[k+1]<205||pixels.data[k+2]<180)pixels.data[k+3]=0;
+    ctx.putImageData(pixels,0,0);return {url:c.toDataURL(),x,y,w,h};
   }
   const layouts={
     landscape:{w:1672,h:941,sun:[1414,110,79],hub:[1259,304],post:'M1118 548L1144 548L1144 646L1118 646Z',
@@ -59,7 +74,7 @@
       const daylight=el('g',{filter:'url(#menu-light)'});root.append(daylight);
       const golden=el('linearGradient',{id:'menu-golden',x1:0,y1:0,x2:0,y2:1,gradientUnits:'objectBoundingBox'},[el('stop',{offset:0,'stop-color':'#efaa83'}),el('stop',{offset:'.3','stop-color':'#efaa83','stop-opacity':'.95'}),el('stop',{offset:'.65','stop-color':'#efaa83','stop-opacity':0})]);defs.append(golden);
       const sunset=el('g',{'data-sunset':'true'},[el('rect',{width:d.w,height:d.h,fill:'url(#menu-golden)'})]);
-      daylight.append(image(`menu-living-clean${suffix}.png`,d.w,d.h),sunset);
+      daylight.append(image(`menu-sky-clean${suffix}.png`,d.w,d.h));
       const solar=el('g',{'data-night':'moon'}),[sx,sy,sr]=d.sun;
       solar.append(el('circle',{cx:sx,cy:sy,r:sr,fill:'#fff1bc'}));
       for(const [x,y,r]of [[-.28,-.23,.19],[.18,.2,.23],[.28,-.32,.1],[-.35,.32,.12],[.02,-.5,.13]])solar.append(el('circle',{cx:sx+x*sr,cy:sy+y*sr,r:sr*r,fill:'#dfcf9e',opacity:'.4'}));
@@ -73,21 +88,32 @@
         const img=source?el('image',{href:source.url,x:source.x,y:source.y,width:source.w,height:source.h}):image(original,d.w,d.h);
         const group=el('g',kind?{'data-motion':kind}:{});group.append(el('g',{'clip-path':`url(#${id})`},[img]));parent.append(group);return group;
       }
-      function animate(group,frames,options){group.style.transformBox='view-box';animations.push(group.animate(frames,{iterations:Infinity,...options}));}
+      function animate(group,frames,options){group.style.transformBox='view-box';const eased=frames.map(frame=>({easing:options.easing??'linear',...frame}));animations.push(group.animate(eased,{iterations:Infinity,...options,easing:'linear'}));}
+      const clouds=layout==='landscape'?[[430,25,215,102],[1083,28,130,61],[1530,80,142,101],[236,142,110,58]]:[[181,402,187,110],[577,440,147,65],[800,295,141,83],[824,511,117,75]];
+      for(const [i,bounds]of clouds.entries()){
+        const source=cloudSprite(originals[original],bounds),cloud=el('g',{'data-motion':'cloud'});
+        for(const dx of [-d.w,0,d.w])cloud.append(el('image',{href:source.url,x:source.x+dx,y:source.y,width:source.w,height:source.h}));
+        daylight.append(cloud);animate(cloud,[{transform:'translateX(0px)'},{transform:`translateX(${d.w}px)`}],{duration:d.w/(.65+i*.06)*1000,easing:'linear'});
+      }
+      daylight.append(sunset);
+      const water=el('g',{'data-motion':'water','pointer-events':'none'}),waterMask=`menu-water-${++serial}`;
+      defs.append(el('clipPath',{id:waterMask},[el('path',{d:layout==='landscape'?'M1190 522H1672V768L1540 768L1513 626L1444 613L1385 635L1288 586L1190 564Z':'M779 900H941V974L800 988L749 961Z'})]));water.setAttribute('clip-path',`url(#${waterMask})`);
+      const surface=el('g');for(let i=0;i<16;i++){const x=layout==='landscape'?1195+(i*67)%460:778+(i*37)%180,y=layout==='landscape'?539+(i*29)%179:909+(i*19)%66;surface.append(el('path',{d:`M${x} ${y}q12 -3 25 0t25 0`,fill:'none',stroke:i%3?'#c2f2e6':'#f8ffed','stroke-width':i%3?1.2:1.8,'stroke-linecap':'round',opacity:.22+(i%3)*.05}));}water.append(surface);daylight.append(water);
+      animate(surface,[{transform:'translate(0px,0px)',opacity:.55},{transform:'translate(8px,1px)',opacity:.95,offset:.48},{transform:'translate(0px,0px)',opacity:.55}],{duration:8100,easing:'ease-in-out'});
       const rotor=cut(d.blades,daylight,'mill');rotor.style.transformOrigin=`${d.hub[0]}px ${d.hub[1]}px`;animate(rotor,[{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:72000,easing:'linear'});
       cut(d.post); // The parrot keeps its original perch even on the clean plate.
-      for(const [path,x,y]of d.vegetation){const leaf=cut(path,daylight,'wind');leaf.style.transformOrigin=`${x}px ${y}px`;animate(leaf,[{transform:'skewX(-.16deg) rotate(-.12deg)'},{transform:'skewX(.24deg) rotate(.15deg)',offset:.43},{transform:'skewX(-.16deg) rotate(-.12deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});}
+      for(const [path,x,y]of d.vegetation){const leaf=cut(path,daylight,'wind'),foliage=leaf.querySelector('image');foliage.setAttribute('href',`art/menu-sky-clean${suffix}.png`);foliage.style.transformOrigin=`${x}px ${y}px`;animate(foliage,[{transform:'skewX(-.35deg) rotate(-.28deg)'},{transform:'skewX(.45deg) rotate(.3deg)',offset:.43},{transform:'skewX(-.35deg) rotate(-.28deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});}
       const pets=el('g',{filter:'url(#menu-character-light)'});root.append(pets);
       for(const [index,p]of d.pets.entries()){
         const source=sprite(originals[original],p),rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
         if(p.id!=='maritaca')pets.append(el('ellipse',{cx:p.anchor[0],cy:p.anchor[1]+1,rx:p.head[2]*.85,ry:12,fill:'#224a31',opacity:'.24'}));
         const animal=el('g',{'data-pet':p.id});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
-        animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.001,1.004)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
-        cut(rectangle+(p.tail?p.tail[0]:''),animal,'',source);
-        if(p.tail){const tail=cut(p.tail[0],animal,'tail',source);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;animate(tail,[{transform:'rotate(-1deg)'},{transform:'rotate(1.3deg)',offset:.42},{transform:'rotate(-1deg)'}],{duration:6100+index*587,delay:-index*1700,easing:'ease-in-out'});}
-        const head=cut(`M${p.head[0]-p.head[2]} ${p.head[1]}a${p.head[2]} ${p.head[3]} 0 1 0 ${p.head[2]*2} 0a${p.head[2]} ${p.head[3]} 0 1 0 -${p.head[2]*2} 0`,animal,'head',source);
+        animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
+        if(source.tail){const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;animate(tail,[{transform:'rotate(-2deg)'},{transform:'rotate(2.4deg)',offset:.42},{transform:'rotate(-2deg)'}],{duration:6100+index*587,delay:-index*1700,easing:'ease-in-out'});}
+        cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
+        const head=cut(oval(p.head),animal,'head',without(source,p.ears.map(oval)));
         head.style.transformOrigin=`${p.head[0]}px ${p.head[1]+p.head[3]*.7}px`;
-        animate(head,[{transform:'rotate(0deg)'},{transform:'rotate(0deg)',offset:.67},{transform:'rotate(.28deg)',offset:.75},{transform:'rotate(-.18deg)',offset:.86},{transform:'rotate(0deg)'}],{duration:17000+index*2429,delay:-index*2917,easing:'ease-in-out'});
+        animate(head,[{transform:'rotate(0deg)'},{transform:'rotate(0deg)',offset:.58},{transform:'rotate(.65deg)',offset:.73},{transform:'rotate(-.4deg)',offset:.86},{transform:'rotate(0deg)'}],{duration:17000+index*2429,delay:-index*2917,easing:'ease-in-out'});
         const lids=el('g',{'data-motion':'blink'});head.append(lids);
         for(const [x,y,rx,ry,color]of p.eyes){const lid=el('g');lid.style.transformOrigin=`${x}px ${y}px`;lid.style.transformBox='view-box';
           lid.append(el('ellipse',{cx:x,cy:y,rx:rx+1.5,ry:ry+1.5,fill:color}),el('path',{d:`M${x-rx+2} ${y}Q${x} ${y+4} ${x+rx-2} ${y}`,fill:'none',stroke:'#28272b','stroke-width':2.2,'stroke-linecap':'round'}));lids.append(lid);
@@ -97,7 +123,7 @@
         }
         for(const [i,[x,y,rx,ry]]of p.ears.entries()){
           const ear=cut(`M${x-rx} ${y}a${rx} ${ry} 0 1 0 ${rx*2} 0a${rx} ${ry} 0 1 0 -${rx*2} 0`,head,'ear',source);ear.style.transformOrigin=`${x}px ${y-ry*.55}px`;
-          animate(ear,[{transform:'rotate(0deg)'},{transform:'rotate(0deg)',offset:.77},{transform:`rotate(${i?-0.5:.5}deg)`,offset:.82},{transform:'rotate(0deg)',offset:.88},{transform:'rotate(0deg)'}],{duration:19900+index*1777+i*389,delay:-index*3677-i*1700,easing:'ease-in-out'});
+          animate(ear,[{transform:'rotate(0deg)'},{transform:'rotate(0deg)',offset:.70},{transform:`rotate(${i?-1.2:1.2}deg)`,offset:.80},{transform:'rotate(0deg)',offset:.88},{transform:'rotate(0deg)'}],{duration:19900+index*1777+i*389,delay:-index*3677-i*1700,easing:'ease-in-out'});
         }
       }
       const lamps=el('g',{'data-night':'lamps'}),lights=layout==='portrait'?[[709,791],[712,741],[855,1000],[917,1010],[200,839],[76,804]]:[[1259,409],[1259,358],[1434,638],[1521,655],[209,421],[1109,441]];
@@ -118,17 +144,18 @@
       lastClock=performance.now();
     }
     function visibility(){
-      const run=!home.hidden&&!document.hidden&&!motion.matches;
-      for(const a of animations)if(run&&a.playState!=='running')a.play();else if(!run&&a.playState==='running')a.pause();
+      const run=!home.hidden&&!document.hidden;
+      for(const a of animations){a.updatePlaybackRate(motion.matches?.3:1);if(run&&a.playState!=='running')a.play();else if(!run&&a.playState==='running')a.pause();}
+      home.dataset.motion=motion.matches?'gentle':'full';
       clearInterval(tick);tick=undefined;
       if(!home.hidden&&!document.hidden){clock=new Date();updateLight();tick=setInterval(()=>{clock=new Date();updateLight();},1000);}
     }
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
-    const images=['menu-living-clean.png','menu-living-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
+    const images=['menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
     const ready=Promise.all(images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
-    return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,lastClock};}});
+    return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,lastClock};}});
   }
   window.GolfMenuScene=Object.freeze({mount});
 })();

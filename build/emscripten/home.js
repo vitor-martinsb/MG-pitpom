@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById(id),home=$('home');
-  let route='splash',ready=false,nativeReady=false,assetsReady=false,bootComplete=false,lastNativeMenu=false;
+  let route='splash',ready=false,nativeReady=false,assetsReady=false,bootComplete=false,lastNativeMenu=false,campaignRequested=false;
   const connectSettings=document.createElement('span');connectSettings.id='connect-settings-slot';$('back-main').before(connectSettings);
   const lobbyChat=document.createElement('button');lobbyChat.id='lobby-open-chat';lobbyChat.className='secondary';lobbyChat.dataset.i18n='chat';lobbyChat.textContent=GolfI18n.t('chat');$('lobby-leave').before(lobbyChat);
   const trail=$('lobby-adventure'),journey=document.createElement('details'),journeyTitle=document.createElement('summary');
@@ -36,6 +36,7 @@
   $('home-pets').hidden=true;
   function show(next,focus=true){
     if(['splash','menu'].includes(next)&&!bootComplete)return;
+    if(next!=='menu')campaignRequested=false;
     route=next;home.hidden=!['splash','menu'].includes(next);home.dataset.screen=next;
     if(next!=='game')roomPhase('');
     document.body.dataset.home=next;
@@ -50,10 +51,12 @@
     if(home.hidden||e.target.closest?.('input,select,summary'))return;
     if(route==='splash'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();e.stopImmediatePropagation();proceed();}
   },true);
-  $('offline').onclick=()=>{
+  function openCampaign(){
     if(!ready)return;window.GolfOnline?.cancelAim();
-    if(Module.ccall('golf_ui_open_level_selection','number',[],[])){show('campaign',false);}
-  };
+    if(Module.ccall('golf_ui_open_level_selection','number',[],[])){campaignRequested=false;show('campaign',false);}
+    else campaignRequested=true;
+  }
+  $('offline').onclick=openCampaign;
   $('open-multiplayer').onclick=()=>{show('multiplayer');window.GolfOnline?.resume();};
   $('back-main').onclick=()=>show('menu');
   $('exit-game').onclick=()=>show('splash');
@@ -66,6 +69,7 @@
     roomPhase,
     native(selection){
       nativeReady=!!selection.menu;finishBoot();
+      if(campaignRequested&&nativeReady&&route==='menu')openCampaign();
       if(selection.menu&&!selection.open&&!lastNativeMenu&&route==='game'&&!window.GolfOnline?.active())show('menu');
       if(selection.loading&&route==='campaign')show('game',false);
       lastNativeMenu=!!selection.menu;

@@ -26,7 +26,7 @@ static void online_preview(void) {}
 #endif
 
 static struct {
-    bool active, playing, shot_pending, loading, has_snapshot, awaiting_ready, impact;
+    bool active, playing, shot_pending, loading, has_snapshot, awaiting_ready, impact, returning_to_menu;
     int requested_level, hole;
     uint32_t local_id, camera_id;
     float age, interval, time;
@@ -76,6 +76,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
     golf_game_t *game=golf_game_get();
     if (!type) {json_value_free(value);return;}
     if (!strcmp(type,"welcome")) {
+        online.returning_to_menu=false;
         online.active=true; online.local_id=(uint32_t)json_object_get_number(o,"id");
         online.camera_id=online.local_id; online.requested_level=-1;
         game->local_player_id=online.local_id; game->players[0].id=online.local_id;
@@ -186,14 +187,22 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
     } else if (!strcmp(type,"disconnected")) { online.playing=false; online.shot_pending=false;
     } else if (!strcmp(type,"leave")) {
         online.active=false; online.playing=false;
+        online.loading=false; online.awaiting_ready=false; online.requested_level=-1;
         game->begin_camera_animation.active=false;
         golf_player_t local=*golf_game_get_local_player(); game->players[0]=local; game->player_count=1;
-        if(golf_get()->level) golf_goto_main_menu();
+        online.returning_to_menu=golf_get()->level==NULL;
+        if(!online.returning_to_menu) golf_goto_main_menu();
     }
     json_value_free(value);
 }
 
 void golf_online_update(float dt) {
+    /* Leaving during asynchronous loading must not strand the offline client
+       in IN_GAME when the outstanding level finishes on a later frame. */
+    if(online.returning_to_menu){
+        if(golf_get()->level){online.returning_to_menu=false;golf_goto_main_menu();}
+        return;
+    }
     if(!online.active) return;
     golf_t *golf=golf_get(); golf_game_t *game=golf_game_get();
     if(online.requested_level>=0 && golf->state!=GOLF_STATE_TITLE_SCREEN && golf_data_get_load_state(golf->level_loading_path)==GOLF_DATA_LOADED) {

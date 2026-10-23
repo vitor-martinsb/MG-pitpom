@@ -40,7 +40,8 @@ animations have different durations and offsets. Blink intervals vary within
 each cycle, with eyelids attached to the moving heads. Plants share the same
 gentle wind rhythm, and the windmill makes one turn every 72 seconds. The rig
 does not restart when going between the welcome and main menu. Animations
-pause without resetting while the menu/tab is hidden and respect reduced motion.
+pause without resetting while the menu/tab is hidden. Reduced motion continues
+at 30% speed; see `menu-motion.md` for the desktop repair and cloud-free plates.
 Only an orientation change rebuilds the rig for the corresponding artwork.
 The original static image remains the fallback if a new asset cannot load.
 

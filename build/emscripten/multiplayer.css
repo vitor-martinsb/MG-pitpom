@@ -204,6 +204,7 @@ body.match-info-hidden #hud,body.match-info-hidden #actions,body.match-info-hidd
 .home-screen[data-scene-ready=true] .home-art{visibility:hidden}
 .home-screen .home-brand h1,.home-screen .home-kicker{color:var(--menu-ink,#173f26)}
 .home-screen .home-brand h1{text-shadow:0 2px 8px rgb(0 0 0 / calc(var(--menu-night,0)*.2))}
+.home-screen .home-brand h1{margin-top:0}
 .home-screen .main-menu button,.home-screen .continue-home{background:var(--menu-surface,#fff9e3);color:var(--menu-ink,#173f26);border-color:color-mix(in srgb,var(--menu-ink,#173f26) 18%,transparent)}
 .home-screen .main-menu button:first-child{background:var(--menu-accent,#496c37);color:#fff9ec}
 .home-screen .continue-home{animation-name:continue-lit-pulse}
