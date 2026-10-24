@@ -99,8 +99,8 @@
       const d=layouts[layout],suffix=layout==='portrait'?'-portrait':'',original=`menu-garden${suffix}.png`;
       root=el('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'xMidYMid slice','aria-hidden':'true',class:'living-menu-art'});
       const defs=el('defs');root.append(defs);
-      const matrix=el('feColorMatrix',{type:'matrix',values:'1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0'}),filter=el('filter',{id:'menu-light',x:'0%',y:'0%',width:'100%',height:'100%','color-interpolation-filters':'sRGB'},[matrix]);defs.append(filter);
-      const characterMatrix=matrix.cloneNode(),characterFilter=el('filter',{id:'menu-character-light',x:'-2%',y:'-2%',width:'104%',height:'104%','color-interpolation-filters':'sRGB'},[characterMatrix]);defs.append(characterFilter);
+      const matrix=el('feColorMatrix',{type:'matrix',values:'1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0'}),filter=el('filter',{id:'menu-light',filterUnits:'userSpaceOnUse',x:0,y:0,width:d.w,height:d.h,'color-interpolation-filters':'sRGB'},[matrix]);defs.append(filter);
+      const characterMatrix=matrix.cloneNode(),characterFilter=el('filter',{id:'menu-character-light',filterUnits:'userSpaceOnUse',x:0,y:0,width:d.w,height:d.h,'color-interpolation-filters':'sRGB'},[characterMatrix]);defs.append(characterFilter);
       const daylight=el('g',{filter:'url(#menu-light)'});root.append(daylight);
       const golden=el('linearGradient',{id:'menu-golden',x1:0,y1:0,x2:0,y2:1,gradientUnits:'objectBoundingBox'},[el('stop',{offset:0,'stop-color':'#efaa83'}),el('stop',{offset:'.3','stop-color':'#efaa83','stop-opacity':'.95'}),el('stop',{offset:'.65','stop-color':'#efaa83','stop-opacity':0})]);defs.append(golden);
       const sunset=el('g',{'data-sunset':'true'},[el('rect',{width:d.w,height:d.h,fill:'url(#menu-golden)'})]);
@@ -147,8 +147,11 @@
         animate(foliage,[{transform:'skewX(-.35deg) rotate(-.28deg)'},{transform:'skewX(.45deg) rotate(.3deg)',offset:.43},{transform:'skewX(-.35deg) rotate(-.28deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});
       }
       const pets=el('g',{filter:'url(#menu-character-light)'});root.append(pets);
+      const characterBounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
       for(const [index,template]of d.pets.entries()){
         const source=referenceRigs[template.id]?referenceSprite(originals[`menu-pet-${template.id}.png`],template):birdSprite(originals[original],template,contours[layout][template.id].path);
+        characterBounds.left=Math.min(characterBounds.left,source.x);characterBounds.top=Math.min(characterBounds.top,source.y);
+        characterBounds.right=Math.max(characterBounds.right,source.x+source.w);characterBounds.bottom=Math.max(characterBounds.bottom,source.y+source.h);
         const p=source.rig??template,rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
         if(p.id!=='maritaca')pets.append(el('ellipse',{cx:p.anchor[0],cy:p.anchor[1]+1,rx:p.head[2]*.85,ry:12,fill:'#224a31',opacity:'.24'}));
         const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?`menu-pet-${p.id}.png`:original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
@@ -170,21 +173,26 @@
           animate(ear,[{transform:'rotate(0deg)'},{transform:'rotate(0deg)',offset:.70},{transform:`rotate(${i?-1.2:1.2}deg)`,offset:.80},{transform:'rotate(0deg)',offset:.88},{transform:'rotate(0deg)'}],{duration:19900+index*1777+i*389,delay:-index*3677-i*1700,easing:'ease-in-out'});
         }
       }
+      // Stable filter buffers: animated cloud tiles and pet parts must not
+      // resize objectBoundingBox surfaces on every frame (notably on Android).
+      for(const [key,value]of Object.entries({x:characterBounds.left-32,y:characterBounds.top-32,width:characterBounds.right-characterBounds.left+64,height:characterBounds.bottom-characterBounds.top+64}))characterFilter.setAttribute(key,String(value));
       const lamps=el('g',{'data-night':'lamps'}),lights=layout==='portrait'?[[709,791],[712,741],[855,1000],[917,1010],[200,839],[76,804]]:[[1259,409],[1259,358],[1434,638],[1521,655],[209,421],[1109,441]];
       for(const [x,y]of lights){lamps.append(el('circle',{cx:x,cy:y,r:15,fill:'#ffd76a',opacity:'.08'}),el('circle',{cx:x,cy:y,r:8,fill:'#ffd76a',opacity:'.15'}),el('rect',{x:x-2.6,y:y-4,width:5.2,height:8,rx:1.8,fill:'#fff1aa'}));}root.append(lamps);
       root._matrix=matrix;root._characterMatrix=characterMatrix;container.replaceChildren(root);home.dataset.sceneReady='true';loaded=true;updateLight();visibility();
     }
     const colors={morning:{ink:[22,62,39],surface:[255,249,227],accent:[73,108,55]},afternoon:{ink:[40,59,30],surface:[255,244,217],accent:[79,101,49]},sunset:{ink:[59,35,38],surface:[255,226,191],accent:[115,66,52]},night:{ink:[231,243,255],surface:[22,43,72],accent:[48,77,107]}};
+    const attribute=(node,key,value)=>{value=String(value);if(node.getAttribute(key)!==value)node.setAttribute(key,value);};
+    const property=(node,key,value)=>{if(node.style.getPropertyValue(key)!==value)node.style.setProperty(key,value);};
     function updateLight(){
       if(!root)return;const s=GolfMenuClock.sample(clock),w=s.weights,n=w.night,u=w.sunset,m=w.morning;
-      home.dataset.period=s.period;home.dataset.timeZone=s.timeZone;
-      for(const key of ['ink','surface','accent']){const c=[0,1,2].map(i=>Math.round(Object.entries(w).reduce((v,[p,f])=>v+colors[p][key][i]*f,0)));const value=`rgb(${c.join(',')})`;home.style.setProperty(`--menu-${key}`,value);document.body.style.setProperty(`--menu-${key}`,value);}
+      attribute(home,'data-period',s.period);attribute(home,'data-time-zone',s.timeZone);
+      for(const key of ['ink','surface','accent']){const c=[0,1,2].map(i=>Math.round(Object.entries(w).reduce((v,[p,f])=>v+colors[p][key][i]*f,0)));const value=`rgb(${c.join(',')})`;property(home,`--menu-${key}`,value);property(document.body,`--menu-${key}`,value);}
       // Matrix tints the original art, including all character cutouts, equally.
       const r=1-.89*n-.03*m,g=1-.84*n-.14*u,b=1-.60*n-.36*u;
-      root._matrix.setAttribute('values',`${r} 0 0 0 ${.025*u} 0 ${g} 0 0 0 0 0 ${b} 0 ${.01*n} 0 0 0 1 0`);
-      root._characterMatrix.setAttribute('values',`${1-.40*n} 0 0 0 0 0 ${1-.38*n-.06*u} 0 0 0 0 0 ${1-.22*n-.15*u} 0 ${.01*n} 0 0 0 1 0`);
-      root.querySelectorAll('[data-night]').forEach(e=>e.style.opacity=String(n));home.style.setProperty('--menu-night',String(n));
-      root.querySelector('[data-sunset]').style.opacity=String(u*.83);
+      attribute(root._matrix,'values',`${r} 0 0 0 ${.025*u} 0 ${g} 0 0 0 0 0 ${b} 0 ${.01*n} 0 0 0 1 0`);
+      attribute(root._characterMatrix,'values',`${1-.40*n} 0 0 0 0 0 ${1-.38*n-.06*u} 0 0 0 0 0 ${1-.22*n-.15*u} 0 ${.01*n} 0 0 0 1 0`);
+      root.querySelectorAll('[data-night]').forEach(e=>property(e,'opacity',String(n)));property(home,'--menu-night',String(n));
+      property(root.querySelector('[data-sunset]'),'opacity',String(u*.83));
       lastClock=performance.now();
     }
     function visibility(){

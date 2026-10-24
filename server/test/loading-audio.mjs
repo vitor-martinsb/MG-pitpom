@@ -10,7 +10,7 @@ const out='../out/bots-audio-validation';
 function wav(pcm,rate){const header=Buffer.alloc(44);header.write('RIFF');header.writeUInt32LE(36+pcm.length,4);header.write('WAVEfmt ',8);header.writeUInt32LE(16,16);header.writeUInt16LE(1,20);header.writeUInt16LE(1,22);header.writeUInt32LE(rate,24);header.writeUInt32LE(rate*2,28);header.writeUInt16LE(2,32);header.writeUInt16LE(16,34);header.write('data',36);header.writeUInt32LE(pcm.length,40);return Buffer.concat([header,pcm]);}
 try{
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
-  browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});fs.mkdirSync(out,{recursive:true});
+  browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});fs.mkdirSync(out,{recursive:true});
   const pages=[];
   for(const [name,width,height,mobile]of [['desktop',1200,900,false],['mobile',390,844,true]]){
     const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile}),page=await context.newPage();pages.push(page);
@@ -19,12 +19,12 @@ try{
     await page.waitForTimeout(150);
     const seen=[new Set(),new Set()];let last;
     for(let sample=0;sample<32;sample++){
-      const state=await page.evaluate(()=>{
+      const state=await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(time=>{
         const chase=document.querySelector('#loading .mascot-chase'),bounds=chase.getBoundingClientRect();
-        return {ring:chase.querySelectorAll('.chase-ring,.chase-orbit').length,pets:[...chase.querySelectorAll('.mascot-run')].map(p=>{
+        resolve({time,ring:chase.querySelectorAll('.chase-ring,.chase-orbit').length,pets:[...chase.querySelectorAll('.mascot-run')].map(p=>{
           const r=p.getBoundingClientRect(),u=p.querySelector('use');return {name:p.classList.contains('pituca')?'pituca':'pompom',x:r.x,y:r.y,w:r.width,h:r.height,href:u.getAttribute('href'),frames:p.querySelectorAll('use').length,cx:(r.x+r.width/2-bounds.x)/bounds.width,cy:(r.y+r.height/2-bounds.y)/bounds.height};
-        })};
-      });
+        })});
+      })));
       assert.equal(state.ring,0);assert.equal(state.pets.length,2);
       const [dog,cat]=state.pets;assert.equal(dog.name,'pituca');assert.equal(cat.name,'pompom');
       for(const [i,p]of state.pets.entries()){
@@ -33,9 +33,18 @@ try{
       const overlap=Math.min(dog.x+dog.w,cat.x+cat.w)>Math.max(dog.x,cat.x)&&Math.min(dog.y+dog.h,cat.y+cat.h)>Math.max(dog.y,cat.y);
       assert.equal(overlap,false,`${name}: separate sprites at sample ${sample}`);
       assert.ok(Math.abs(dog.cx+cat.cx-1)<.025&&Math.abs(dog.cy+cat.cy-1)<.025,'stable opposite positions on the chase');
-      if(last)assert.ok(Math.hypot(dog.cx-last.cx,dog.cy-last.cy)<.15,'continuous travel');last=dog;
+      if(last){
+        // A busy renderer may deliver the next sample much later than 110ms.
+        // Bound actual travel by elapsed rendered time and the documented orbit
+        // speed, rather than mistaking dropped samples for a teleport.
+        const elapsed=state.time-last.time,maxSpeed=2*Math.PI*.31/6500;
+        assert.ok(elapsed>0,'rendered time must advance');
+        assert.ok(Math.hypot(dog.cx-last.dog.cx,dog.cy-last.dog.cy)<=maxSpeed*elapsed+.01,'continuous travel at the chase speed');
+      }
+      last={dog,time:state.time};
       if(sample===15){await page.setViewportSize({width:mobile?844:1000,height:mobile?390:760});last=null;}
-      await page.waitForTimeout(110);
+      // Deliberately miss samples once, reproducing the slow-CI timing case.
+      await page.waitForTimeout(sample===7?760:110);
     }
     assert.equal(seen[0].size,8);assert.equal(seen[1].size,8);
     await page.screenshot({path:`${out}/loading-${name}.png`});

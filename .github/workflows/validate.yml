@@ -36,26 +36,85 @@ jobs:
           npm run build
           npm test
           npm run test:deployment -- --url http://localhost:3000
-      - name: Validate compiled visual shaders in WebGL2
+      - name: Share the validated build with browser checks
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-game
+          path: |
+            out/web
+            out/server-native/golf_physics_worker
+          retention-days: 2
+      - name: Container logs
+        if: always()
+        run: docker logs pitpom || true
+  browser-validation:
+    needs: linux-container
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [menus, courses, audio-and-updates]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-game
+          path: out
+      - name: Prepare the exact validated build
+        run: |
+          test -s out/web/golf.wasm
+          test -s out/server-native/golf_physics_worker
+          chmod +x out/server-native/golf_physics_worker
+          cd server
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Start the application
+        run: |
+          PORT=3000 node server/dist/index.js > /tmp/pitpom-browser-server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail http://localhost:3000/health; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pitpom-browser-server.log
+          exit 1
+      - name: Menu rendering and navigation
+        if: matrix.suite == 'menus'
         working-directory: server
         run: |
-          npx playwright install --with-deps chromium
+          node test/menu-flicker.mjs
           node test/menu-alpha.mjs
           node test/menu-motion.mjs
           node test/living-menu.mjs
           node test/clean-play.mjs
           node test/menu-readiness.mjs
           node test/home-navigation.mjs
-          node test/visual-shaders.mjs
           node test/mascot-art.mjs --url http://localhost:3000
+      - name: Course rendering and authority
+        if: matrix.suite == 'courses'
+        working-directory: server
+        run: |
+          node test/visual-shaders.mjs
           node test/course-features.mjs --url http://localhost:3000
           node test/evolution-browser.mjs --url http://localhost:3000
           node test/campaign-browser.mjs
           node test/wildlife-render.mjs
           node test/rescue-browser.mjs
+      - name: Loading, audio, bots and visual updates
+        if: matrix.suite == 'audio-and-updates'
+        working-directory: server
+        run: |
           node test/loading-audio.mjs
           node test/bot-updates-browser.mjs
           node test/visual-refresh.mjs
-      - name: Container logs
-        if: always()
-        run: docker logs pitpom || true
+      - name: Preserve screenshots when a browser check fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-${{ matrix.suite }}
+          path: out/**/*.png
+          retention-days: 2
