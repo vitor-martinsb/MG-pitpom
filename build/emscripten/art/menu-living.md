@@ -1,9 +1,12 @@
 # Living menu artwork and animation
 
 The original `menu-garden.png` and `menu-garden-portrait.png` remain intact.
-Animals, heads, ears, tails, sails and vegetation use clipped original pixels;
-the clean plates fill the space behind the moving cutouts. No character was
-regenerated. Pituca has no tail layer. Frida retains her closed-eye expression.
+The bird and windmill retain clipped illustration pixels. The five dogs/cats now
+use independent transparent exports from the user’s reference, with uniform scale
+and their established foot anchors. The clean plates fill the space behind moving
+cutouts. Pituca has no tail layer; Frida retains her closed-eye expression.
+See [the alpha repair](../../../docs/menu-alpha.md) for the current source and
+foliage compositing rules.
 
 Project assets:
 

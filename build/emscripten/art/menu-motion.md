@@ -1,24 +1,14 @@
 # Desktop animation repair
 
-## Character contour repair
+## Character alpha and foliage repair
 
-`menu-contours.json` stores smooth quadratic vector silhouettes in original
-image coordinates for all six animals in both orientations. The cached sprite
-uses these masks instead of runtime color flood filling, which admitted isolated
-lawn and path pixels around the ears, shoulders and paws. Original character
-colors remain raster pixels; only their cutout boundaries are vector paths.
-The masks preserve Frida's single right tail, Pituca's absence of a tail and
-the opening between Pompom's body and tail.
-
-Sprites and rig subtraction masks render at twice their logical resolution,
-with antialiased edges and a thin outline matching the original ink. This work
-happens only at scene initialization/orientation changes, never per frame.
-The existing part transforms, positions, lighting and navigation are retained.
-The motion regression checks supersampling, partial edge alpha, and absence
-of the former path fragment between Romeu's ear and shoulder in both layouts.
-
-Day/night desktop screenshots and a portrait browser rendering were inspected
-alongside the actual motion comparisons described below.
+The current five-animal source is the supplied reference, exported into five
+independent RGBA layers. Extra outline strokes have been removed. Existing foot
+anchors and one uniform scale preserve character proportions and scene placement.
+The old `menu-contours.json` illustration mask is retained only for the bird.
+The tree boundary is now owned by the original stationary illustration; wind
+contains only leaf pigment and genuine transparency, never opaque sky pixels.
+See [current diagnosis, assets and validation](../../../docs/menu-alpha.md).
 
 The desktop diagnosis reproduced an actual stopped scene: under
 `prefers-reduced-motion: reduce`, all 45 existing WAAPI animations were paused
@@ -55,7 +45,8 @@ Built-in imagegen, not the CLI, prepared two cloud-free backgrounds:
 - `build/emscripten/art/menu-sky-clean.png` (1672 x 941).
 - `build/emscripten/art/menu-sky-clean-portrait.png` (941 x 1672).
 
-No animal was regenerated. Their original pixels remain the animation source.
+The five reference RGBA exports are the current pet animation source; see
+`docs/menu-alpha.md`. The original illustration remains the bird source.
 
 Final landscape prompt:
 

@@ -1,25 +1,63 @@
-/* Original raster pixels, independently rigged in place. No game/physics changes. */
+/* Straight-alpha reference characters and sky-free foliage, rigged in place. */
 (() => {
   'use strict';
   const NS='http://www.w3.org/2000/svg';
   const el=(tag,attrs={},children=[])=>{const e=document.createElementNS(NS,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);e.append(...children);return e;};
-  // Cached vector silhouettes remove scenery fragments without changing the art.
-  // Supersampling keeps the contour smooth at desktop and mobile display scales.
-  function sprite(original,p,contour){
+  // The established illustration mask is now used only by the unchanged bird.
+  function birdSprite(original,p,contour){
     const x=Math.max(0,Math.floor(p.head[0]-p.head[2]-35)),y=Math.max(0,Math.floor(p.head[1]-p.head[3]-25));
     const w=Math.min(original.naturalWidth-x,Math.ceil(p.head[2]*2+115)),h=Math.ceil(p.anchor[1]-y+18),scale=2;
     const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const ctx=c.getContext('2d');
     ctx.scale(scale,scale);ctx.drawImage(original,x,y,w,h,0,0,w,h);
     ctx.globalCompositeOperation='destination-in';ctx.save();ctx.translate(-x,-y);ctx.fill(new Path2D(contour),'evenodd');ctx.restore();ctx.globalCompositeOperation='source-over';
-    ctx.save();ctx.translate(-x,-y);ctx.strokeStyle='#202024';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke(new Path2D(contour));ctx.restore();
-    const tails=original.naturalWidth===1672?{luna:[550,587,40,51],romeu:[731,586,43,53],frida:[1043,585,38,55],maritaca:[1148,535,38,23],pompom:[1021,723,70,103]}:{luna:[231,984,43,52],romeu:[392,982,43,53],frida:[664,987,34,50],maritaca:[752,942,35,41],pompom:[635,1108,64,95]};
-    const bounds=tails[p.id];let tail;
+    const bounds=original.naturalWidth===1672?[1148,535,38,23]:[752,942,35,41];let tail;
     if(bounds){const [a,b,cw,ch]=bounds,t=document.createElement('canvas');t.width=w*scale;t.height=h*scale;const tc=t.getContext('2d');tc.scale(scale,scale);tc.drawImage(c,0,0,w,h);tc.globalCompositeOperation='destination-in';tc.fillRect(a-x,b-y,cw,ch);tail={url:t.toDataURL(),x,y,w,h};ctx.clearRect(a-x,b-y,cw,ch);}
     return {url:c.toDataURL(),tail,x,y,w,h,canvas:c,scale};
   }
   function without(source,paths){
     const c=document.createElement('canvas'),mask=document.createElement('canvas');c.width=mask.width=source.canvas.width;c.height=mask.height=source.canvas.height;const m=mask.getContext('2d');m.scale(source.scale,source.scale);m.translate(-source.x,-source.y);for(const path of paths)m.fill(new Path2D(path));m.globalCompositeOperation='destination-out';m.lineWidth=2.4;for(const path of paths)m.stroke(new Path2D(path));
     const ctx=c.getContext('2d');ctx.drawImage(source.canvas,0,0);ctx.globalCompositeOperation='destination-out';ctx.drawImage(mask,0,0);return {...source,url:c.toDataURL(),canvas:c};
+  }
+  // The supplied five-character reference is kept as separate straight-alpha
+  // exports. Uniform scale and the existing foot anchors preserve their staging.
+  const referenceRigs={
+    luna:{bounds:[0,440,415,923],feet:220,head:[214,600,201,157],ears:[[91,553,86,74],[337,519,70,68]],eyes:[[179,578,28,32,'#443228'],[285,560,28,32,'#443228']],tail:[0,770,111,149],pivot:[115,880]},
+    romeu:{bounds:[310,510,690,916],feet:498,head:[498,657,182,144],ears:[[365,688,50,65],[633,688,47,65]],eyes:[[453,655,28,31,'#353236'],[553,655,28,31,'#353236']],tail:[310,800,90,120],pivot:[404,900]},
+    frida:{bounds:[625,530,941,928],feet:790,head:[785,672,155,140],ears:[[722,584,42,48],[884,622,38,43]],eyes:[],tail:[865,768,76,160],pivot:[870,895]},
+    pituca:{bounds:[55,905,545,1378],feet:300,head:[300,1060,245,149],ears:[[165,1065,103,98],[460,992,75,78]],eyes:[[269,1042,33,38,'#333238'],[392,1011,33,38,'#333238']]},
+    pompom:{bounds:[505,897,941,1377],feet:700,head:[680,1049,160,146],ears:[[620,971,54,55],[800,1009,52,43]],eyes:[[632,1065,32,36,'#f1a150'],[733,1096,32,36,'#eda04d']],tail:[800,1120,141,260],pivot:[801,1338]}
+  };
+  function referenceSprite(original,template){
+    const r=referenceRigs[template.id],[left,top,right,bottom]=r.bounds;
+    const targetTop=Math.min(template.head[1]-template.head[3],...template.ears.map(e=>e[1]-e[3]));
+    const ratio=(template.anchor[1]-targetTop)/(bottom-top),x=template.anchor[0]-(r.feet-left)*ratio,y=targetTop;
+    const w=Math.ceil((right-left)*ratio)+2,h=Math.ceil((bottom-top)*ratio)+2,scale=2;
+    const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;
+    const ctx=c.getContext('2d');ctx.scale(scale,scale);ctx.imageSmoothingQuality='high';
+    ctx.drawImage(original,left,top,right-left,bottom-top,0,0,(right-left)*ratio,(bottom-top)*ratio);
+    const point=([a,b,...rest])=>[x+(a-left)*ratio,y+(b-top)*ratio,...rest.map(v=>typeof v==='number'?v*ratio:v)];
+    const rig={...template,head:point(r.head),ears:r.ears.map(point),eyes:r.eyes.map(point)};
+    let tail;
+    if(r.tail){
+      const [a,b,cw,ch]=r.tail.map((v,i)=>i<2?(v-(i?top:left))*ratio:v*ratio);
+      const t=document.createElement('canvas');t.width=c.width;t.height=c.height;
+      const tc=t.getContext('2d');tc.drawImage(c,0,0);tc.globalCompositeOperation='destination-in';tc.fillRect(a*scale,b*scale,cw*scale,ch*scale);
+      tail={url:t.toDataURL(),x,y,w,h};ctx.clearRect(a,b,cw,ch);
+      const pivot=point(r.pivot);rig.tail=['',...pivot];
+    }
+    return {url:c.toDataURL(),tail,x,y,w,h,canvas:c,scale,rig};
+  }
+  function foliageSprite(original){
+    const c=document.createElement('canvas');c.width=original.naturalWidth;c.height=original.naturalHeight;
+    const ctx=c.getContext('2d');ctx.drawImage(original,0,0);const pixels=ctx.getImageData(0,0,c.width,c.height);
+    for(let i=0;i<pixels.data.length;i+=4){
+      const [r,g,b]=pixels.data.subarray(i,i+3);
+      // Only interior leaf pigment moves. Sky/mountains and their mixed edge
+      // pixels are transparent; the unmodified plate owns the outer silhouette.
+      const coverage=Math.min(1,Math.max(0,(g-b-24)/16),Math.max(0,(g-r-5)/10));
+      pixels.data[i+3]=Math.round(255*coverage);
+    }
+    ctx.putImageData(pixels,0,0);return {url:c.toDataURL(),x:0,y:0,w:c.width,h:c.height};
   }
   const oval=([x,y,rx,ry])=>`M${x-rx} ${y}a${rx} ${ry} 0 1 0 ${rx*2} 0a${rx} ${ry} 0 1 0 -${rx*2} 0`;
   function cloudSprite(original,[x,y,w,h]){
@@ -83,7 +121,12 @@
       function animate(group,frames,options){group.style.transformBox='view-box';const eased=frames.map(frame=>({easing:options.easing??'linear',...frame}));animations.push(group.animate(eased,{iterations:Infinity,...options,easing:'linear'}));}
       const clouds=layout==='landscape'?[[430,25,215,102],[1083,28,130,61],[1530,80,142,101],[236,142,110,58]]:[[181,402,187,110],[577,440,147,65],[800,295,141,83],[824,511,117,75]];
       for(const [i,bounds]of clouds.entries()){
-        const source=cloudSprite(originals[original],bounds),cloud=el('g',{'data-motion':'cloud'});
+        // Edge/occluded cloud crops become rectangles once moved into the sky.
+        // Use complete original cloud silhouettes, retaining each cloud anchor.
+        const complete=i%2?[1078,23,140,71]:[425,20,225,112];
+        const source=cloudSprite(originals['menu-garden.png'],complete),ratio=Math.min(bounds[2]/source.w,bounds[3]/source.h);
+        source.x=bounds[0];source.y=bounds[1];source.w*=ratio;source.h*=ratio;
+        const cloud=el('g',{'data-motion':'cloud'});
         for(const dx of [-d.w,0,d.w])cloud.append(el('image',{href:source.url,x:source.x+dx,y:source.y,width:source.w,height:source.h}));
         daylight.append(cloud);animate(cloud,[{transform:'translateX(0px)'},{transform:`translateX(${d.w}px)`}],{duration:d.w/(.65+i*.06)*1000,easing:'linear'});
       }
@@ -94,12 +137,21 @@
       animate(surface,[{transform:'translate(0px,0px)',opacity:.55},{transform:'translate(8px,1px)',opacity:.95,offset:.48},{transform:'translate(0px,0px)',opacity:.55}],{duration:8100,easing:'ease-in-out'});
       const rotor=cut(d.blades,daylight,'mill');rotor.style.transformOrigin=`${d.hub[0]}px ${d.hub[1]}px`;animate(rotor,[{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:72000,easing:'linear'});
       cut(d.post); // The parrot keeps its original perch even on the clean plate.
-      for(const [path,x,y]of d.vegetation){const leaf=cut(path,daylight,'wind'),foliage=leaf.querySelector('image');foliage.setAttribute('href',`art/menu-sky-clean${suffix}.png`);foliage.style.transformOrigin=`${x}px ${y}px`;animate(foliage,[{transform:'skewX(-.35deg) rotate(-.28deg)'},{transform:'skewX(.45deg) rotate(.3deg)',offset:.43},{transform:'skewX(-.35deg) rotate(-.28deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});}
+      const foliageSource=foliageSprite(originals[`menu-sky-clean${suffix}.png`]);
+      const foliageMask=`menu-foliage-${++serial}`;
+      const mask=el('mask',{id:foliageMask,maskUnits:'userSpaceOnUse',x:0,y:0,width:d.w,height:d.h});
+      mask.style.maskType='alpha';mask.append(el('image',{href:foliageSource.url,width:d.w,height:d.h}));defs.append(mask);
+      for(const [path,x,y]of d.vegetation){
+        const leaf=cut(path,daylight,'wind',foliageSource);leaf.setAttribute('mask',`url(#${foliageMask})`);
+        const foliage=leaf.querySelector('image');foliage.style.transformOrigin=`${x}px ${y}px`;
+        animate(foliage,[{transform:'skewX(-.35deg) rotate(-.28deg)'},{transform:'skewX(.45deg) rotate(.3deg)',offset:.43},{transform:'skewX(-.35deg) rotate(-.28deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});
+      }
       const pets=el('g',{filter:'url(#menu-character-light)'});root.append(pets);
-      for(const [index,p]of d.pets.entries()){
-        const source=sprite(originals[original],p,contours[layout][p.id].path),rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
+      for(const [index,template]of d.pets.entries()){
+        const source=referenceRigs[template.id]?referenceSprite(originals[`menu-pet-${template.id}.png`],template):birdSprite(originals[original],template,contours[layout][template.id].path);
+        const p=source.rig??template,rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
         if(p.id!=='maritaca')pets.append(el('ellipse',{cx:p.anchor[0],cy:p.anchor[1]+1,rx:p.head[2]*.85,ry:12,fill:'#224a31',opacity:'.24'}));
-        const animal=el('g',{'data-pet':p.id});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
+        const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?`menu-pet-${p.id}.png`:original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
         animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
         if(source.tail){const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;animate(tail,[{transform:'rotate(-2deg)'},{transform:'rotate(2.4deg)',offset:.42},{transform:'rotate(-2deg)'}],{duration:6100+index*587,delay:-index*1700,easing:'ease-in-out'});}
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
@@ -145,7 +197,7 @@
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
-    const images=['menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
+    const images=['menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png',...Object.keys(referenceRigs).map(id=>`menu-pet-${id}.png`)];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
     return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,lastClock};}});
   }

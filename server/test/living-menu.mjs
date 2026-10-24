@@ -5,7 +5,7 @@ import {createServer} from '../dist/index.js';
 const app=createServer(),errors=[];let browser;
 try{
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
-  browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
+  browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
   fs.mkdirSync('../out/living-menu',{recursive:true});
   for(const [width,height,zone,mobile]of [[1280,800,'Pacific/Auckland',false],[390,844,'America/Los_Angeles',true]]){
     const context=await browser.newContext({viewport:{width,height},timezoneId:zone,isMobile:mobile,hasTouch:mobile}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));

@@ -40,6 +40,7 @@ jobs:
         working-directory: server
         run: |
           npx playwright install --with-deps chromium
+          node test/menu-alpha.mjs
           node test/menu-motion.mjs
           node test/living-menu.mjs
           node test/clean-play.mjs

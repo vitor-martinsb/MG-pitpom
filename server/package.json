@@ -9,6 +9,7 @@
     "test": "tsx --test test/*.test.ts",
     "load-test": "tsx src/load-test.ts",
     "build:native": "cmake -S native -B ../out/server-native && cmake --build ../out/server-native --config Release",
+    "test:menu-alpha": "npm run build && node test/menu-alpha.mjs",
     "test:menu": "npm run build && node test/menu-readiness.mjs",
     "test:browser": "npm run build && node test/browser.mjs",
     "test:profile-input": "npm run build && node test/profile-input.mjs",
