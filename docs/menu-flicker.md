@@ -33,8 +33,8 @@ that a particular Android GPU/browser combination is free of rendering issues.
 
 The separate failure in staging run 40135407240 was in `loading-audio.mjs`:
 "continuous travel" assumed fixed sample intervals even when the runner delivered
-frames later. It now samples on animation frames and bounds displacement by
-actual elapsed render time and orbit speed, deliberately missing a 760ms sample.
+frames later. It bounds displacement by elapsed animation time and orbit speed, deliberately
+missing a 760ms sample.
 Sprite separation, eight-frame coverage, speed, resize, music and mute checks
 remain enforced.
 
@@ -49,3 +49,12 @@ welcome shadow pulse is removed, the title uses unblurred text, and the animated
 scenery has its own paint containment/stacking context below the controls. The
 regression also samples title glyph interiors and the opaque welcome-button
 interior across successive screenshots while scenery and animals keep moving.
+
+Run 40150599828 exposed a second sampling issue: mobile polling observed five
+of eight loading gait frames, while the identical staging build observed all
+eight. The loading test now first verifies automatic movement with a running
+clock, then uses Playwright's controlled clock to execute every RAF in 96ms
+steps (shorter than the 100ms art frame). It still skips one 760ms observation,
+asserts all eight distinct frames for both pets, and checks spacing, speed and
+resize. The clock resumes before real audio, crossfade and mute verification.
+This changes test timing only; production animation clocks are unchanged.

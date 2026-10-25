@@ -14,17 +14,26 @@ try{
   const pages=[];
   for(const [name,width,height,mobile]of [['desktop',1200,900,false],['mobile',390,844,true]]){
     const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile}),page=await context.newPage();pages.push(page);
+    await page.clock.install();
     page.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(page,url);await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});
     await page.evaluate(()=>{document.getElementById('connect').hidden=true;document.getElementById('loading').hidden=false;});
-    await page.waitForTimeout(150);
+    await page.waitForFunction(()=>{const e=document.querySelector('#loading .mascot-run');return e?.style.left&&e.style.top;});
+    const position=()=>page.locator('#loading .mascot-run').first().evaluate(e=>[e.style.left,e.style.top]);
+    const moving=await position();await page.waitForFunction(before=>{const e=document.querySelector('#loading .mascot-run');return e.style.left!==before[0]||e.style.top!==before[1];},moving,{timeout:10000});
+    // Polling real frames can alias an 800ms gait when CI drops frames. Pause
+    // the browser clock, then execute every RAF at controlled 96ms intervals
+    // (shorter than the 100ms art frame). Keep all eight-frame assertions.
+    await page.clock.pauseAt(new Date((await page.evaluate(()=>Date.now()))+5000));
+    await page.clock.runFor(16);
     const seen=[new Set(),new Set()];let last;
     for(let sample=0;sample<32;sample++){
-      const state=await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(time=>{
+      const state=await page.evaluate(()=>{
+        const time=performance.now();
         const chase=document.querySelector('#loading .mascot-chase'),bounds=chase.getBoundingClientRect();
-        resolve({time,ring:chase.querySelectorAll('.chase-ring,.chase-orbit').length,pets:[...chase.querySelectorAll('.mascot-run')].map(p=>{
+        return {time,ring:chase.querySelectorAll('.chase-ring,.chase-orbit').length,pets:[...chase.querySelectorAll('.mascot-run')].map(p=>{
           const r=p.getBoundingClientRect(),u=p.querySelector('use');return {name:p.classList.contains('pituca')?'pituca':'pompom',x:r.x,y:r.y,w:r.width,h:r.height,href:u.getAttribute('href'),frames:p.querySelectorAll('use').length,cx:(r.x+r.width/2-bounds.x)/bounds.width,cy:(r.y+r.height/2-bounds.y)/bounds.height};
-        })});
-      })));
+        })};
+      });
       assert.equal(state.ring,0);assert.equal(state.pets.length,2);
       const [dog,cat]=state.pets;assert.equal(dog.name,'pituca');assert.equal(cat.name,'pompom');
       for(const [i,p]of state.pets.entries()){
@@ -34,19 +43,19 @@ try{
       assert.equal(overlap,false,`${name}: separate sprites at sample ${sample}`);
       assert.ok(Math.abs(dog.cx+cat.cx-1)<.025&&Math.abs(dog.cy+cat.cy-1)<.025,'stable opposite positions on the chase');
       if(last){
-        // A busy renderer may deliver the next sample much later than 110ms.
-        // Bound actual travel by elapsed rendered time and the documented orbit
-        // speed, rather than mistaking dropped samples for a teleport.
+        // Bound actual travel by controlled elapsed time and orbit speed,
+        // including the deliberately missed sample below.
         const elapsed=state.time-last.time,maxSpeed=2*Math.PI*.31/6500;
         assert.ok(elapsed>0,'rendered time must advance');
         assert.ok(Math.hypot(dog.cx-last.dog.cx,dog.cy-last.dog.cy)<=maxSpeed*elapsed+.01,'continuous travel at the chase speed');
       }
       last={dog,time:state.time};
       if(sample===15){await page.setViewportSize({width:mobile?844:1000,height:mobile?390:760});last=null;}
-      // Deliberately miss samples once, reproducing the slow-CI timing case.
-      await page.waitForTimeout(sample===7?760:110);
+      // Still skip observation once to exercise a genuine long sampling gap.
+      await page.clock.runFor(sample===7?760:96);
     }
     assert.equal(seen[0].size,8);assert.equal(seen[1].size,8);
+    await page.clock.resume();
     await page.screenshot({path:`${out}/loading-${name}.png`});
     await page.evaluate(()=>{document.getElementById('loading').hidden=true;document.getElementById('connect').hidden=false;});
     console.log(`${name}: independent eight-frame runs, spacing, continuous orbit, resize and no dotted lines passed.`);
