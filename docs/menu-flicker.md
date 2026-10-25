@@ -1,35 +1,45 @@
-# Menu compositing and CI timing
+# Menu character compositing and CI timing
 
-The animated SVG lighting filters previously used object bounding boxes. The
-background's bounds included offscreen cloud tiles, while the pets' bounds
-followed their animated parts. Those changing filter surfaces risk clipping or
-losing layers on mobile compositors. Both filters now use fixed scene-space
-bounds: the visible viewport for scenery and the cached sprite union plus
-motion padding for animals. The rendering assets, poses and animation clocks
-are unchanged.
+The Android report persisted after stabilizing SVG filter bounds. The pets now
+paint together onto a single unfiltered HTML Canvas 2D surface, outside the scenery SVG. The SVG rig retains
+the original motion timelines and pivots as an invisible motion model; it never
+paints character layers. The painter reads those transforms and draws the same
+reference parts in the same order, preserving straight alpha. It requests a
+software raster backing so only the completed character frame is composited.
 
-The one-second Brasilia clock now writes filter matrices, opacity and palette
-properties only when values actually change. Stable lighting does not invalidate
-all animated layers every second; sunset/night transitions still update their
-colors normally. No animation is disabled as a flicker workaround.
+Character lighting is applied to cached sprite pixels only when the palette
+changes. The character SVG filter has been removed. The scenery retains its
+fixed scene-space filter and only updates lighting attributes when values change.
+No reference assets, poses, placement, motion timing or gameplay resources change.
 
-`server/test/menu-flicker.mjs` runs real continuous animation starting at 19:04
-Brasilia time. It samples opaque tan chest/leg pixels from Luna's actual body
-sprite, projects them into successive screenshots, and checks that the torso
-stays visible. Desktop and mobile (3x device density) are covered. It also checks
-fixed filter bounds, continued mill motion, zero redundant stable-night matrix
-writes, and navigation. Screenshots go to `out/menu-flicker`.
+The character backing has fixed bounds around the sprite union with motion
+padding, follows viewport/device density with a 2x scene-resolution cap, and
+avoids a full-screen bitmap. Hidden menus cancel paint requests; navigation
+resumes the same clocks. Orientation changes replace the previous surface and
+stop its painter before rebuilding.
 
-The failure in staging run 40135407240 was a separate assertion in
-`loading-audio.mjs`: "continuous travel" assumed a fixed sampling interval, even
-when the runner delivered frames later. The check now samples on animation
-frames and bounds displacement by actual elapsed render time and orbit speed.
-It deliberately misses a 760ms sample to exercise that case. Sprite separation,
-eight-frame coverage, speed, resize, audio and mute checks remain enforced.
+`server/test/menu-flicker.mjs` starts at 19:04 Brasilia time on desktop and a
+3x-density mobile viewport. It samples opaque interior pixels from all six actual
+body sprites over 40 seconds per device, covering complete head, ear and blink
+cycles. It checks both the painted pixels and periodic composited screenshots
+against reference interior colors, verifies paint progress, pause/resume, and
+both phone orientations. Captures go to `out/menu-flicker`.
 
-CI still runs every existing browser script. The validated container exports its
-runtime web files and native worker once; three browser jobs download that exact
-build and run menus, courses, and audio/updates in parallel. Downloaded worker
-permissions are restored explicitly. Failed jobs retain their screenshots. This
-avoids crowding all 16 browser scripts into the original 35-minute container job
-without skipping any checks or extending the timeout.
+The original `menu-motion.mjs` per-motion screenshot comparisons still verify
+visible breathing, head, ear, tail, blink, wind, water, cloud and mill movement.
+`living-menu.mjs` covers all four palettes, timezone independence, continuous
+palette boundaries and navigation. Passing headless checks does not establish
+that a particular Android GPU/browser combination is free of rendering issues.
+
+The separate failure in staging run 40135407240 was in `loading-audio.mjs`:
+"continuous travel" assumed fixed sample intervals even when the runner delivered
+frames later. It now samples on animation frames and bounds displacement by
+actual elapsed render time and orbit speed, deliberately missing a 760ms sample.
+Sprite separation, eight-frame coverage, speed, resize, music and mute checks
+remain enforced.
+
+CI runs all existing browser scripts. The validated container exports its web
+files and native worker once; three browser jobs download that exact build and
+run menus, courses, and audio/updates in parallel. Worker permissions are restored
+explicitly. Failed jobs retain screenshots. No checks are skipped and the
+35-minute per-job timeout is unchanged.

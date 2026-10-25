@@ -41,7 +41,7 @@ try {
   // The welcome button deliberately pulses outside the scene. Inspect the menu
   // so that pulse cannot be mistaken for a trail in the SVG screenshot.
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));
-  const scene=page.locator('.living-menu-art'),still=await scene.screenshot();await page.waitForTimeout(100);
+  const scene=page.locator('.living-scene'),still=await scene.screenshot();await page.waitForTimeout(100);
   assert.equal(Buffer.compare(still,await scene.screenshot()),0,'frozen frames must not accumulate trails');
   const frames=[];
   for(const fraction of [0,.43,.8]){

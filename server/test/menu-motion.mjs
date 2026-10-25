@@ -23,13 +23,13 @@ try{
    return {scale,smooth,scenery:ctx.getImageData(Math.floor((point[0]-x)*scale),Math.floor((point[1]-y)*scale),1,1).data[3]};
   });assert.equal(edges.scale,2);assert.ok(edges.smooth>100,'vector boundary has antialiased coverage');assert.equal(edges.scenery,0,'empty space beside the reference bandana is transparent');
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));
-  const still=await page.locator('.living-menu-art').screenshot();await page.waitForTimeout(80);assert.equal(Buffer.compare(still,await page.locator('.living-menu-art').screenshot()),0,'frozen scene is pixel-stable before testing each motion');
+  const still=await page.locator('.living-scene').screenshot();await page.waitForTimeout(80);assert.equal(Buffer.compare(still,await page.locator('.living-scene').screenshot()),0,'frozen scene is pixel-stable before testing each motion');
   // These comparisons inspect the browser's rendered PNG pixels, rather than
   // merely checking that a timer or a WAAPI animation object exists.
   const cases=[['mill','[data-motion=mill]',.1],['cloud','[data-motion=cloud]',.02],['water','[data-motion=water]',.48],['wind','[data-motion=wind]',.43],['breathing','[data-pet=pituca]',.5],['head','[data-pet=pituca] [data-motion=head]',.73],['ear','[data-pet=pituca] [data-motion=ear]',.8],['tail','[data-pet=frida] [data-motion=tail]',.42],['blink','[data-pet=luna] [data-motion=blink]',.1535]];
   for(const [kind,selector,offset]of cases){
    const seek=fraction=>page.locator(selector).first().evaluate((e,f)=>{const a=e.getAnimations().length?e.getAnimations():e.getAnimations({subtree:true});for(const item of a){const timing=item.effect.getTiming();item.currentTime=Number(timing.duration)*f+Number(timing.delay);}},fraction);
-   await seek(0);await page.waitForTimeout(35);const before=await page.locator('.living-menu-art').screenshot();await seek(offset);await page.waitForTimeout(35);const after=await page.locator('.living-menu-art').screenshot();
+   await seek(0);await page.waitForTimeout(35);const before=await page.locator('.living-scene').screenshot();await seek(offset);await page.waitForTimeout(35);const after=await page.locator('.living-scene').screenshot();
    if(name==='desktop'){fs.writeFileSync(`../out/menu-motion/${kind}-before.png`,before);fs.writeFileSync(`../out/menu-motion/${kind}-after.png`,after);}
    assert.notEqual(Buffer.compare(before,after),0,`${name}: ${kind} must change real rendered pixels: ${JSON.stringify(await page.locator(selector).first().evaluate(e=>({transform:getComputedStyle(e).transform,animations:e.getAnimations({subtree:true}).map(a=>({time:a.currentTime,frames:a.effect.getKeyframes(),timing:a.effect.getTiming()}))})))}`);
   }
