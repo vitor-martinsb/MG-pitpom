@@ -102,6 +102,24 @@ try{
   await page.locator('#back-main').click();await page.waitForTimeout(250);assert.ok(await page.evaluate(()=>GolfHome.scene.petFrames)>paused,'resume painted animal motion after navigation');assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35);
   if(mobile){for(const viewport of [{width:844,height:390},{width:390,height:844}]){await page.setViewportSize(viewport);await page.waitForFunction(layout=>GolfHome.scene.layout===layout&&GolfHome.scene.petFrames>3,viewport.width>viewport.height?'landscape':'portrait');assert.equal(await page.locator('canvas[data-pet-surface]').count(),1);const alpha=await page.locator('canvas[data-pet-surface]').evaluate(c=>{const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let opaque=0;for(let k=3;k<pixels.length;k+=4)if(pixels[k]>240)opaque++;return opaque;});assert.ok(alpha>10000,'animals remain painted after rotating the phone');}}
 
+  await page.locator('#exit-game').click();await page.locator('#continue-home').waitFor({state:'visible'});
+  assert.equal(await page.locator('.home-brand,#continue-home').evaluateAll(nodes=>nodes.reduce((n,e)=>n+e.getAnimations({subtree:true}).length,0)),0,'title and welcome control must not pulse');
+  const boxes=await page.evaluate(()=>{const box=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};return {title:box(document.querySelector('.home-brand h1')),button:box(document.getElementById('continue-home')),ink:getComputedStyle(document.querySelector('.home-brand h1')).color.match(/\d+/g).slice(0,3).map(Number),frames:GolfHome.scene.petFrames};});
+  const still=(await page.screenshot({scale:'css'})).toString('base64');
+  const welcomeSamples=await page.evaluate(async({bytes,boxes})=>{const i=new Image();i.src='data:image/png;base64,'+bytes;await i.decode();const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);const p=ctx.getImageData(0,0,c.width,c.height).data,read=(x,y)=>Array.from(p.slice((y*c.width+x)*4,(y*c.width+x)*4+3)),title=[],button=[];
+   for(let y=Math.ceil(boxes.title.y);y<boxes.title.y+boxes.title.h;y++)for(let x=Math.ceil(boxes.title.x);x<boxes.title.x+boxes.title.w;x++){const rgb=read(x,y);if(rgb.every((v,k)=>Math.abs(v-boxes.ink[k])<2))title.push({x,y,rgb});}
+   for(let y=Math.ceil(boxes.button.y+12);y<boxes.button.y+boxes.button.h-12;y+=2)for(let x=Math.ceil(boxes.button.x+24);x<boxes.button.x+boxes.button.w-24;x+=2)button.push({x,y,rgb:read(x,y)});
+   return {title:title.filter((_,i)=>i%Math.max(1,Math.floor(title.length/256))===0).slice(0,256),button};
+  },{bytes:still,boxes});
+  assert.ok(welcomeSamples.title.length>30&&welcomeSamples.button.length>100,'sample visible glyph interiors and the real welcome control');
+  for(let frame=0;frame<8;frame++){
+   await page.waitForTimeout(450);const png=await page.screenshot({scale:'css'});fs.writeFileSync(`../out/menu-flicker/${name}-welcome-${frame}.png`,png);
+   const stable=await page.evaluate(async({bytes,samples})=>{const i=new Image();i.src='data:image/png;base64,'+bytes;await i.decode();const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);const p=ctx.getImageData(0,0,c.width,c.height).data;return Object.fromEntries(Object.entries(samples).map(([name,points])=>[name,points.filter(q=>{const k=(q.y*c.width+q.x)*4;return q.rgb.every((v,i)=>Math.abs(v-p[k+i])<=5);}).length/points.length]));},{bytes:png.toString('base64'),samples:welcomeSamples});
+   assert.ok(stable.title>.98&&stable.button>.98,`${name}: stable foreground over the moving scenery ${JSON.stringify(stable)}`);
+  }
+  assert.ok(await page.evaluate(()=>GolfHome.scene.petFrames)>boxes.frames,'static labels cannot stop animal animation');
+  await page.locator('#continue-home').click();await page.locator('#main-menu').waitFor({state:'visible'});
+  console.log(name+': title glyphs and welcome control stay visible and stable while scenery/animals animate.');
   assert.deepEqual(errors,[]);await context.close();console.log(`${name}: 19:04 animated body visibility, stable filter surfaces, zero redundant night repaints and navigation passed.`);
  }
 }finally{await browser?.close();app.close();}

@@ -43,3 +43,9 @@ files and native worker once; three browser jobs download that exact build and
 run menus, courses, and audio/updates in parallel. Worker permissions are restored
 explicitly. Failed jobs retain screenshots. No checks are skipped and the
 35-minute per-job timeout is unchanged.
+
+The title and welcome control are static foreground elements. The previous
+welcome shadow pulse is removed, the title uses unblurred text, and the animated
+scenery has its own paint containment/stacking context below the controls. The
+regression also samples title glyph interiors and the opaque welcome-button
+interior across successive screenshots while scenery and animals keep moving.
