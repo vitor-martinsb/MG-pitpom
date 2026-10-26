@@ -551,7 +551,7 @@ bool golf_physics_shoot(golf_physics_world_t *world, golf_player_t *player, vec3
     float gs = CFG_NUM(world->config, "aim_green_speed"), ys = CFG_NUM(world->config, "aim_yellow_speed"), rs = CFG_NUM(world->config, "aim_red_speed"), ds = CFG_NUM(world->config, "aim_dark_red_speed");
     float speed = power < gp ? gs + (ys-gs)*power/gp : power < yp ? ys + (rs-ys)*(power-gp)/(yp-gp) : power < rp ? rs + (ds-rs)*(power-yp)/(rp-yp) : ds;
     player->ball.vel = vec3_scale(direction, speed / len);
-    if(player->ball.slow_shots>0)player->ball.vel=vec3_scale(player->ball.vel,.65f);
+    player->ball.vel=vec3_scale(player->ball.vel,golf_ball_shot_scale(&player->ball));
     player->ball.start_pos = player->ball.pos;
     player->ball.is_moving = true;
     player->ball.time_going_slow = 0;

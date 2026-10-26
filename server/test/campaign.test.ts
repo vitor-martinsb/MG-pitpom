@@ -25,7 +25,7 @@ test('eighty courses preserve the twenty originals and group three cumulative ev
     assert.ok(fs.existsSync(path.join(root,expected)));
   }
   assert.equal(fs.readdirSync(path.join(root,'data/campaign')).filter(n=>n.endsWith('.level')).length,60);
-  assert.deepEqual(manifest.petRoster,{fixed:['pituca','pompom'],thirdCandidates:['romeu','luna','frida'],count:3});
+  assert.deepEqual(manifest.petRoster,{fixed:['pituca','pompom'],thirdCandidates:['romeu','luna','frida','juju'],count:3});
   const translations=JSON.parse(fs.readFileSync(path.join(root,'data/locales.json'),'utf8'));
   for(const lang of ['en','pt-BR','es']){
     const names=Array.from({length:20},(_,i)=>translations[lang][`family.${i+1}`]);
@@ -65,7 +65,7 @@ test('resident selection stays fixed for a whole field and never repeats the pre
     const physics=new Physics(root,'data/levels/level-3.level');
     try{
       const configured=await physics.configure(false,field*735+19,.5,previous);
-      assert.ok([0,1,2].includes(configured.thirdKind));
+      assert.ok([0,1,2,3].includes(configured.thirdKind));
       assert.notEqual(configured.thirdKind,previous);
       previous=configured.thirdKind;
       for(const ticks of [0,1200,1200,1200]){

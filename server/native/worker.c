@@ -107,7 +107,7 @@ static void collision_sound(const char *name,const char *path,float volume,bool 
 }
 static void wildlife_json(const golf_wildlife_t *w) {
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
-    for(int i=0;i<3;i++) {
+    for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
         printf("%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,(a->active&&i==mechanics.third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
     }
@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
                 golf_mechanics_tick(&mechanics,players,GOLF_MAX_PLAYERS,world.time);
                 for(int i=0;i<GOLF_MAX_PLAYERS;i++)if(players[i].id){
                     if(players[i].ball.effect_serial!=effects[i]){
-                        const char *kinds[]={"","romeu","luna","frida","portal"};
+                        const char *kinds[]={"","romeu","luna","frida","portal","capture","juju"};
                         event(kinds[players[i].ball.effect_kind],&players[i],1);
                     }
                     else if(players[i].ball.cat_hits!=hits[i])event("slap",&players[i],1);
@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {
                 golf_player_t *p=&players[i]; golf_ball_t *b=&p->ball;
-                printf("%s{\"id\":%u,\"pos\":[%.9g,%.9g,%.9g],\"vel\":[%.9g,%.9g,%.9g],\"moving\":%s,\"hole\":%s,\"water\":%s,\"strokes\":%d,\"firstComplete\":%s,\"captured\":%s,\"captureUntil\":%.9g,\"slowShots\":%d,\"slowUntil\":%.9g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.9g,\"effectSerial\":%u,\"wildlifeProtection\":%.9g,\"rescueStarted\":%.9g,\"rescueFrom\":[%.9g,%.9g,%.9g]}",comma?",":"",p->id,b->pos.x,b->pos.y,b->pos.z,b->vel.x,b->vel.y,b->vel.z,b->is_moving?"true":"false",b->is_in_hole?"true":"false",b->is_in_water?"true":"false",p->stroke_count,b->first_shot_complete?"true":"false",b->captured?"true":"false",b->capture_until,b->slow_shots,b->slow_until,b->capture_kind,b->effect_kind,b->effect_time,b->effect_serial,b->wildlife_protection,b->rescue_started,b->rescue_from.x,b->rescue_from.y,b->rescue_from.z); comma=true;
+                printf("%s{\"id\":%u,\"pos\":[%.9g,%.9g,%.9g],\"vel\":[%.9g,%.9g,%.9g],\"moving\":%s,\"hole\":%s,\"water\":%s,\"strokes\":%d,\"firstComplete\":%s,\"captured\":%s,\"captureUntil\":%.9g,\"slowShots\":%d,\"slowUntil\":%.9g,\"mudShots\":%d,\"mudFadeUntil\":%.9g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.9g,\"effectSerial\":%u,\"wildlifeProtection\":%.9g,\"rescueStarted\":%.9g,\"rescueFrom\":[%.9g,%.9g,%.9g]}",comma?",":"",p->id,b->pos.x,b->pos.y,b->pos.z,b->vel.x,b->vel.y,b->vel.z,b->is_moving?"true":"false",b->is_in_hole?"true":"false",b->is_in_water?"true":"false",p->stroke_count,b->first_shot_complete?"true":"false",b->captured?"true":"false",b->capture_until,b->slow_shots,b->slow_until,b->mud_shots,b->mud_fade_until,b->capture_kind,b->effect_kind,b->effect_time,b->effect_serial,b->wildlife_protection,b->rescue_started,b->rescue_from.x,b->rescue_from.y,b->rescue_from.z); comma=true;
             }
             printf("],\"events\":[");for(int i=0;i<event_count;i++)printf("%s{\"id\":%u,\"player\":%u,\"kind\":\"%s\",\"strength\":%.5g}",i?",":"",events[i].id,events[i].player,events[i].kind,events[i].strength);
             puts("]}");event_count=0; fflush(stdout); json_value_free(value); continue;

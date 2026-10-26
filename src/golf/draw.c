@@ -47,13 +47,15 @@ static void _draw_player_balls(const char *pipeline_name) {
         sg_apply_pipeline(golf_shader_get_pipeline(shader,protected?"ball_protected":pipeline_name)->sg_pipeline);
         sg_apply_bindings(&bindings);
         float radius = player->ball.radius;
-        mat4 model_mat = mat4_multiply_n(3, mat4_translation(player->ball.draw_pos),
+        mat4 model_mat = mat4_multiply_n(3, mat4_translation(golf_garden_ball_position(player,game->t)),
                 mat4_scale(V3(radius, radius, radius)), mat4_from_quat(player->ball.orientation));
         golf_shader_uniform_t *vs = golf_shader_vs_uniform_setup(shader, "ball_vs_params", 2,
                 UNIFORM_MAT4("proj_view_mat", mat4_transpose(graphics->proj_view_mat)),
                 UNIFORM_MAT4("model_mat", mat4_transpose(model_mat)));
         sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range){ vs->data, vs->size });
         vec4 color=player->color;
+        float mud=player->ball.mud_shots>0?player->ball.mud_shots/3.f:golf_clampf((player->ball.mud_fade_until-game->t)/.65f,0,1)/3;
+        if(mud>0){float stain=.22f*mud;color=V4(color.x*(1-stain)+.42f*stain,color.y*(1-stain)+.26f*stain,color.z*(1-stain)+.13f*stain,color.w);}
         if(player->ball.slow_until>game->t)color=V4(color.x*.67f+.33f,color.y*.67f+.27f,color.z*.67f+.04f,color.w);
         if(game->mechanics.impact&&!player->ball.first_shot_complete)color=V4(.65f*color.x+.35f,.65f*color.y+.35f,.65f*color.z+.35f,.72f);
         golf_shader_uniform_t *fs = golf_shader_fs_uniform_setup(shader, "ball_fs_params", 1,

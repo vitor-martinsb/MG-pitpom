@@ -2,7 +2,9 @@
 #define GOLF_WILDLIFE_H
 #include "golf/navigation.h"
 #include "golf/player.h"
-#define GOLF_WILDLIFE_COUNT 3
+#define GOLF_WILDLIFE_COUNT 4
+#define GOLF_JUJU 3
+#define GOLF_EFFECT_JUJU 6
 #define GOLF_WIND_ZONES 8
 #define GOLF_PORTALS 8
 #define GOLF_PUDDLES 128

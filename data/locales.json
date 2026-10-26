@@ -241,7 +241,13 @@
     "botsSummary": "{count} bots · manage individually",
     "botRosterHint": "The lineup is ready. Expand only to edit or remove a specific bot.",
     "hideMatchInfo": "Hide match information",
-    "showMatchInfo": "Show match information"
+    "showMatchInfo": "Show match information",
+    "juju.meet": "Meet Juju",
+    "juju.description": "A playful calico kitten who loves resting in the mud.",
+    "juju.ability": "Her paw tap redirects the ball and covers it in mud for your next three shots. Each completed shot removes some mud.",
+    "effect.juju": "Juju’s muddy paw tap!",
+    "juju.muddy.one": "Muddy ball · {count} shot left",
+    "juju.muddy.other": "Muddy ball · {count} shots left"
   },
   "pt-BR": {
     "settings": "Configurações",
@@ -485,7 +491,13 @@
     "botsSummary": "{count} bots · gerenciar individualmente",
     "botRosterHint": "A equipe está pronta. Expanda apenas para editar ou remover um bot específico.",
     "hideMatchInfo": "Ocultar informações da partida",
-    "showMatchInfo": "Mostrar informações da partida"
+    "showMatchInfo": "Mostrar informações da partida",
+    "juju.meet": "Conheça a Juju",
+    "juju.description": "Uma gatinha tricolor arteira que adora descansar no barro.",
+    "juju.ability": "Seu tapinha desvia a bola e a cobre de barro nas suas próximas três tacadas. Cada tacada concluída remove um pouco da sujeira.",
+    "effect.juju": "Tapinha enlameado da Juju!",
+    "juju.muddy.one": "Bola enlameada · falta {count} tacada",
+    "juju.muddy.other": "Bola enlameada · faltam {count} tacadas"
   },
   "es": {
     "settings": "Ajustes",
@@ -729,6 +741,12 @@
     "botsSummary": "{count} bots · gestionar individualmente",
     "botRosterHint": "El equipo está listo. Despliega solo para editar o eliminar un bot específico.",
     "hideMatchInfo": "Ocultar información de la partida",
-    "showMatchInfo": "Mostrar información de la partida"
+    "showMatchInfo": "Mostrar información de la partida",
+    "juju.meet": "Conoce a Juju",
+    "juju.description": "Una gatita tricolor traviesa que adora descansar en el barro.",
+    "juju.ability": "Su patita desvía la bola y la cubre de barro durante tus próximos tres golpes. Cada golpe completado elimina parte del barro.",
+    "effect.juju": "¡Toquecito de barro de Juju!",
+    "juju.muddy.one": "Bola embarrada · queda {count} golpe",
+    "juju.muddy.other": "Bola embarrada · quedan {count} golpes"
   }
 }

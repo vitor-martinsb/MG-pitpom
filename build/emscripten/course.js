@@ -3,7 +3,7 @@
   const $=id=>document.getElementById(id),t=key=>GolfI18n.t(key);
   let geometry,level,base,frame,collapsed=false,last=0;
   let lastSlap=-100,lastWake=-100,soloStarted=-1,effectLevel=-1;
-  const heard=new Map(),effectNames=['','romeu','luna','frida','portal','maritaca'];
+  const heard=new Map(),effectNames=['','romeu','luna','frida','portal','maritaca','juju'];
   const worldLabel=document.createElement('small'),effectLabel=document.createElement('small');
   worldLabel.id='campaign-world';effectLabel.id='wildlife-effect';effectLabel.setAttribute('role','status');
   const status=document.createElement('aside');status.id='course-status';status.append(worldLabel,effectLabel);document.body.append(status);
@@ -68,7 +68,7 @@
     worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.courseName(window.GOLF_CAMPAIGN?.courses[frame.level])}`:'';
     const local=frame.players.find(p=>p.id===frame.local);
     const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
-    effectLabel.textContent=effect?GolfI18n.t('effect.'+effectNames[effect]):'';
+    effectLabel.textContent=[effect?GolfI18n.t('effect.'+effectNames[effect]):'',local?.mudShots>0?GolfI18n.t('juju.muddy.'+(local.mudShots===1?'one':'other'),{count:local.mudShots}):''].filter(Boolean).join(' · ');
   }
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;

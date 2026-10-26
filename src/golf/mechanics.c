@@ -93,7 +93,7 @@ void golf_mechanics_animate(golf_mechanics_t *m,float time) {
     uint32_t key=random_word(m->seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
     m->cat_presence=m->dog_presence=1;
     m->cat_present=m->cat_valid;m->dog_present=m->dog_valid;
-    for(int i=0;i<3;i++){
+    for(int i=0;i<GOLF_WILDLIFE_COUNT;i++){
         golf_wild_animal_t *a=&m->wildlife.animals[i];
         a->present=a->active&&i==m->third_kind;
         a->presence=a->present?1:0;
@@ -107,8 +107,8 @@ void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
     m->seed=seed;
     uint32_t key=random_word(seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
     // Choose once per field; exclude the previous companion without reducing
-    // the remaining two to a fixed rotation. Animation never changes this ID.
-    m->third_kind=previous_pet>=0&&previous_pet<3?(previous_pet+1+(int)(key%2))%3:(int)(key%3);
+    // the other companions to a fixed rotation. Animation never changes this ID.
+    m->third_kind=previous_pet>=0&&previous_pet<GOLF_WILDLIFE_COUNT?(previous_pet+1+(int)(key%(GOLF_WILDLIFE_COUNT-1)))%GOLF_WILDLIFE_COUNT:(int)(key%GOLF_WILDLIFE_COUNT);
     // All pets coexist: trim only the lateral crossing when it approaches a
     // third-pet route. Positions and route endpoints remain fixed for the field.
     golf_wild_animal_t *pet=&m->wildlife.animals[m->third_kind];
@@ -125,7 +125,7 @@ void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
         }
         if(!clear){m->cat_span=fmaxf(0,candidate-.05f);break;}
     }
-    for(int k=0;k<3;k++){
+    for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
         m->wildlife.animals[k].clock=((key>>(k*5))%100)/10.f;
         m->wildlife.animals[k].patrol_period=5.5f+((key>>(k*7))%70)/10.f;
     }

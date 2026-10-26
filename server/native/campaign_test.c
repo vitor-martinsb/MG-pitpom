@@ -145,7 +145,7 @@ int main(int argc,char **argv) {
     // Repeated seeding here represents separate fields, never a live respawn.
     assert(m.cat_valid&&m.dog_valid);
     for(int kind=0;kind<3;kind++)assert(m.wildlife.animals[kind].active);
-    bool chosen[3]={false};int previous=-1;
+    bool chosen[GOLF_WILDLIFE_COUNT]={false};int previous=-1;
     for(uint32_t seed=1;seed<=32;seed++){
         golf_mechanics_t resident=m;golf_mechanics_seed(&resident,seed,previous);
         const int selected=resident.third_kind;
@@ -157,7 +157,7 @@ int main(int argc,char **argv) {
             assert(resident.cat_present&&resident.dog_present);
             assert(resident.cat_presence==1&&resident.dog_presence==1);
             int visible=2;
-            for(int k=0;k<3;k++){
+            for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
                 const golf_wild_animal_t *a=&resident.wildlife.animals[k];
                 assert(a->present==(k==selected));
                 if(a->present){assert(a->presence==1);visible++;}
@@ -172,7 +172,7 @@ int main(int argc,char **argv) {
             }
         }
     }
-    assert(chosen[0]&&chosen[1]&&chosen[2]);
+    assert(chosen[0]&&chosen[1]&&chosen[2]&&chosen[3]);
     // Existing twenty-course records must survive the interleaved catalogue.
     JSON_Value *saved=json_parse_string("{\"stroke_count_level_0\":2,\"stroke_count_level_1\":3,\"stroke_count_level_19\":7,\"pitpom100_best_1\":1}");
     const int old_courses[]={0,4,76},old_scores[]={2,3,7};char key[64];

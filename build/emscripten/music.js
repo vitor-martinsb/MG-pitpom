@@ -73,6 +73,7 @@
     else if(kind==='impact')effectTone(190*variation,.2,level,0,effectsBus,420);
     else if(kind==='slap'){effectTone(550,.12,.22,0,effectsBus,90);effectTone(300,.2,.13,.08,effectsBus,150);}
     else if(kind==='capture'){effectTone(220,.22,.17,0,effectsBus,70);effectTone(90,.16,.1,.2,effectsBus,300);}
+    else if(kind==='juju'){effectTone(470,.09,.17,0,effectsBus,130);effectTone(95,.24,.14,.07,effectsBus,48);effectTone(150,.16,.08,.18,effectsBus,80);}
     else if(kind==='romeu'){effectTone(340,.18,.12,0,effectsBus,170);effectTone(410,.13,.07,.12,effectsBus,230);}
     else if(kind==='luna'){effectTone(230,.11,.12,0,effectsBus,380);effectTone(180,.15,.10,.14,effectsBus,290);}
     else if(kind==='frida'){effectTone(520,.20,.10,0,effectsBus,850);effectTone(850,.24,.09,.17,effectsBus,390);}
@@ -88,7 +89,7 @@
   }
   window.GolfAudio={play,
     engine(name,strength){const map={hit_ball:'shot',ball_in_hole:'hole',ball_in_water:'water',ball_out_of_bounds:'error',wood:'wood',stone:'stone',confirmation:'ui',button:'ui',ball_impact:'wood'};if(network&&['hit_ball','ball_in_hole','wood','stone','ball_impact'].includes(name))return;play(map[name]??(name.includes('button')?'ui':name.includes('confirm')?'ui':name),strength);},
-    events(events,hole=0){network=true;if(hole!==lastEventHole){lastEventHole=hole;lastEvent=0;}const fresh=events.filter(e=>e.id>lastEvent);for(const e of fresh)lastEvent=Math.max(lastEvent,e.id);const priority={hole:0,capture:1,slap:1,romeu:1,luna:1,frida:1,portal:1,shot:2,impact:3,wood:4,stone:4};fresh.sort((a,b)=>(priority[a.kind]??5)-(priority[b.kind]??5));for(const e of fresh.slice(0,6))play(e.kind,e.strength);},
+    events(events,hole=0){network=true;if(hole!==lastEventHole){lastEventHole=hole;lastEvent=0;}const fresh=events.filter(e=>e.id>lastEvent);for(const e of fresh)lastEvent=Math.max(lastEvent,e.id);const priority={hole:0,capture:1,slap:1,juju:1,romeu:1,luna:1,frida:1,portal:1,shot:2,impact:3,wood:4,stone:4};fresh.sort((a,b)=>(priority[a.kind]??5)-(priority[b.kind]??5));for(const e of fresh.slice(0,6))play(e.kind,e.strength);},
     phase(next){scene=next;if(next==='menu'){network=false;lastEvent=0;lastEventHole=-1;GolfMusic.world(0);}update();if(next==='game')play('start');},
     victory(){celebrations++;scene='results';if(master)master.gain.setTargetAtTime(0,context.currentTime,.25);play('victory');setTimeout(applause,650);setTimeout(update,4600);},
     status:()=>({...prefs,voices,scene,celebrations,network,state:context?.state??'idle'})

@@ -15,7 +15,7 @@
 #define WORLD_LIMIT 72000
 #define FX_LIMIT 8192
 // Detailed wildlife and the original mascots, including simultaneous actions.
-#define ACTOR_LIMIT 24576
+#define ACTOR_LIMIT 40960
 typedef struct garden_vertex { vec3 position, normal; vec4 color; } garden_vertex_t;
 typedef struct garden_mesh { garden_vertex_t *vertices; int count, capacity; } garden_mesh_t;
 static struct {
@@ -474,8 +474,74 @@ static void poodle(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
     oval(mesh,V3(.035f*sinf(time*3),.72f,-.53f),V3(.115f,.12f,.11f),curl,3,8);
     if(acting&&age<.8f)for(int dot=0;dot<6;dot++){float t=fmodf(age*3+dot/6.f,1);oval(mesh,V3(-.23f+t*.2f,.30f*(1-t),-.22f+t*.3f),V3(.014f,.018f,.014f),paint(.89f,.79f,.35f,0),2,5);}
 }
+/* Calico markings are face colors on the existing low-poly surfaces. */
+static void calico(garden_mesh_t *mesh,vec3 center,vec3 scale,bool head){
+    vec4 white=paint(.98f,.95f,.88f,0),black=paint(.10f,.105f,.12f,0),orange=paint(.94f,.49f,.16f,0);
+    for(int ring=0;ring<6;ring++)for(int segment=0;segment<14;segment++){
+        vec3 n[4];for(int j=0;j<4;j++)n[j]=sphere_point(-MF_PI*.5f+MF_PI*(ring+(j>=2))/6.f,2*MF_PI*(segment+(j==1||j==2))/14.f);
+        vec3 mid=vec3_scale(vec3_add(n[0],n[2]),.5f);vec4 color=white;
+        bool patch=head?(mid.y>-.06f&&(mid.z<.30f||fabsf(mid.x)>.30f)):(mid.y>-.10f&&mid.z<.45f);
+        if(patch)color=head?(mid.x<0?orange:black):(sinf(mid.z*7+mid.x*5)>0?orange:black);
+        int idx[]={0,1,2,0,2,3};for(int k=0;k<6;k++){vec3 v=n[idx[k]];emit(mesh,vec3_add(center,V3(v.x*scale.x,v.y*scale.y,v.z*scale.z)),v,color);}
+    }
+}
+static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
+    vec4 white=paint(.98f,.95f,.88f,0),black=paint(.10f,.105f,.12f,0),orange=paint(.94f,.49f,.16f,0),mud=paint(.34f,.18f,.08f,0),pink=paint(.93f,.57f,.59f,0);
+    float age=time-a->action_time,slap=age>=0&&age<.55f?sinf(MF_PI*age/.55f):0;
+    float breath=.006f*sinf(time*1.8f),head=.43f+breath+slap*.025f;
+    for(int j=0;j<20;j++){float x=j*2*MF_PI/20,z=(j+1)*2*MF_PI/20;float r=.66f+.025f*sinf(j*2.7f);
+        triangle(mesh,V3(0,.012f,-.04f),V3(cosf(x)*r,.012f,-.04f+sinf(x)*r*.75f),V3(cosf(z)*r,.012f,-.04f+sinf(z)*r*.75f),mud);}
+    calico(mesh,V3(0,.23f+breath,-.12f),V3(.27f,.20f,.43f),false);
+    for(int side=-1;side<=1;side+=2){
+        oval(mesh,V3(side*.18f,.09f,-.36f),V3(.12f,.08f,.15f),white,3,8);
+        vec3 paw=V3(side*.16f+(side==1?slap*.26f:0),.09f+(side==1?slap*.16f:0),.42f-(side==1?slap*.12f:0));
+        oval(mesh,paw,V3(.09f,.08f,.20f),white,3,8);
+        oval(mesh,vec3_add(paw,V3(0,.055f,.09f)),V3(.075f,.028f,.075f),mud,2,7);
+        vec4 ear=side<0?orange:black;
+        triangle(mesh,V3(side*.22f,head+.10f,.22f),V3(side*.19f,head+.34f,.23f),V3(side*.055f,head+.17f,.40f),ear);
+        triangle(mesh,V3(side*.18f,head+.14f,.395f),V3(side*.17f,head+.27f,.27f),V3(side*.095f,head+.17f,.405f),pink);
+    }
+    calico(mesh,V3(0,head,.29f),V3(.235f,.215f,.22f),true);
+    for(int side=-1;side<=1;side+=2){
+        float blink=powf(fmaxf(0,cosf(time*.83f+1.7f)),64);float eye=.045f*(1-.88f*blink);
+        oval(mesh,V3(side*.098f,head+.02f,.491f),V3(.057f,eye,.016f),paint(.54f,.58f,.24f,0),3,8);
+        oval(mesh,V3(side*.098f,head+.02f,.505f),V3(.019f,eye*.86f,.008f),black,2,7);
+        oval(mesh,V3(side*.089f,head+.035f,.514f),V3(.009f,eye*.25f,.005f),white,2,5);
+        oval(mesh,V3(side*.045f,head-.08f,.505f),V3(.075f,.055f,.04f),white,2,8);
+        for(int j=0;j<2;j++)branch(mesh,V3(side*.08f,head-.065f,.53f),V3(side*.25f,head-.065f+j*.035f,.55f),.0025f,.001f,black);
+    }
+    oval(mesh,V3(0,head-.055f,.55f),V3(.028f,.020f,.018f),pink,2,7);
+    vec3 tail[]={V3(-.12f,.18f,-.47f),V3(-.38f,.14f,-.53f),V3(-.49f,.11f,-.28f),V3(-.43f,.10f,-.10f)};
+    tail[3].x+=.025f*sinf(time*1.7f);
+    for(int j=0;j<3;j++)branch(mesh,tail[j],tail[j+1],.055f,.045f,j==0?black:j==1?orange:white);
+    oval(mesh,V3(-.245f,.27f,-.13f),V3(.025f,.055f,.10f),mud,2,6);
+}
+static float mud_amount(const golf_ball_t *b,float time){return b->mud_shots>0?b->mud_shots/3.f:golf_clampf((b->mud_fade_until-time)/.65f,0,1)/3;}
+vec3 golf_garden_ball_position(const golf_player_t *p,float time){
+    vec3 pos=p->ball.draw_pos;float mud=mud_amount(&p->ball,time);
+    if(mud>0&&p->ball.is_moving&&!p->ball.capture_until&&!p->ball.is_in_water){
+        float speed=hypotf(p->ball.vel.x,p->ball.vel.z),blend=golf_clampf(speed/1.5f,0,1)*mud;
+        pos.y+=.014f*powf(fmaxf(0,sinf(time*13+p->id)),6)*blend;
+        pos.x+=.003f*sinf(time*19+p->id)*blend;
+    }return pos;
+}
+static void muddy_ball(garden_mesh_t *mesh,const golf_player_t *p,float time){
+    float amount=mud_amount(&p->ball,time);if(amount<=0)return;
+    garden.transform=mat4_multiply(mat4_translation(golf_garden_ball_position(p,time)),mat4_from_quat(p->ball.orientation));
+    int count=p->ball.mud_shots>0?3+p->ball.mud_shots*2:5;
+    float fade=p->ball.mud_shots>0?1:golf_clampf((p->ball.mud_fade_until-time)/.65f,0,1);
+    for(int j=0;j<count;j++){
+        float y=1-2*(j+.5f)/12.f,angle=j*2.399963f,r=sqrtf(fmaxf(0,1-y*y));vec3 n=V3(cosf(angle)*r,y,sinf(angle)*r);
+        vec4 mud=j%2?paint(.38f,.22f,.11f,0):paint(.52f,.32f,.17f,0);
+        vec3 q=vec3_scale(n,p->ball.radius*.95f);float size=(.023f+.008f*(j%3))*fade;
+        oval(mesh,q,V3(size,size*.85f,size),mud,2,4);
+    }
+    garden.transform=mat4_identity();
+}
+
 static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind,float time,golf_game_t *game) {
     garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
+    if(kind==GOLF_JUJU){juju(mesh,a,time);garden.transform=mat4_identity();return;}
     if(kind==0){poodle(mesh,a,time);garden.transform=mat4_identity();return;}
     vec4 black=paint(.10f,.11f,.13f,0),cream=paint(.97f,.95f,.89f,0),pink=paint(.86f,.52f,.51f,0);
     vec4 tabby=paint(.31f,.29f,.26f,0),gray=paint(.52f,.50f,.48f,0);
@@ -680,7 +746,7 @@ void golf_garden_draw_feedback(float time) {
         float gait=golf_clampf(fabsf(cosf(angle))*game->mechanics.cat_span*.75f/.18f,0,1);
         if(game->mechanics.cat_valid&&game->mechanics.cat_present)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward,travelled*(2*MF_PI/.42f),gait);
         if(game->mechanics.dog_valid&&game->mechanics.dog_present)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game),0,0);
-        for(int kind=0;kind<3;kind++)if(game->mechanics.wildlife.animals[kind].active&&game->mechanics.wildlife.animals[kind].present){
+        for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(game->mechanics.wildlife.animals[kind].active&&game->mechanics.wildlife.animals[kind].present){
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
         }
         campaign_obstacles(&actor,&game->mechanics.wildlife,time);
@@ -704,6 +770,7 @@ void golf_garden_draw_feedback(float time) {
         golf_player_t *p=&game->players[i];
         if(p->connected&&p->ball.capture_kind==5&&p->ball.capture_until>time)maritaca(&actor,p,time,p->id==game->local_player_id);
     }
+    for(int i=0;i<game->player_count;i++)if(golf_game_player_visible(&game->players[i])&&!game->players[i].ball.is_in_hole)muddy_ball(&actor,&game->players[i],time);
     garden.actor_count=(unsigned)actor.count;
     if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}
     for(int i=0;i<game->player_count;i++) {
@@ -714,7 +781,7 @@ void golf_garden_draw_feedback(float time) {
             vec3 q=vec3_add(p,V3(cosf(a)*.20f,.035f,sinf(a)*.20f));
             triangle(&fx,q,vec3_add(q,V3(.025f,.035f,0)),vec3_add(q,V3(.04f,0,.02f)),paint(.93f,.79f,.30f,0));
         }
-        if(player->ball.effect_serial&&player->ball.effect_kind>=3&&time-player->ball.effect_time<1.3f) {
+        if(player->ball.effect_serial&&(player->ball.effect_kind==3||player->ball.effect_kind==4)&&time-player->ball.effect_time<1.3f) {
             for(int dot=0;dot<8;dot++) {
                 float a=dot*MF_PI/4+time*3,r=.24f+.12f*sinf(time*5);
                 vec3 q=vec3_add(p,V3(cosf(a)*r,.09f+dot*.02f,sinf(a)*r));

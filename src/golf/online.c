@@ -126,7 +126,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             game->mechanics.cat_phase=(float)json_object_get_number(mascots,"catPhase");
             game->mechanics.third_kind=(int)json_object_get_number(mascots,"thirdKind");
             JSON_Array *animals=json_object_get_array(mascots,"wildlife");
-            for(int k=0;k<3;k++) {
+            for(int k=0;k<GOLF_WILDLIFE_COUNT;k++) {
                 golf_wild_animal_t *a=&game->mechanics.wildlife.animals[k];
                 JSON_Object *o=json_array_get_object(animals,k);a->active=o&&json_object_get_boolean(o,"active")==1;
                 a->present=a->active&&(!json_object_has_value(o,"visible")||json_object_get_boolean(o,"visible")==1);
@@ -157,6 +157,8 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             p->ball.captured=json_object_get_boolean(b,"captured")==1;
             p->ball.capture_until=(float)json_object_get_number(b,"captureUntil");
             p->ball.slow_until=(float)json_object_get_number(b,"slowUntil");
+            p->ball.mud_shots=(int)json_object_get_number(b,"mudShots");
+            p->ball.mud_fade_until=(float)json_object_get_number(b,"mudFadeUntil");
             p->ball.slow_shots=(int)json_object_get_number(b,"slowShots");
             p->ball.capture_kind=(int)json_object_get_number(b,"captureKind");
             p->ball.rescue_started=(float)json_object_get_number(b,"rescueStarted");

@@ -25,6 +25,14 @@ Updates to `staging` deploy after the GitHub validation workflow passes.
 The free service sleeps after 15 minutes without traffic and takes about one
 minute to wake up. Rooms and chat are kept in memory and end on server restarts.
 
+## Juju
+
+Choose **Meet Juju** in the main menu to see the calico kitten resting in mud.
+She can join Pituca and Pompom as the field's permanent third companion. Her
+paw tap redirects the ball and adds mud for the next three personal shots,
+with progressively fewer clumps, 18% lower launch speed and gentle deviations.
+See [Juju's art, rules and validation](build/emscripten/art/juju.md).
+
 ## Languages
 
 Open **Settings → Language** to select **English**, **Português (Brasil)** or

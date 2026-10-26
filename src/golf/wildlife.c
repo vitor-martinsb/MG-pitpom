@@ -30,12 +30,12 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
     memset(w,0,sizeof(*w));w->floor=floor;w->nav=nav;w->spawn=start;w->hole=hole;w->time=-1;
     w->excluded_count=excluded_count<32?excluded_count:32;
     memcpy(w->excluded,excluded,w->excluded_count*sizeof(*excluded));
-    vec3 wanted[3];bool present[3]={false};
+    vec3 wanted[GOLF_WILDLIFE_COUNT];bool present[GOLF_WILDLIFE_COUNT]={false};
     for(int i=0;i<level->entities.length;i++) {
         golf_entity_t *e=&level->entities.data[i];if(e->type!=GROUP_ENTITY)continue;
         golf_transform_t t=golf_entity_get_world_transform(level,e);int kind,pair,end;float strength;
         if(sscanf(e->name,"campaign:%d:%d:%d",&w->world,&w->stage,&w->course)==3)continue;
-        if(sscanf(e->name,"animal:%d",&kind)==1&&kind>=0&&kind<3){wanted[kind]=t.position;present[kind]=true;}
+        if(sscanf(e->name,"animal:%d",&kind)==1&&kind>=0&&kind<GOLF_WILDLIFE_COUNT){wanted[kind]=t.position;present[kind]=true;}
         else if(sscanf(e->name,"wind:%f",&strength)==1&&w->wind_count<GOLF_WIND_ZONES)
             w->wind[w->wind_count++]=(golf_wind_zone_t){.pos=t.position,.size=t.scale,.direction=V3(1,0,0),.strength=strength};
         else if(!strncmp(e->name,"mill:",5)&&w->wind_count<GOLF_WIND_ZONES){
@@ -56,11 +56,12 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         }
         if(!match)continue;
         w->course=index*4+1;w->world=index/2+1;w->stage=index%2*4+1;
-        for(int kind=0;kind<3;kind++)if(!present[kind]) {
+        for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(!present[kind]) {
             wanted[kind]=vec3_add(start,vec3_scale(vec3_sub(hole,start),.25f+kind*.25f));present[kind]=true;
         }
         break;
     }
+    if(!present[GOLF_JUJU]&&present[2]){wanted[GOLF_JUJU]=wanted[2];present[GOLF_JUJU]=true;}
     for(int i=0;i<w->portal_count;i++){
         golf_portal_t *portal=&w->portals[i];portal->active=golf_wildlife_safe(w,portal->pos,.26f);
         if(!portal->active){
@@ -71,7 +72,7 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
             }
         }
     }
-    for(int kind=0;kind<3;kind++)if(present[kind]) {
+    for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(present[kind]) {
         float score=FLT_MAX;int best=-1;bool shared=false;
         /* On narrow fields use a second spatial search, preserving separation
            from both permanent mascots and clearance from the tee and cup. */
@@ -99,10 +100,11 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
 }
 static void animate(golf_wildlife_t *w,float time) {
     float dt=w->time<0?0:golf_clampf(time-w->time,0,.1f);w->time=time;
-    for(int kind=0;kind<3;kind++) {
+    for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++) {
         golf_wild_animal_t *a=&w->animals[kind];if(!a->active)continue;
         float age=time-a->action_time;
         if(age>=0&&age<1.1f){a->walking=false;a->speed=0;a->gait*=expf(-dt*12);continue;}
+        if(kind==GOLF_JUJU){a->walking=false;a->speed=0;a->gait=0;continue;}
         a->clock+=dt;float period=a->patrol_period>0?a->patrol_period:8+kind*1.7f,p=fmodf(a->clock,period)/period;
         float t=p<.4f?p/.4f:p<.5f?1:p<.9f?1-(p-.5f)/.4f:0;
         t=t*t*(3-2*t);vec3 old=a->pos;
@@ -121,7 +123,7 @@ void golf_wildlife_shot(golf_wildlife_t *w,const golf_player_t *p){
         *s=(golf_wild_shot_t){p->id,++w->accepted_shots,p->stroke_count,true};return;
     }
 }
-static void finish_shots(golf_wildlife_t *w,golf_player_t *players,int count){
+static void finish_shots(golf_wildlife_t *w,golf_player_t *players,int count,float time){
     for(int i=0;i<count;i++){
         golf_player_t *p=&players[i];if(!p->id)continue;
         for(int j=0;j<GOLF_MAX_PLAYERS;j++){
@@ -130,6 +132,9 @@ static void finish_shots(golf_wildlife_t *w,golf_player_t *players,int count){
             s->pending=false;
             if(p->ball.slow_shots>0&&s->stroke>p->ball.slow_born_stroke){
                 if(--p->ball.slow_shots==0)p->ball.slow_until=0;
+            }
+            if(p->ball.mud_shots>0&&s->stroke>p->ball.mud_born_stroke){
+                if(--p->ball.mud_shots==0)p->ball.mud_fade_until=time+.65f;
             }
             for(int k=0;k<GOLF_PUDDLES;k++){
                 golf_puddle_t *q=&w->puddles[k];
@@ -149,7 +154,7 @@ static vec3 random_destination(const golf_wildlife_t *w,const golf_player_t *p,u
         int j=(first+(uint32_t)k)%w->nav->count;vec3 q=w->nav->nodes[j].pos;
         if(!w->nav->nodes[j].reachable||vec3_distance(q,w->hole)<1.3f||vec3_distance(q,p->ball.pos)<2||!golf_wildlife_safe(w,q,.28f))continue;
         bool clear=true;
-        for(int a=0;a<3;a++)if(w->animals[a].active&&fminf(vec3_distance(q,w->animals[a].a),vec3_distance(q,w->animals[a].b))<1.5f)clear=false;
+        for(int a=0;a<GOLF_WILDLIFE_COUNT;a++)if(w->animals[a].active&&fminf(vec3_distance(q,w->animals[a].a),vec3_distance(q,w->animals[a].b))<1.5f)clear=false;
         for(int a=0;a<w->portal_count;a++)if(vec3_distance(q,w->portals[a].pos)<1.3f)clear=false;
         if(clear)return vec3_add(q,V3(0,p->ball.radius,0));
     }
@@ -229,8 +234,14 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
         if(enabled&&b->slow_shots>0&&b->is_moving) {
             b->vel.x*=.996f;b->vel.z*=.996f;
         }
+        if(enabled&&b->mud_shots>0&&b->is_moving&&!b->is_in_water&&!b->is_out_of_bounds){
+            // Bounded deterministic steering, no extra energy or vertical force.
+            float speed=hypotf(b->vel.x,b->vel.z);
+            if(speed>.2f){float angle=.0006f*sinf(time*9+p->id*.71f),x=b->vel.x,z=b->vel.z;
+                b->vel.x=x*cosf(angle)-z*sinf(angle);b->vel.z=x*sinf(angle)+z*cosf(angle);}
+        }
         if(!enabled||b->capture_until>0||b->is_in_water||b->is_out_of_bounds||!p->stroke_count||time<b->wildlife_protection)continue;
-        for(int kind=0;kind<3;kind++) {
+        for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++) {
             golf_wild_animal_t *a=&w->animals[kind];if(!a->active||!a->present||a->presence<.95f)continue;
             float d=vec3_distance(b->pos,vec3_add(a->pos,V3(0,b->radius,0)));
             if(d>.82f)b->wildlife_contact&=~(1u<<kind);
@@ -243,7 +254,17 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
                 b->slow_until=time+1;b->vel=vec3_scale(b->vel,.55f);
                 if(!slow_applied){b->effect_kind=1;b->effect_time=time;b->effect_serial++;}
             }else if(kind==1)capture(b,2,vec3_add(w->spawn,V3(0,b->radius,0)),time,1.15f);
-            else capture(b,3,random_destination(w,p,seed),time,.85f);
+            else if(kind==2)capture(b,3,random_destination(w,p,seed),time,.85f);
+            else {
+                vec3 incoming=V3(b->vel.x,0,b->vel.z);float speed=vec3_length(incoming);
+                vec3 direction=speed>.1f?vec3_scale(incoming,1/speed):a->forward;
+                float angle=(random_word(seed^p->id^b->wildlife_hits[kind])&1?1:-1)*(.55f);
+                b->vel=V3(direction.x*cosf(angle)-direction.z*sinf(angle),0,direction.x*sinf(angle)+direction.z*cosf(angle));
+                b->vel=vec3_scale(b->vel,golf_clampf(speed*GOLF_MUD_SPEED,1.2f,4.5f));
+                b->is_moving=true;b->time_going_slow=0;b->resting_static=false;
+                b->mud_shots=3;b->mud_born_stroke=p->stroke_count;b->mud_fade_until=0;
+                b->effect_kind=GOLF_EFFECT_JUJU;b->effect_time=time;b->effect_serial++;
+            }
             b->wildlife_protection=time+.4f;break;
         }
         if(b->capture_until>0)continue;
@@ -255,6 +276,6 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             break;
         }
     }
-    finish_shots(w,players,count);
+    finish_shots(w,players,count,time);
     // The puddle's lifetime is independent of each player's three-shot debuff.
 }

@@ -33,6 +33,7 @@ try{
   const snapshot=await freezePhysics(room);
   assert.equal(snapshot.players.length,50);assert.equal(snapshot.mascots.wildlife.filter(a=>a.active).length,1);
   snapshot.time+=10;
+  for(const ball of snapshot.players){ball.mudShots=3;ball.mudFadeUntil=0;}
   // Include both original mascots even if their safe-spawn search omitted one.
   snapshot.mascots.catActive=snapshot.mascots.dogActive=true;
   snapshot.mascots.catVisible=snapshot.mascots.dogVisible=true;
@@ -61,9 +62,9 @@ try{
     });
     assert.equal(frame.mode,'impact');assert.equal(frame.players.length,50);
     assert.equal(room.busy,true,'the room stays frozen throughout the renderer fixture');
-    assert.ok(frame.actorVertices>0&&frame.actorVertices<24576,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
+    assert.ok(frame.actorVertices>0&&frame.actorVertices<40960,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
     await page.screenshot({path:`../out/campaign-validation/wildlife-fifty-${name}.png`});
-    console.log(`${name}: 50 Impact players and simultaneous wildlife actions: ${frame.actorVertices}/24576 vertices.`);
+    console.log(`${name}: 50 Impact players and simultaneous wildlife actions: ${frame.actorVertices}/40960 vertices.`);
   }
   assert.deepEqual(errors,[]);
 }finally{for(const socket of clients)socket.terminate();await browser?.close();app.close();}

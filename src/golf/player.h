@@ -8,6 +8,7 @@
 #define GOLF_MAX_PLAYERS 50
 #define GOLF_PLAYER_NAME_SIZE 32
 #define GOLF_BALL_RADIUS 0.12f
+#define GOLF_MUD_SPEED .82f
 
 /* All simulation and interpolation state belongs to an individual ball. */
 typedef struct golf_ball {
@@ -21,10 +22,12 @@ typedef struct golf_ball {
     uint32_t cat_hits;
     int dog_stroke;
     /* Temporary effects are per ball; cosmetics remain in golf_player.color. */
-    float slow_until,wildlife_protection,wildlife_cooldown[3],portal_cooldown;
+    float slow_until,wildlife_protection,wildlife_cooldown[4],portal_cooldown;
     int slow_shots,slow_born_stroke;
+    int mud_shots,mud_born_stroke;
+    float mud_fade_until;
     bool puddle_contact;
-    uint32_t wildlife_hits[3],wildlife_contact,effect_serial;
+    uint32_t wildlife_hits[4],wildlife_contact,effect_serial;
     int capture_kind,effect_kind;
     float effect_time;
     vec3 capture_target;
@@ -35,6 +38,11 @@ typedef struct golf_ball {
     vec3 resting_pos,resting_vel;
     float resting_dt;
 } golf_ball_t;
+
+/* The legacy solo launcher and authoritative shots share temporary modifiers. */
+static inline float golf_ball_shot_scale(const golf_ball_t *b){
+    return (b->slow_shots>0?.65f:1)*(b->mud_shots>0?GOLF_MUD_SPEED:1);
+}
 
 typedef struct golf_player {
     uint32_t id;
