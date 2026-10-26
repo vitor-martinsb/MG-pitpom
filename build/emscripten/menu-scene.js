@@ -20,7 +20,9 @@
   }
   // The supplied five-character reference is kept as separate straight-alpha
   // exports. Uniform scale and the existing foot anchors preserve their staging.
+  const petFile=id=>`menu-pet-${id}.${id==='juju'?'svg':'png'}`;
   const referenceRigs={
+    juju:{bounds:[0,0,600,350],feet:300,head:[437,139,116,107],ears:[[360,59,34,46],[525,63,35,43]],eyes:[[397,143,19,23,'#fff3de'],[475,143,19,23,'#fff3de']]},
     luna:{bounds:[0,440,415,923],feet:220,head:[214,600,201,157],ears:[[91,553,86,74],[337,519,70,68]],eyes:[[179,578,28,32,'#443228'],[285,560,28,32,'#443228']],tail:[0,770,111,149],pivot:[115,880]},
     romeu:{bounds:[310,510,690,916],feet:498,head:[498,657,182,144],ears:[[365,688,50,65],[633,688,47,65]],eyes:[[453,655,28,31,'#353236'],[553,655,28,31,'#353236']],tail:[310,800,90,120],pivot:[404,900]},
     frida:{bounds:[625,530,941,928],feet:790,head:[785,672,155,140],ears:[[722,584,42,48],[884,622,38,43]],eyes:[],tail:[865,768,76,160],pivot:[870,895]},
@@ -115,6 +117,7 @@
       blades:'M1259 291L1213 229L1191 248L1247 306L1184 354L1203 378L1259 317L1304 388L1329 370L1272 305L1344 252L1323 230L1260 290Z',
       vegetation:[['M0 0H452Q454 79 386 109Q344 155 287 140Q249 185 183 145Q92 208 0 206Z',130,182],['M1420 296Q1436 201 1503 191Q1574 172 1617 261L1610 351Q1488 365 1420 296Z',1513,357],['M0 814Q72 774 149 830L236 941H0Z',85,941],['M1470 828Q1556 777 1672 807V941H1470Z',1590,941],['M388 903Q409 866 434 907L435 919L403 921Z',420,920],['M1559 458Q1602 438 1634 468L1644 504L1575 508Z',1607,505]],
       pets:[
+        {id:'juju',anchor:[442,810],head:[505,700,58,54],ears:[],eyes:[]},
         {id:'luna',body:'M551 485Q556 462 589 450Q633 429 674 446Q717 432 733 453L728 480L716 487L699 509L694 562L692 630Q696 649 663 646L626 648L588 638Q548 634 554 608Q553 589 572 588L581 571L584 534L565 521Z',anchor:[650,645],head:[644,522,87,82],ears:[[582,484,28,42],[707,466,27,31]],tail:['M586 633Q554 635 554 610Q550 589 571 589Q585 593 577 608Q569 617 589 616Z',588,625],eyes:[[626,491,11,12,'#473627'],[671,486,11,12,'#352b22']]},
         {id:'romeu',body:'M739 526Q732 509 744 502Q736 486 753 481Q755 464 776 466Q784 451 801 461Q819 450 832 463Q850 453 860 470Q883 466 886 487Q906 491 899 512Q906 532 890 545L880 560L880 602Q887 634 872 646L818 649L769 641Q733 642 733 614L742 591L759 588L761 565Z',anchor:[816,645],head:[820,521,85,66],ears:[[756,526,20,31],[880,524,19,30]],tail:['M765 635Q728 638 735 607Q738 590 748 589Q761 589 757 605Q752 614 773 615Z',771,625],eyes:[[800,513,10,12,'#272827'],[846,512,10,12,'#272827']]},
         {id:'frida',body:'M942 522L946 486Q966 491 981 505L1008 506L1052 496L1050 532L1046 558L1042 593Q1056 581 1066 593Q1085 612 1067 630L1048 636Q1034 654 1008 647L977 651L953 645Q927 648 923 627Q920 608 938 605L942 570L924 559L937 554Z',anchor:[997,647],head:[993,543,63,59],ears:[[957,509,15,23],[1037,516,16,24]],tail:['M1041 622Q1064 618 1050 605Q1042 593 1055 589Q1069 586 1075 604Q1081 632 1044 638Z',1045,632],eyes:[[962,543,10,5,'#827d72'],[1014,547,10,5,'#898277']],closed:true},
@@ -126,6 +129,7 @@
       blades:'M710 680L672 626L653 645L699 694L647 735L663 753L711 707L751 763L770 749L724 694L782 649L763 632L711 682Z',
       vegetation:[['M0 252Q137 251 154 340Q231 350 191 458Q256 499 182 558Q89 628 0 597Z',70,591],['M811 665Q819 589 878 581Q926 568 941 601V763Q863 745 811 665Z',882,767],['M0 1415Q80 1369 185 1464L222 1672H0Z',95,1672],['M751 1482Q839 1428 941 1465V1672H741Z',870,1672],['M745 1140Q760 1114 778 1146L777 1164H749Z',763,1165]],
       pets:[
+        {id:'juju',anchor:[470,850],head:[530,770,48,45],ears:[],eyes:[]},
         {id:'luna',body:'M231 894Q235 871 267 863Q293 842 330 853Q368 839 394 860L389 888L372 895L364 945L356 1006L355 1035L328 1039L300 1040L265 1034Q232 1030 232 1006Q232 986 251 985L261 950L254 929Q234 925 231 894Z',anchor:[308,1035],head:[315,910,84,66],ears:[[254,893,26,34],[369,872,25,29]],tail:['M266 1026Q232 1026 233 1004Q232 984 249 987Q263 990 256 1005L274 1014Z',268,1022],eyes:[[297,897,10,12,'#463629'],[337,894,10,12,'#352c24']]},
         {id:'romeu',body:'M399 932Q391 919 404 908Q399 893 415 885Q417 872 434 874Q446 858 463 869Q481 859 493 873Q515 870 523 889Q545 895 542 917Q550 940 532 951L523 968L523 999Q536 1026 514 1035L472 1038L423 1032Q391 1032 394 1008L405 984L420 980L422 965Z',anchor:[470,1034],head:[470,921,77,62],ears:[[414,934,18,25],[529,932,18,25]],tail:['M422 1023Q387 1026 396 1000Q399 983 411 984Q423 988 415 1001L432 1011Z',426,1020],eyes:[[452,917,10,11,'#272827'],[494,918,10,11,'#272827']]},
         {id:'frida',body:'M577 928L582 892L612 911L639 915L674 905L678 934L670 965L665 991Q678 981 690 992Q705 1014 684 1027L665 1035L638 1041L612 1038L585 1039Q559 1037 560 1016Q556 999 574 996L578 973L562 963L575 958Z',anchor:[628,1036],head:[624,949,62,58],ears:[[591,914,16,25],[662,925,16,26]],tail:['M662 1020Q684 1011 672 1002Q665 990 680 989Q697 990 696 1009Q696 1029 663 1035Z',666,1029],eyes:[[599,947,10,5,'#827d72'],[642,951,10,5,'#898277']],closed:true},
@@ -193,7 +197,7 @@
       const pets=el('g',{'visibility':'hidden','data-pet-rig':'motion-only'});root.append(pets);painter=petPainter(root,d);
       const characterBounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
       for(const [index,template]of d.pets.entries()){
-        const source=referenceRigs[template.id]?referenceSprite(originals[`menu-pet-${template.id}.png`],template):birdSprite(originals[original],template,contours[layout][template.id].path);
+        const source=referenceRigs[template.id]?referenceSprite(originals[petFile(template.id)],template):birdSprite(originals[original],template,contours[layout][template.id].path);
         characterBounds.left=Math.min(characterBounds.left,source.x);characterBounds.top=Math.min(characterBounds.top,source.y);
         characterBounds.right=Math.max(characterBounds.right,source.x+source.w);characterBounds.bottom=Math.max(characterBounds.bottom,source.y+source.h);
         const p=source.rig??template,rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
@@ -201,7 +205,7 @@
           const [x,y]=[p.anchor[0],p.anchor[1]+1],rx=p.head[2]*.85,shadow=el('ellipse',{cx:x,cy:y,rx,ry:12,fill:'#224a31',opacity:'.24'});pets.append(shadow);
           painter.shape(shadow,x-rx-1,y-13,rx*2+2,26,c=>{c.fillStyle='#224a31';c.beginPath();c.ellipse(x,y,rx,12,0,0,Math.PI*2);c.fill();});
         }
-        const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?`menu-pet-${p.id}.png`:original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
+        const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?petFile(p.id):original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
         animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
         if(source.tail){const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;animate(tail,[{transform:'rotate(-2deg)'},{transform:'rotate(2.4deg)',offset:.42},{transform:'rotate(-2deg)'}],{duration:6100+index*587,delay:-index*1700,easing:'ease-in-out'});}
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
@@ -254,7 +258,7 @@
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
-    const images=['menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png',...Object.keys(referenceRigs).map(id=>`menu-pet-${id}.png`)];
+    const images=['menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png',...Object.keys(referenceRigs).map(id=>petFile(id))];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
     return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,petFrames:painter?.frames??0,petRenderer:'canvas-2d',lastClock};}});
   }

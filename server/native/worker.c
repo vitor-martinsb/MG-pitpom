@@ -114,6 +114,9 @@ static void wildlife_json(const golf_wildlife_t *w) {
     printf("],\"acceptedShots\":%u,\"puddles\":[",w->accepted_shots);
     int count=0;for(int i=0;i<GOLF_PUDDLES;i++)if(w->puddles[i].active){
         const golf_puddle_t *p=&w->puddles[i];printf("%s{\"id\":%u,\"pos\":[%.7g,%.7g,%.7g],\"born\":%u,\"remaining\":%d}",count++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->born,p->remaining);
+    }printf("],\"mudPrints\":[");
+    count=0;for(int i=0;i<GOLF_MUD_PRINTS;i++)if(w->mud_prints[i].active){
+        const golf_mud_print_t *p=&w->mud_prints[i];printf("%s{\"id\":%u,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"born\":%.7g}",count++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->forward.x,p->forward.z,p->born);
     }printf("]");
 }
 

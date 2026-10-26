@@ -136,6 +136,11 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         }
         if(mascots){
             golf_wildlife_t *w=&game->mechanics.wildlife;w->time=(float)json_object_get_number(o,"time");w->accepted_shots=(uint32_t)json_object_get_number(mascots,"acceptedShots");
+            memset(w->mud_prints,0,sizeof(w->mud_prints));JSON_Array *prints=json_object_get_array(mascots,"mudPrints");
+            for(size_t i=0;i<json_array_get_count(prints)&&i<GOLF_MUD_PRINTS;i++){
+                JSON_Object *q=json_array_get_object(prints,i);golf_mud_print_t *p=&w->mud_prints[i];
+                p->active=true;p->pos=golf_json_object_get_vec3(q,"pos");p->forward=golf_json_object_get_vec3(q,"forward");p->id=(uint32_t)json_object_get_number(q,"id");p->born=(float)json_object_get_number(q,"born");
+            }
             memset(w->puddles,0,sizeof(w->puddles));JSON_Array *puddles=json_object_get_array(mascots,"puddles");
             for(size_t i=0;i<json_array_get_count(puddles)&&i<GOLF_PUDDLES;i++){
                 JSON_Object *q=json_array_get_object(puddles,i);golf_puddle_t *p=&w->puddles[i];

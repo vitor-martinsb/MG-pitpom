@@ -3,9 +3,10 @@
 `juju-mud.png` is an original transparent illustration generated with the
 built-in imagegen tool using the supplied real calico photo for identity and
 the existing menu garden for character style. The generated alpha is preserved.
-No existing menu animal or background was replaced. The introduction opens
-from **Meet Juju** in the main menu, with English, Brazilian Portuguese and
-Spanish descriptions.
+No existing menu animal or background was replaced. The main menu now uses
+`menu-pet-juju.svg`, an editable vector illustration with green eyes, one tail,
+calico markings and a mud puddle. It joins the canvas pet compositor with
+independent breathing, blinks and ear/head motion; no extra menu button.
 
 Final prompt (built-in tool, transparent background):
 
@@ -14,8 +15,14 @@ Final prompt (built-in tool, transparent background):
 ## Gameplay
 
 Juju joins the third-companion pool (kind 3), preserving the permanent Pituca
-and Pompom and excluding the previous field's companion. She rests in a mud
-puddle, breathes, blinks, flicks her single tail and swipes her front paw.
+and Pompom and excluding the previous field's companion. She walks a validated safe
+corridor, rests, blinks, flicks her single tail and swipes her front paw.
+Legs follow distance-based gait. Alternating pawprints appear every 22 cm,
+last 24 seconds and shrink during the final 3 seconds. A fixed 48-print ring
+bounds memory, render and protocol cost. Authority and solo share the same
+trail; snapshots and planner copies preserve its exact state. Continuous
+trail contact does not refresh an already muddy ball. Pets and trail remain
+absent from the minimap.
 The contact edge/cooldown prevents repeated slaps while the ball stays beside her.
 
 Effect 6 applies a bounded 31.5 degree sideways tap and three personal future
@@ -37,7 +44,7 @@ use server state. Sounds use the existing procedural audio mixer.
 Native coverage: `juju_mud_three_shots`. Browser coverage:
 `server/test/juju-browser.mjs`, plus existing wildlife/render/navigation suites.
 `juju_placement_*` validates all 80 courses. The overpopulated renderer fixture
-also fits 50 muddy balls and all four optional animals into 39108/40960 vertices;
+also checks 50 muddy balls and all four optional animals against 40960 vertices;
 the normal game still renders only one optional companion alongside the mascots.
 
 ## Green-eye correction

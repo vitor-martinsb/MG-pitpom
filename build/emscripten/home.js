@@ -33,8 +33,6 @@
     for(const button of $('main-menu').querySelectorAll('button'))button.disabled=false;
     requestAnimationFrame(()=>{$('home-loading').hidden=true;show('splash',false);});
   }
-  $('meet-juju').onclick=()=>{$('juju-dialog').showModal();};
-  $('close-juju').onclick=()=>{$('juju-dialog').close();$('meet-juju').focus();};
   $('home-pets').hidden=true;
   function show(next,focus=true){
     if(['splash','menu'].includes(next)&&!bootComplete)return;

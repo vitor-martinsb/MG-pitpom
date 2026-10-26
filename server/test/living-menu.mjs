@@ -17,7 +17,7 @@ try{
       await page.evaluate(hour=>{window.__menuTime=Date.parse(`2026-10-23T${String(Math.floor(hour)).padStart(2,'0')}:${hour%1?'30':'00'}:00-03:00`);},hour);
       await page.waitForFunction(period=>document.getElementById('home').dataset.period===period,period);
       assert.equal(await page.locator('#home').getAttribute('data-time-zone'),'America/Sao_Paulo');
-      assert.equal(await page.locator('[data-pet]').count(),6);assert.equal(await page.locator('[data-pet=pituca] [data-motion=tail]').count(),0);assert.equal(await page.locator('[data-motion=tail]').count(),5);
+      assert.equal(await page.locator('[data-pet]').count(),7);assert.equal(await page.locator('[data-pet=pituca] [data-motion=tail]').count(),0);assert.equal(await page.locator('[data-motion=tail]').count(),5);
       await page.waitForTimeout(350);await page.screenshot({path:`../out/living-menu/${kind}-${period}.png`});
       const contrast=await page.locator('#continue-home').evaluate(e=>{const s=getComputedStyle(e),lum=color=>{const c=color.match(/[\d.]+/g).slice(0,3).map(Number).map(n=>{n/=255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4;});return .2126*c[0]+.7152*c[1]+.0722*c[2];};const a=lum(s.color),b=lum(s.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);});assert.ok(contrast>=4.5,`${kind} ${period} button contrast: ${contrast}`);
     }
@@ -43,5 +43,5 @@ try{
     await page.waitForFunction(()=>!document.getElementById('offline').disabled,null,{timeout:90000});await page.locator('#offline').click();await page.locator('#level-selection').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>GolfHome.scene.running),0);
     await context.close();
   }
-  assert.deepEqual(errors,[]);console.log('Brasilia time under Auckland/Los Angeles device zones, all four palettes, continuous boundaries, six independent animals, tailless Pituca, mill/wind, pause/resume, reduced motion and campaign/multiplayer navigation passed.');
+  assert.deepEqual(errors,[]);console.log('Brasilia time under Auckland/Los Angeles device zones, all four palettes, continuous boundaries, seven independent animals, tailless Pituca, mill/wind, pause/resume, reduced motion and campaign/multiplayer navigation passed.');
 }finally{await browser?.close();app.close();}

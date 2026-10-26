@@ -19,14 +19,24 @@ int main(int argc,char **argv){
    golf_wild_animal_t *a=&resident.wildlife.animals[GOLF_JUJU];
    assert(a->active&&golf_wildlife_safe(&resident.wildlife,a->pos,.44f));
    assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&vec3_distance(a->pos,m.dog)>1.24f);
-   for(int tick=0;tick<1200;tick+=120){vec3 before=a->pos;golf_mechanics_tick(&resident,NULL,0,tick/120.f);assert(vec3_distance(before,a->pos)<.001f);}
+   float distance=0;for(int tick=0;tick<200;tick++){
+    vec3 before=a->pos;golf_mechanics_tick(&resident,NULL,0,tick/10.f);
+    assert(a->active&&golf_wildlife_safe(&resident.wildlife,a->pos,.44f));
+    assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&vec3_distance(a->pos,m.dog)>1.24f);
+    distance+=vec3_distance(before,a->pos);
+   }
+   assert(vec3_distance(a->a,a->b)>.1f&&distance>.5f);
+   if(resident.third_kind==GOLF_JUJU){assert(resident.wildlife.next_mud_print>0);int prints=0;
+    for(int j=0;j<GOLF_MUD_PRINTS;j++)if(resident.wildlife.mud_prints[j].active){prints++;assert(golf_wildlife_safe(&resident.wildlife,resident.wildlife.mud_prints[j].pos,.20f));}
+    assert(prints>0&&prints<=GOLF_MUD_PRINTS);
+   }else assert(resident.wildlife.next_mud_print==0);
   }
-  printf("Juju safe permanent resting placement: %s\n",argv[1]);return 0;
+  printf("Juju safe permanent walking placement and pawprints: %s\n",argv[1]);return 0;
  }
  bool found=false;for(int seed=1;seed<64;seed++){golf_mechanics_seed(&m,seed,-1);if(m.third_kind==GOLF_JUJU){found=true;break;}}assert(found);
  golf_wildlife_t w=m.wildlife;w.wind_count=w.portal_count=0;
  for(int j=0;j<GOLF_WILDLIFE_COUNT;j++)w.animals[j].active=w.animals[j].present=j==GOLF_JUJU;
- golf_wild_animal_t *a=&w.animals[GOLF_JUJU];a->presence=1;vec3 spot=a->pos;
+ golf_wild_animal_t *a=&w.animals[GOLF_JUJU];a->presence=1;a->a=a->b=a->pos;vec3 spot=a->pos;
  golf_player_t players[50];for(int i=0;i<50;i++){make(&players[i],i+1,vec3_add(spot,V3(0,GOLF_BALL_RADIUS,0)));players[i].stroke_count=1;players[i].ball.is_moving=true;players[i].ball.vel=V3(0,0,-3);golf_wildlife_shot(&w,&players[i]);}
  golf_wildlife_tick(&w,players,50,10,917,true);
  for(int i=0;i<50;i++){golf_ball_t *b=&players[i].ball;assert(b->mud_shots==3&&b->mud_born_stroke==1&&b->effect_kind==GOLF_EFFECT_JUJU&&b->effect_serial==1);assert(fabsf(b->vel.x)>.5f&&b->vel.z<0&&vec3_length(b->vel)<3);assert(!b->capture_until&&!b->slow_shots);}
@@ -45,6 +55,18 @@ int main(int argc,char **argv){
   p->ball.is_moving=false;golf_wildlife_tick(&w,players,50,10002,917,true);assert(p->ball.mud_shots==remaining-1);
   golf_wildlife_tick(&w,players,50,10003,917,true);assert(p->ball.mud_shots==remaining-1&&players[1].ball.mud_shots==3);
  }
+ // Trail contacts apply once and use the same three completed personal shots.
+ memset(w.shots,0,sizeof(w.shots));
+ golf_player_t trail;make(&trail,88,tee);trail.stroke_count=1;trail.ball.vel=V3(0,0,-3);trail.ball.is_moving=true;
+ w.mud_prints[0]=(golf_mud_print_t){m.start,V3(0,0,1),10004,1,true};
+ golf_wildlife_tick(&w,&trail,1,10004,917,false);assert(!trail.ball.mud_shots);
+ golf_wildlife_tick(&w,&trail,1,10004,917,true);
+ assert(trail.ball.mud_shots==3&&trail.ball.effect_kind==GOLF_EFFECT_JUJU&&trail.ball.effect_serial==1&&fabsf(trail.ball.vel.x)>.5f);
+ for(int tick=1;tick<1200;tick++)golf_wildlife_tick(&w,&trail,1,10004+tick/120.f,917,true);
+ assert(trail.ball.effect_serial==1&&trail.ball.mud_shots==3);
+ for(int remaining=3;remaining;remaining--){trail.stroke_count++;trail.ball.is_moving=false;golf_wildlife_shot(&w,&trail);golf_wildlife_tick(&w,&trail,1,10014,917,true);assert(trail.ball.mud_shots==remaining-1);}
+ golf_wildlife_tick(&w,&trail,1,10015,917,true);assert(!trail.ball.mud_shots&&trail.ball.effect_serial==1);
+ golf_wildlife_tick(&w,&trail,1,10029,917,true);assert(!w.mud_prints[0].active);
  assert(players[0].ball.mud_fade_until>10002);assert(golf_physics_shoot(&world,&players[0],V3(0,0,-1),.1f));assert(fabsf(vec3_length(players[0].ball.vel)-normal)<.001f);
  // Compare distance and lateral deviation using the actual floor and solver.
  for(int power=0;power<3;power++){

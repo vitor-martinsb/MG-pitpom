@@ -488,15 +488,18 @@ static void calico(garden_mesh_t *mesh,vec3 center,vec3 scale,bool head){
 static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
     vec4 white=paint(.98f,.95f,.88f,0),black=paint(.10f,.105f,.12f,0),orange=paint(.94f,.49f,.16f,0),mud=paint(.34f,.18f,.08f,0),pink=paint(.93f,.57f,.59f,0);
     float age=time-a->action_time,slap=age>=0&&age<.55f?sinf(MF_PI*age/.55f):0;
-    float breath=.006f*sinf(time*1.8f),head=.43f+breath+slap*.025f;
-    for(int j=0;j<20;j++){float x=j*2*MF_PI/20,z=(j+1)*2*MF_PI/20;float r=.66f+.025f*sinf(j*2.7f);
-        triangle(mesh,V3(0,.012f,-.04f),V3(cosf(x)*r,.012f,-.04f+sinf(x)*r*.75f),V3(cosf(z)*r,.012f,-.04f+sinf(z)*r*.75f),mud);}
-    calico(mesh,V3(0,.23f+breath,-.12f),V3(.27f,.20f,.43f),false);
+    float gait=golf_clampf(a->gait,0,1),rise=.17f*gait;
+    float breath=.006f*sinf(time*1.8f),head=.43f+rise+breath+slap*.025f;
+    calico(mesh,V3(0,.23f+rise+breath,-.12f),V3(.27f,.20f,.43f),false);
     for(int side=-1;side<=1;side+=2){
-        oval(mesh,V3(side*.18f,.09f,-.36f),V3(.12f,.08f,.15f),white,3,8);
+        int leg=side<0?0:1;
+        if(gait>.01f){
+            quadruped_leg(mesh,leg,side*.16f,.36f,.23f+rise,a->stride,gait,white,false,side==1?slap*.16f:0);
+            quadruped_leg(mesh,leg+2,side*.18f,-.36f,.23f+rise,a->stride,gait,white,false,0);
+        }else oval(mesh,V3(side*.18f,.09f,-.36f),V3(.12f,.08f,.15f),white,3,8);
         vec3 paw=V3(side*.16f+(side==1?slap*.26f:0),.09f+(side==1?slap*.16f:0),.42f-(side==1?slap*.12f:0));
-        oval(mesh,paw,V3(.09f,.08f,.20f),white,3,8);
-        oval(mesh,vec3_add(paw,V3(0,.055f,.09f)),V3(.075f,.028f,.075f),mud,2,7);
+        if(gait<=.01f){oval(mesh,paw,V3(.09f,.08f,.20f),white,3,8);
+            oval(mesh,vec3_add(paw,V3(0,.055f,.09f)),V3(.075f,.028f,.075f),mud,2,7);}
         vec4 ear=side<0?orange:black;
         triangle(mesh,V3(side*.22f,head+.10f,.22f),V3(side*.19f,head+.34f,.23f),V3(side*.055f,head+.17f,.40f),ear);
         triangle(mesh,V3(side*.18f,head+.14f,.395f),V3(side*.17f,head+.27f,.27f),V3(side*.095f,head+.17f,.405f),pink);
@@ -750,6 +753,21 @@ void golf_garden_draw_feedback(float time) {
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
         }
         campaign_obstacles(&actor,&game->mechanics.wildlife,time);
+        for(int i=0;i<GOLF_MUD_PRINTS;i++){
+            const golf_mud_print_t *p=&game->mechanics.wildlife.mud_prints[i];if(!p->active)continue;
+            float fade=golf_clampf((GOLF_MUD_PRINT_LIFETIME-(time-p->born))/3,0,1);
+            vec3 right=V3(p->forward.z,0,-p->forward.x);
+            // Four flat pads, 54 vertices per print, fixed 48-print budget.
+            for(int pad=0;pad<4;pad++){
+                vec3 center=p->pos;center.y+=.009f;
+                if(pad)center=vec3_add(center,vec3_add(vec3_scale(p->forward,.10f),vec3_scale(right,(pad-2)*.065f)));
+                int segments=pad?4:6;float radius=(pad?.036f:.073f)*fade;
+                for(int j=0;j<segments;j++){
+                    float a=j*2*MF_PI/segments,b=(j+1)*2*MF_PI/segments;
+                    triangle(&fx,center,vec3_add(center,V3(cosf(a)*radius,0,sinf(a)*radius)),vec3_add(center,V3(cosf(b)*radius,0,sinf(b)*radius)),paint(.34f,.19f,.09f,0));
+                }
+            }
+        }
         for(int i=0;i<GOLF_PUDDLES;i++)if(game->mechanics.wildlife.puddles[i].active){
             vec3 p=game->mechanics.wildlife.puddles[i].pos;p.y+=.008f;
             for(int j=0;j<14;j++){float a=j*2*MF_PI/14,b=(j+1)*2*MF_PI/14;float r=.56f;

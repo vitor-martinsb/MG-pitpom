@@ -238,12 +238,3 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
  .home-screen .continue-home{left:auto;right:4%;bottom:max(8%,var(--safe-bottom));max-width:40%;transform:none;padding:8px 20px;font-size:.8rem;min-height:44px}
  .home-screen .continue-home:active{transform:translateY(1px)}
 }
-
-/* Character introduction keeps the established three main routes intact. */
-.juju-intro{position:absolute;left:max(20px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));width:auto;z-index:4;background:var(--menu-surface,#fff4d9);color:var(--menu-ink,#283b1e)}
-.home-screen[data-screen="splash"] .juju-intro{display:none}
-.juju-dialog{width:min(640px,92vw);max-height:90dvh;overflow:auto;border:1px solid #c7b388;border-radius:24px;padding:20px;background:#fff5e1;color:#293d29;box-shadow:0 20px 70px #14261866}
-.juju-dialog::backdrop{background:#15271c99;backdrop-filter:blur(4px)}
-.juju-dialog img{display:block;width:100%;height:auto;max-height:48dvh;object-fit:contain}
-.juju-dialog .muted{color:#665847}
-@media(max-width:600px){.juju-intro{bottom:auto;top:75px;left:12px;padding:8px 12px;font-size:12px}.juju-dialog{padding:16px}}

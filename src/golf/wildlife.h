@@ -8,6 +8,8 @@
 #define GOLF_WIND_ZONES 8
 #define GOLF_PORTALS 8
 #define GOLF_PUDDLES 128
+#define GOLF_MUD_PRINTS 48
+#define GOLF_MUD_PRINT_LIFETIME 24.f
 typedef struct golf_wild_animal {
     bool active, walking, present;
     vec3 a,b,pos,forward;
@@ -17,12 +19,14 @@ typedef struct golf_wild_animal {
 typedef struct golf_wind_zone { vec3 pos,size,direction; float strength,period,phase; bool mill; } golf_wind_zone_t;
 typedef struct golf_portal { vec3 pos; int pair,end; bool active; } golf_portal_t;
 typedef struct golf_puddle {vec3 pos;uint32_t id,born;int remaining;bool active;} golf_puddle_t;
+typedef struct golf_mud_print {vec3 pos,forward;float born;uint32_t id;bool active;} golf_mud_print_t;
 typedef struct golf_wild_shot {uint32_t player,sequence;int stroke;bool pending;} golf_wild_shot_t;
 typedef struct golf_wildlife {
     golf_wild_animal_t animals[GOLF_WILDLIFE_COUNT];
     golf_wind_zone_t wind[GOLF_WIND_ZONES]; int wind_count;
     golf_portal_t portals[GOLF_PORTALS]; int portal_count;
     golf_puddle_t puddles[GOLF_PUDDLES];uint32_t accepted_shots,next_puddle;
+    golf_mud_print_t mud_prints[GOLF_MUD_PRINTS];uint32_t next_mud_print;float print_distance;
     golf_wild_shot_t shots[GOLF_MAX_PLAYERS];
     int world,stage,course;
     float time;

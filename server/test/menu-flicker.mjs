@@ -53,7 +53,7 @@ try{
     }
     bodies.push({node,id:node.closest('[data-pet]').dataset.pet,points:points.filter((_,i)=>i%Math.max(1,Math.floor(points.length/32))===0).slice(0,32),minimum:1});
    }
-   if(bodies.length!==6||bodies.some(b=>b.points.length<5))throw new Error('Need opaque interior samples from every actual animal body');
+   if(bodies.length!==7||bodies.some(b=>b.points.length<5))throw new Error('Need opaque interior samples from every actual animal body');
    window.__petSamples=bodies;
    const start=performance.now();let checks=0,previousFrames=-1;
    while(performance.now()-start<40000){
@@ -74,7 +74,7 @@ try{
    return {checks,bodies:bodies.map(({id,minimum})=>({id,minimum}))};
   });
   const capture=(async()=>{
-   await page.waitForFunction(()=>window.__petSamples?.length===6);
+   await page.waitForFunction(()=>window.__petSamples?.length===7);
    for(let frame=0;frame<8;frame++){
     await page.waitForTimeout(4500);
     const samples=await page.evaluate(()=>{const v=document.querySelector('.living-menu-art')._characterLight;return window.__petSamples.map(body=>{const m=body.node.getScreenCTM();return {id:body.id,points:body.points.map(p=>{const q=new DOMPoint(p.x,p.y).matrixTransform(m);return {x:q.x,y:q.y,rgb:p.rgb.map((c,i)=>c*v[i]+(i===2?v[3]*255:0))};})};});});

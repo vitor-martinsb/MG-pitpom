@@ -27,10 +27,12 @@ minute to wake up. Rooms and chat are kept in memory and end on server restarts.
 
 ## Juju
 
-Choose **Meet Juju** in the main menu to see the calico kitten resting in mud.
+Juju rests in mud alongside the other pets in the main menu.
 She can join Pituca and Pompom as the field's permanent third companion. Her
 paw tap redirects the ball and adds mud for the next three personal shots,
 with progressively fewer clumps, 18% lower launch speed and gentle deviations.
+Juju now joins the main-menu pets as a clean SVG illustration (green eyes, one calico tail), without an extra navigation button. In fields where she is selected, she walks a validated safe corridor and leaves alternating muddy pawprints every 22 cm. The shared authoritative trail holds at most 48 prints, lasts 24 seconds, and shrinks gently during its final 3 seconds. Touching Juju or a print applies the existing bounded slap and three personal completed-shot mud effect. Continuous contact does not refresh the trail effect. Footprints and animals remain absent from the minimap.
+
 See [Juju's art, rules and validation](build/emscripten/art/juju.md).
 
 ## Languages

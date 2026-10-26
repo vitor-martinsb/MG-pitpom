@@ -53,6 +53,10 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     int puddles=0;for(int i=0;i<GOLF_PUDDLES;i++)if(m->wildlife.puddles[i].active){
         golf_puddle_t *p=&m->wildlife.puddles[i];used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g,%.5g],\"remaining\":%d}",puddles++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->remaining);
     }
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"mudPrints\":[");
+    int prints=0;for(int i=0;i<GOLF_MUD_PRINTS;i++)if(m->wildlife.mud_prints[i].active){
+        golf_mud_print_t *p=&m->wildlife.mud_prints[i];used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g,%.5g],\"born\":%.5g}",prints++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->born);
+    }
     vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time());
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"surfaceGroups\":%u,\"landscapeGap\":%.5g",golf_draw_surface_groups(),golf_garden_landscape_gap());
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",m->cat_present?"true":"false",m->dog_present?"true":"false",m->third_kind,m->cat_presence,m->dog_presence,m->cat_phase,golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);

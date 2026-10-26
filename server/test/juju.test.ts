@@ -15,8 +15,10 @@ test('Juju is a stable fourth companion candidate; authority includes clean mud 
   }
   assert.ok(selected>0);const before=await p.step(0),after=await p.step(1200);
   assert.equal(after.mascots.thirdKind,3);assert.equal(after.mascots.wildlife![3]!.visible,true);
-  assert.deepEqual(after.mascots.wildlife![3]!.pos,before.mascots.wildlife![3]!.pos);
-  assert.equal(after.mascots.wildlife![3]!.walking,false);
+  assert.notDeepEqual(after.mascots.wildlife![3]!.pos,before.mascots.wildlife![3]!.pos);
+   assert.ok(after.mascots.wildlife![3]!.stride>0);
+   assert.ok(after.mascots.mudPrints!.length>0&&after.mascots.mudPrints!.length<=48);
+   const prints=structuredClone(after.mascots.mudPrints);await p.plan(0,'easy');assert.deepEqual((await p.step(0)).mascots.mudPrints,prints);
   for(const ball of after.players){assert.equal(ball.mudShots,0);assert.equal(ball.mudFadeUntil,0);}
   const balls=structuredClone(after.players);await p.plan(0,'easy');assert.deepEqual((await p.step(0)).players,balls);
   await p.configure(false,selected,.5,3);assert.notEqual((await p.step(0)).mascots.thirdKind,3);

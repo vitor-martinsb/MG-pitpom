@@ -26,7 +26,7 @@ typedef struct golf_ball {
     int slow_shots,slow_born_stroke;
     int mud_shots,mud_born_stroke;
     float mud_fade_until;
-    bool puddle_contact;
+    bool puddle_contact, mud_print_contact;
     uint32_t wildlife_hits[4],wildlife_contact,effect_serial;
     int capture_kind,effect_kind;
     float effect_time;
