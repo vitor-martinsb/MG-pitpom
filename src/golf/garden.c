@@ -504,7 +504,7 @@ static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
     calico(mesh,V3(0,head,.29f),V3(.235f,.215f,.22f),true);
     for(int side=-1;side<=1;side+=2){
         float blink=powf(fmaxf(0,cosf(time*.83f+1.7f)),64);float eye=.045f*(1-.88f*blink);
-        oval(mesh,V3(side*.098f,head+.02f,.491f),V3(.057f,eye,.016f),paint(.54f,.58f,.24f,0),3,8);
+        oval(mesh,V3(side*.098f,head+.02f,.491f),V3(.057f,eye,.016f),paint(.28f,.65f,.18f,0),3,8);
         oval(mesh,V3(side*.098f,head+.02f,.505f),V3(.019f,eye*.86f,.008f),black,2,7);
         oval(mesh,V3(side*.089f,head+.035f,.514f),V3(.009f,eye*.25f,.005f),white,2,5);
         oval(mesh,V3(side*.045f,head-.08f,.505f),V3(.075f,.055f,.04f),white,2,8);

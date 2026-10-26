@@ -39,3 +39,10 @@ Native coverage: `juju_mud_three_shots`. Browser coverage:
 `juju_placement_*` validates all 80 courses. The overpopulated renderer fixture
 also fits 50 muddy balls and all four optional animals into 39108/40960 vertices;
 the normal game still renders only one optional companion alongside the mascots.
+
+## Green-eye correction
+
+Juju has green eyes in the presentation illustration and the 3D model.
+The built-in imagegen tool edited the existing transparent asset with this prompt:
+
+> Use case: precise-object-edit. Edit this exact existing transparent Juju game character illustration. Change ONLY the colored irises of BOTH eyes from amber/brown to clear natural leafy GREEN, with lighter green lower iris and darker green upper iris. Keep black pupils and white eye highlights exactly intact. Preserve every other detail: same calico cat identity, orange left forehead/ear and black right forehead/ear, white face/chest/paws, exact pose, expression, head and body proportions, outlines, fur patches, ONE tail, mud on paws/body, complete mud puddle, framing and original 1536x1024 size. Keep the actual transparent background and alpha edges. No new elements, no redraw, no changes outside the iris color. This is a minimal eye-color correction of the production asset.
