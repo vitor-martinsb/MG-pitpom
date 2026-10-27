@@ -9,7 +9,7 @@ import {freezePhysics} from './room-fixture.mjs';
 const app=createServer(),errors=[];let browser,releasePlanner;
 try{
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
-  browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
+  browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
   const contexts=await Promise.all([browser.newContext({viewport:{width:1200,height:900}}),browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})]);
   const pages=await Promise.all(contexts.map(c=>c.newPage())),[a,b]=pages;
   for(const page of pages){
@@ -31,6 +31,9 @@ try{
   const roster=await a.evaluate(()=>window.nativeRoster);assert.equal(roster.find(p=>p.nickname==='Human Host').bot,undefined);assert.equal(roster.filter(p=>p.nickname.startsWith('[BOT] ')).length,3);
   await a.locator('#holes').selectOption('1');await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));
   room.selectedLevels=[0];room.holes=1;room.hole=0;await room.load();
+  // Keep the real mascot mechanics, but use a repeatable patrol for the
+  // completion/three-stroke fixture instead of a random match seed.
+  await room.physics.configure(false,1234);
   await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===1&&GolfCourse.inspect().frame.intro)));
   const bots=[...room.members.values()].filter(m=>m.bot),humans=[...room.members.values()].filter(m=>!m.bot);for(const bot of bots)bot.nextDecision=Infinity;
   await Promise.all(pages.map(p=>p.locator('#skip-presentation').click()));await a.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));

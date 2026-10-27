@@ -17,7 +17,7 @@ try{
     assert.equal(await page.locator('#home').isVisible(),true);assert.equal(await page.locator('#connect').isHidden(),true);
     assert.equal(await page.locator('#main-menu').isHidden(),true);assert.equal(await page.locator('html').getAttribute('lang'),'en');
     await page.waitForFunction(()=>document.querySelector('.home-art')?.complete&&document.querySelector('.home-art').naturalWidth>900);
-    assert.equal(await page.locator('.home-art').getAttribute('alt'),'Pituca, Pompom, Romeu, Luna, Frida, Maritaca');
+    assert.equal(await page.locator('.home-art').getAttribute('alt'),'Pituca, Pompom, Romeu, Luna, Frida, Juju, Maritaca');
     assert.ok((await page.locator('.home-art').evaluate(e=>e.currentSrc)).endsWith(touch?'menu-garden-portrait.png':'menu-garden.png'));
     await page.screenshot({path:`../out/home-navigation/welcome-${name}.png`});
     if(touch)await page.locator('#continue-home').tap();else await page.keyboard.press('Enter');
