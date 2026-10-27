@@ -8,6 +8,25 @@
 void headless_config_load(void);
 bool headless_level_load(golf_level_t *,const char *);
 static void make(golf_player_t *p,int id,vec3 pos){golf_player_init(p,id,"Juju",V4(1,1,1,1),0);golf_player_start_level(p,pos);}
+static void readable_trail(golf_mechanics_t original){
+ golf_wildlife_t w=original.wildlife;w.time=-1;w.next_mud_print=0;w.print_distance=0;memset(w.mud_prints,0,sizeof(w.mud_prints));
+ for(int k=0;k<GOLF_WILDLIFE_COUNT;k++)w.animals[k].active=w.animals[k].present=k==GOLF_JUJU;
+ golf_wild_animal_t *a=&w.animals[GOLF_JUJU];unsigned generated=0;int turns=0;vec3 first_heading=a->forward;
+ for(int tick=0;tick<6000;tick++){
+  vec3 before=a->forward;golf_wildlife_tick(&w,NULL,0,tick/120.f,917,true);
+  float turn=acosf(golf_clampf(vec3_dot(before,a->forward),-1,1));assert(turn<=4.f/120+.001f);
+  if(vec3_dot(first_heading,a->forward)<-.9f)turns++;
+  for(int i=0;i<GOLF_MUD_PRINTS;i++)if(w.mud_prints[i].active){
+   golf_mud_print_t *p=&w.mud_prints[i];assert(fabsf(vec3_length(p->forward)-1)<.001f);
+   assert(golf_wildlife_safe(&w,p->pos,.10f));
+   for(int j=0;j<i;j++)if(w.mud_prints[j].active&&fabsf(p->pos.y-w.mud_prints[j].pos.y)<.06f){
+    vec3 d=vec3_sub(p->pos,w.mud_prints[j].pos);assert(hypotf(d.x,d.z)>=GOLF_MUD_PRINT_CLEARANCE-.0001f);
+   }
+  }
+  generated=w.next_mud_print;
+ }
+ assert(generated>10&&turns>0);puts("Juju walking: bounded turns and distinct, non-overlapping pawprints over repeated patrols passed.");
+}
 int main(int argc,char **argv){
  headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
  golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);golf_config_t config={0};
@@ -34,6 +53,7 @@ int main(int argc,char **argv){
   printf("Juju safe permanent walking placement and pawprints: %s\n",argv[1]);return 0;
  }
  bool found=false;for(int seed=1;seed<64;seed++){golf_mechanics_seed(&m,seed,-1);if(m.third_kind==GOLF_JUJU){found=true;break;}}assert(found);
+ readable_trail(m);
  golf_wildlife_t w=m.wildlife;w.wind_count=w.portal_count=0;
  for(int j=0;j<GOLF_WILDLIFE_COUNT;j++)w.animals[j].active=w.animals[j].present=j==GOLF_JUJU;
  golf_wild_animal_t *a=&w.animals[GOLF_JUJU];a->presence=1;a->a=a->b=a->pos;vec3 spot=a->pos;

@@ -489,13 +489,14 @@ static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
     vec4 white=paint(.98f,.95f,.88f,0),black=paint(.10f,.105f,.12f,0),orange=paint(.94f,.49f,.16f,0),mud=paint(.34f,.18f,.08f,0),pink=paint(.93f,.57f,.59f,0);
     float age=time-a->action_time,slap=age>=0&&age<.55f?sinf(MF_PI*age/.55f):0;
     float gait=golf_clampf(a->gait,0,1),rise=.17f*gait;
+    float phase=a->stride+fmaxf(0,time-golf_game_get()->mechanics.wildlife.time)*a->speed*(2*MF_PI/.42f);
     float breath=.006f*sinf(time*1.8f),head=.43f+rise+breath+slap*.025f;
     calico(mesh,V3(0,.23f+rise+breath,-.12f),V3(.27f,.20f,.43f),false);
     for(int side=-1;side<=1;side+=2){
         int leg=side<0?0:1;
         if(gait>.01f){
-            quadruped_leg(mesh,leg,side*.16f,.36f,.23f+rise,a->stride,gait,white,false,side==1?slap*.16f:0);
-            quadruped_leg(mesh,leg+2,side*.18f,-.36f,.23f+rise,a->stride,gait,white,false,0);
+            quadruped_leg(mesh,leg,side*.16f,.36f,.23f+rise,phase,gait,white,false,side==1?slap*.16f:0);
+            quadruped_leg(mesh,leg+2,side*.18f,-.36f,.23f+rise,phase,gait,white,false,0);
         }else oval(mesh,V3(side*.18f,.09f,-.36f),V3(.12f,.08f,.15f),white,3,8);
         vec3 paw=V3(side*.16f+(side==1?slap*.26f:0),.09f+(side==1?slap*.16f:0),.42f-(side==1?slap*.12f:0));
         if(gait<=.01f){oval(mesh,paw,V3(.09f,.08f,.20f),white,3,8);
@@ -514,10 +515,13 @@ static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
         for(int j=0;j<2;j++)branch(mesh,V3(side*.08f,head-.065f,.53f),V3(side*.25f,head-.065f+j*.035f,.55f),.0025f,.001f,black);
     }
     oval(mesh,V3(0,head-.055f,.55f),V3(.028f,.020f,.018f),pink,2,7);
-    vec3 tail[]={V3(-.12f,.18f,-.47f),V3(-.38f,.14f,-.53f),V3(-.49f,.11f,-.28f),V3(-.43f,.10f,-.10f)};
-    tail[3].x+=.025f*sinf(time*1.7f);
+    // The tail stays attached to the rising hips; a compact curl cannot sweep
+    // away from the body when the walking pose lifts it off the ground.
+    vec3 tail[]={V3(-.08f,.25f+rise+breath,-.47f),V3(-.23f,.22f+rise+breath,-.55f),
+        V3(-.34f,.17f+rise+breath,-.40f),V3(-.29f,.16f+rise+breath,-.24f)};
+    tail[3].x+=.012f*sinf(time*1.7f);
     for(int j=0;j<3;j++)branch(mesh,tail[j],tail[j+1],.055f,.045f,j==0?black:j==1?orange:white);
-    oval(mesh,V3(-.245f,.27f,-.13f),V3(.025f,.055f,.10f),mud,2,6);
+    oval(mesh,V3(-.245f,.27f+rise+breath,-.13f),V3(.025f,.055f,.10f),mud,2,6);
 }
 static float mud_amount(const golf_ball_t *b,float time){return b->mud_shots>0?b->mud_shots/3.f:golf_clampf((b->mud_fade_until-time)/.65f,0,1)/3;}
 vec3 golf_garden_ball_position(const golf_player_t *p,float time){
@@ -760,8 +764,8 @@ void golf_garden_draw_feedback(float time) {
             // Four flat pads, 54 vertices per print, fixed 48-print budget.
             for(int pad=0;pad<4;pad++){
                 vec3 center=p->pos;center.y+=.009f;
-                if(pad)center=vec3_add(center,vec3_add(vec3_scale(p->forward,.10f),vec3_scale(right,(pad-2)*.065f)));
-                int segments=pad?4:6;float radius=(pad?.036f:.073f)*fade;
+                if(pad)center=vec3_add(center,vec3_add(vec3_scale(p->forward,.075f),vec3_scale(right,(pad-2)*.044f)));
+                int segments=pad?4:6;float radius=(pad?.024f:.052f)*fade;
                 for(int j=0;j<segments;j++){
                     float a=j*2*MF_PI/segments,b=(j+1)*2*MF_PI/segments;
                     triangle(&fx,center,vec3_add(center,V3(cosf(a)*radius,0,sinf(a)*radius)),vec3_add(center,V3(cosf(b)*radius,0,sinf(b)*radius)),paint(.34f,.19f,.09f,0));

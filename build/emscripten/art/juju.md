@@ -17,7 +17,7 @@ Final prompt (built-in tool, transparent background):
 Juju joins the third-companion pool (kind 3), preserving the permanent Pituca
 and Pompom and excluding the previous field's companion. She walks a validated safe
 corridor, rests, blinks, flicks her single tail and swipes her front paw.
-Legs follow distance-based gait. Alternating pawprints appear every 22 cm,
+Legs follow distance-based gait. Alternating pawprints appear every 28 cm,
 last 24 seconds and shrink during the final 3 seconds. A fixed 48-print ring
 bounds memory, render and protocol cost. Authority and solo share the same
 trail; snapshots and planner copies preserve its exact state. Continuous
@@ -67,3 +67,15 @@ The five existing anchors are unchanged. Juju stands on the free front-left
 green in landscape and the front-right in portrait, with enough space to keep
 her paws and tail visible beside the controls. The gameplay model, green eyes,
 three-shot mud state and synchronized muddy footsteps are unchanged.
+
+## Walking and trail clarity
+
+Juju's curled tail now rises with her hips in the walking pose, stays close to
+her body and has a smaller tip sway. Turns ease through the patrol endpoints;
+walking paws interpolate between authoritative updates.
+
+Pawprints are smaller, spaced 28 cm apart and alternate sides behind her paws.
+When she retraces the same corridor, nearby prints refresh instead of piling up.
+Individual pads remain separate and the existing lifetime, three-shot mud effect
+and server synchronization are retained. The native Juju test follows repeated
+patrols and checks bounded turns, safe placement and minimum print separation.

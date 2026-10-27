@@ -10,6 +10,8 @@
 #define GOLF_PUDDLES 128
 #define GOLF_MUD_PRINTS 48
 #define GOLF_MUD_PRINT_LIFETIME 24.f
+#define GOLF_MUD_PRINT_STEP .28f
+#define GOLF_MUD_PRINT_CLEARANCE .20f
 typedef struct golf_wild_animal {
     bool active, walking, present;
     vec3 a,b,pos,forward;

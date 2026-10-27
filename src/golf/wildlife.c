@@ -144,16 +144,32 @@ static void animate(golf_wildlife_t *w,float time) {
         vec3 velocity=vec3_sub(a->pos,old);velocity.y=0;a->walking=dt>0&&vec3_length(velocity)>.00001f;
         float travelled=dt>0?vec3_length(velocity):0;a->speed=dt>0?travelled/dt:0;
         a->stride+=travelled*(2*MF_PI/.42f);a->gait+=(golf_clampf(a->speed/.18f,0,1)-a->gait)*(1-expf(-dt*14));
-        if(a->walking)a->forward=vec3_normalize(velocity);
+        vec3 heading=a->walking?vec3_normalize(velocity):a->forward;
+        if(a->walking){
+            if(kind==GOLF_JUJU){
+                // Ease turns at the ends of the patrol instead of snapping the
+                // body and curled tail through 180 degrees in a single tick.
+                float yaw=atan2f(a->forward.x,a->forward.z),target=atan2f(heading.x,heading.z);
+                float delta=atan2f(sinf(target-yaw),cosf(target-yaw));
+                yaw+=golf_clampf(delta,-4*dt,4*dt);a->forward=V3(sinf(yaw),0,cosf(yaw));
+            }else a->forward=heading;
+        }
         // Distance-based steps follow the same safe corridor and gait on every client.
         if(kind==GOLF_JUJU&&a->present&&a->walking){
             w->print_distance+=travelled;
-            if(w->print_distance>=.22f){
-                w->print_distance=fmodf(w->print_distance,.22f);
+            if(w->print_distance>=GOLF_MUD_PRINT_STEP){
+                w->print_distance=fmodf(w->print_distance,GOLF_MUD_PRINT_STEP);
                 unsigned id=++w->next_mud_print;float side=id&1?.105f:-.105f;
-                vec3 pos=vec3_add(a->pos,V3(a->forward.z*side,0,-a->forward.x*side)),hit;
-                if(golf_nav_floor(w->floor,pos,&hit,0))pos.y=hit.y;
-                w->mud_prints[(id-1)%GOLF_MUD_PRINTS]=(golf_mud_print_t){pos,a->forward,time,id,true};
+                // The trail follows actual travel, independently of a gentle body turn.
+                vec3 pos=vec3_add(a->pos,vec3_add(vec3_scale(heading,-.22f),V3(heading.z*side,0,-heading.x*side))),hit;
+                if(!golf_nav_floor(w->floor,pos,&hit,0))continue;pos.y=hit.y;
+                // Returning through the same corridor refreshes nearby marks;
+                // repeated laps must not stack into an unreadable muddy stripe.
+                for(int j=0;j<GOLF_MUD_PRINTS;j++){
+                    golf_mud_print_t *q=&w->mud_prints[j];float dx=q->pos.x-pos.x,dz=q->pos.z-pos.z;
+                    if(q->active&&fabsf(q->pos.y-pos.y)<.06f&&dx*dx+dz*dz<GOLF_MUD_PRINT_CLEARANCE*GOLF_MUD_PRINT_CLEARANCE)q->active=false;
+                }
+                w->mud_prints[(id-1)%GOLF_MUD_PRINTS]=(golf_mud_print_t){pos,heading,time,id,true};
             }
         }
     }
