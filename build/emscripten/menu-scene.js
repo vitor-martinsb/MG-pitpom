@@ -159,7 +159,7 @@
   };
   // Keep all established anchors. The new companion occupies the open front green.
   layouts.landscape.pets.push({id:'juju',anchor:[470,837],head:[1180,713,70,65],ears:[[1130,663,20,26],[1230,679,20,25]],eyes:[]});
-  layouts.portrait.pets.push({id:'juju',anchor:[470,850],head:[530,745,58,55],ears:[],eyes:[]});
+  layouts.portrait.pets.push({id:'juju',anchor:[755,1205],head:[815,1100,58,55],ears:[],eyes:[]});
   for(const [name,d]of Object.entries(layouts)){const bird=d.pets.find(p=>p.id==='maritaca');bird.anchor[1]=name==='portrait'?1039:647;}
   function mount(container,home){
     let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;

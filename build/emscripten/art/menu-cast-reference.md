@@ -9,3 +9,6 @@ Runtime source-space masks separate the overlapping paws/ears of adjacent charac
 Clouds wrap continuously to the right. Clipped water ripples and flag cloth folds move in that direction, while trees and grass bend softly. All motion follows the existing menu visibility, reduced-motion and Brasilia-clock lifecycle. The flag pole and course geometry stay fixed.
 
 Animal placement is shuffled from the field seed over reachable navigation candidates. Every proposed whole path is sampled at 4 cm intervals with floor, dynamic obstacle, tee, cup, portal and companion clearance. A validated authored fallback remains for constrained maps. No per-frame placement lottery or changes to the ball physics were introduced.
+
+On portrait screens Juju shares the front-row ground line with Pituca and Pompom,
+close to the group. Her original scale and the landscape placement are retained.
