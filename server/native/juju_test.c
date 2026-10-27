@@ -1,4 +1,5 @@
 #include "golf/mechanics.h"
+#include "golf/juju_pose.h"
 #include "golf/physics.h"
 #undef NDEBUG
 #include <assert.h>
@@ -27,7 +28,23 @@ static void readable_trail(golf_mechanics_t original){
  }
  assert(generated>10&&turns>0);puts("Juju walking: bounded turns and distinct, non-overlapping pawprints over repeated patrols passed.");
 }
+static void connected_legs(void){
+ for(int step=0;step<=100;step++)for(int frame=0;frame<32;frame++)for(int swipe=0;swipe<=1;swipe++)for(int leg=0;leg<4;leg++){
+  float gait=step/100.f,torso=.23f+.17f*gait+.006f*sinf(frame);
+  golf_juju_leg_pose_t p=golf_juju_leg_pose(leg,torso,frame*2*MF_PI/32,gait,swipe);
+  vec3 q=vec3_sub(p.root,V3(0,torso,-.12f));
+  float inside=q.x*q.x/(.27f*.27f)+q.y*q.y/(.20f*.20f)+q.z*q.z/(.43f*.43f);
+  assert(inside<.7f); // Would fail with the old front hip beyond the torso.
+  assert(isfinite(p.knee.x)&&isfinite(p.knee.y)&&isfinite(p.foot.z));
+  assert(vec3_distance(p.root,p.knee)>.01f&&vec3_distance(p.knee,p.foot)>.01f);
+  assert(p.foot.y-p.paw_size.y>=-.001f);
+  golf_juju_leg_pose_t next=golf_juju_leg_pose(leg,torso+.000017f,frame*2*MF_PI/32,gait+.0001f,swipe);
+  assert(vec3_distance(p.foot,next.foot)<.001f); // No detached-paw mode switch.
+ }
+ puts("Juju: all four limbs rooted inside the torso across rest, walk, transition and swipe poses passed.");
+}
 int main(int argc,char **argv){
+ if(argc==1)connected_legs();
  headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
  golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);golf_config_t config={0};
  golf_physics_world_t world={.level=&level,.config=&config,.static_bvh=&fixed,.dynamic_bvh=&moving,.multiplayer=true};golf_physics_build_world(&world,false);

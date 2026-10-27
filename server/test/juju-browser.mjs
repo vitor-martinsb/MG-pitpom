@@ -52,7 +52,21 @@ try{
    await page.screenshot({path:`../out/juju-validation/mud-${amount}-${i?'mobile':'desktop'}.png`});
   }
  }
+ // Exercise the exact poses in which paws used to detach, including the old
+ // resting/walking threshold and a side view of shoulders and rear hips.
+ for(const [name,gait,stride,age,forward]of [
+  ['resting',0,0,2,[0,0,1]],['transition',.005,.8,2,[1,0,0]],
+  ['walking',1,2.1,2,[1,0,0]],['swiping',0,0,.2,[0,0,1]]]){
+  snapshot.time+=1;juju.actionTime=snapshot.time-age;juju.action=age<1?4:0;
+  juju.walking=gait>0;juju.gait=gait;juju.stride=stride;juju.speed=0;juju.forward=forward;
+  send();
+  for(const [i,page]of pages.entries()){
+   await page.waitForFunction(({time,gait})=>{const f=GolfCourse.inspect().frame;return f.time>=time&&Math.abs(f.wildlife[3].gait-gait)<.0001;},{time:snapshot.time,gait});
+   const frame=await page.evaluate(()=>GolfCourse.inspect().frame);assert.ok(frame.actorVertices>0&&frame.actorVertices<24576);
+   await page.screenshot({path:`../out/juju-validation/connected-paws-${name}-${i?'mobile':'desktop'}.png`});
+  }
+ }
  // Both client renderers consume the same authoritative animal/effect state.
  const state=await Promise.all(pages.map(p=>p.evaluate(()=>{const f=GolfCourse.inspect().frame;return {wildlife:f.wildlife,mudPrints:f.mudPrints,balls:f.players.map(p=>({id:p.id,mud:p.mudShots})).sort((a,b)=>a.id-b.id)};})));assert.deepEqual(state[0],state[1]);
- assert.deepEqual(errors,[]);console.log('Juju: vector menu Juju on desktop/mobile, two-client shared animal, walking paws and shared muddy footprints, muddy clumps 3/2/1/0, HUD and finite WebGL buffers passed.');
+ assert.deepEqual(errors,[]);console.log('Juju: vector menu Juju on desktop/mobile, two-client shared animal, connected resting/transition/walking/swiping paws and shared muddy footprints, muddy clumps 3/2/1/0, HUD and finite WebGL buffers passed.');
 }finally{await browser?.close();app.close();}

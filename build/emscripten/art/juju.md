@@ -79,3 +79,12 @@ When she retraces the same corridor, nearby prints refresh instead of piling up.
 Individual pads remain separate and the existing lifetime, three-shot mud effect
 and server synchronization are retained. The native Juju test follows repeated
 patrols and checks bounded turns, safe placement and minimum print separation.
+
+## Connected paws in every pose
+
+The four legs now share one continuous pose: shoulder and hip roots are inside
+the calico torso, with connected upper/lower limbs and rounded knees. Resting,
+walking and swiping blend the same joints instead of swapping detached paw
+ovals for a different walking mesh. Mud follows each paw in every pose.
+The native pose regression sweeps the full gait and swipe ranges, verifies
+root placement inside the torso, foot clearance and continuous transitions.

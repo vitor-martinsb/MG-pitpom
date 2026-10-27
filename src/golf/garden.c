@@ -1,4 +1,5 @@
 #include "golf/garden.h"
+#include "golf/juju_pose.h"
 #include <float.h>
 #include <math.h>
 #include <stddef.h>
@@ -492,15 +493,19 @@ static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
     float phase=a->stride+fmaxf(0,time-golf_game_get()->mechanics.wildlife.time)*a->speed*(2*MF_PI/.42f);
     float breath=.006f*sinf(time*1.8f),head=.43f+rise+breath+slap*.025f;
     calico(mesh,V3(0,.23f+rise+breath,-.12f),V3(.27f,.20f,.43f),false);
+    for(int leg=0;leg<4;leg++){
+        golf_juju_leg_pose_t p=golf_juju_leg_pose(leg,.23f+rise+breath,phase,gait,slap);
+        // Both limb sections are drawn in every pose. Their roots overlap the
+        // torso, and rounded joints hide seams as the knees fold and extend.
+        branch(mesh,p.root,p.knee,.070f,.055f,white);
+        branch(mesh,p.knee,p.foot,.055f,.043f,white);
+        oval(mesh,p.root,V3(.073f,.070f,.073f),white,2,7);
+        oval(mesh,p.knee,V3(.057f,.057f,.057f),white,2,7);
+        oval(mesh,p.foot,p.paw_size,white,3,8);
+        vec3 dirt=vec3_add(p.foot,V3(0,p.paw_size.y*.65f,p.paw_size.z*.25f));
+        oval(mesh,dirt,V3(p.paw_size.x*.80f,.022f,p.paw_size.z*.48f),mud,2,7);
+    }
     for(int side=-1;side<=1;side+=2){
-        int leg=side<0?0:1;
-        if(gait>.01f){
-            quadruped_leg(mesh,leg,side*.16f,.36f,.23f+rise,phase,gait,white,false,side==1?slap*.16f:0);
-            quadruped_leg(mesh,leg+2,side*.18f,-.36f,.23f+rise,phase,gait,white,false,0);
-        }else oval(mesh,V3(side*.18f,.09f,-.36f),V3(.12f,.08f,.15f),white,3,8);
-        vec3 paw=V3(side*.16f+(side==1?slap*.26f:0),.09f+(side==1?slap*.16f:0),.42f-(side==1?slap*.12f:0));
-        if(gait<=.01f){oval(mesh,paw,V3(.09f,.08f,.20f),white,3,8);
-            oval(mesh,vec3_add(paw,V3(0,.055f,.09f)),V3(.075f,.028f,.075f),mud,2,7);}
         vec4 ear=side<0?orange:black;
         triangle(mesh,V3(side*.22f,head+.10f,.22f),V3(side*.19f,head+.34f,.23f),V3(side*.055f,head+.17f,.40f),ear);
         triangle(mesh,V3(side*.18f,head+.14f,.395f),V3(side*.17f,head+.27f,.27f),V3(side*.095f,head+.17f,.405f),pink);
