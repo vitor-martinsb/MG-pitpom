@@ -4,7 +4,9 @@ import fs from 'node:fs';
 import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
 import {freezePhysics} from './room-fixture.mjs';
+import {campaignIndices} from './campaign-shards.mjs';
 
+const indices=campaignIndices(80),lastIndex=indices.at(-1);
 const app=createServer();let browser;
 try{
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));
@@ -22,7 +24,7 @@ try{
   await Promise.all(pages.map(p=>p.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]))));
   const room=app.rooms.get(code);room.selectedLevels=Array.from({length:80},(_,i)=>i);room.holes=80;
   fs.mkdirSync('../out/campaign-validation',{recursive:true});const budgets=[];
-  for(let index=0;index<80;index++){
+  for(const index of indices){
     room.hole=index;await room.load();
     await Promise.all(pages.map(p=>p.waitForFunction(index=>GolfCourse.inspect().frame?.course===index+1&&GolfCourse.inspect().frame.intro,index,{timeout:30000})));
     await Promise.all(pages.map(p=>p.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]))));
@@ -59,28 +61,28 @@ try{
   // Trusted renderer fixtures: labels, capture visibility and cosmetics; native
   // tests separately trigger these interactions using physical contact.
   await b.evaluate(()=>GolfI18n.setLanguage('es'));
-  await b.waitForFunction(()=>document.getElementById('campaign-world').textContent.includes(GolfI18n.courseName(GOLF_CAMPAIGN.courses[79])));
+  await b.waitForFunction(index=>document.getElementById('campaign-world').textContent.includes(GolfI18n.courseName(GOLF_CAMPAIGN.courses[index])),lastIndex);
   // All three detailed animals can animate together, including both carried
   // balls and Romeu's droplets, without exhausting the mobile actor buffer.
-  const animated=structuredClone(frame);
+  const animated={...structuredClone(frame),hole:lastIndex};
   for(const animal of animated.mascots.wildlife){animal.actionTime=animated.time-.2;animal.walking=true;}
   animated.players.forEach((ball,i)=>{ball.captureKind=i%2+2;ball.captured=true;ball.captureUntil=animated.time+10;});
   for(const page of pages){
     const count=await page.evaluate(async snapshot=>{
-      Module.ccall('golf_online_receive',null,['string'],[JSON.stringify({...snapshot,type:'snapshot',hole:79})]);
+      Module.ccall('golf_online_receive',null,['string'],[JSON.stringify({...snapshot,type:'snapshot'})]);
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       return JSON.parse(Module.ccall('golf_course_frame','string',[],[])).actorVertices;
     },animated);
     assert.ok(count>0&&count<24576,`simultaneous wildlife animations fit actor buffer: ${count}`);
   }
   for(const kind of [1,2,3,4]){
-    await b.evaluate(({snapshot,kind})=>{
+    await b.evaluate(({snapshot,kind,hole})=>{
       const f=GolfCourse.inspect().frame,ball=snapshot.players.find(p=>p.id===f.local);
       ball.slowUntil=kind===1?f.time+10:0;ball.captureKind=kind===1?0:kind;
       ball.captured=kind>1;ball.captureUntil=kind>1?f.time+10:0;
       ball.effectKind=kind;ball.effectSerial=kind;
-      Module.ccall('golf_online_receive',null,['string'],[JSON.stringify({...snapshot,type:'snapshot',hole:79})]);
-    },{snapshot:frame,kind});
+      Module.ccall('golf_online_receive',null,['string'],[JSON.stringify({...snapshot,type:'snapshot',hole})]);
+    },{snapshot:frame,kind,hole:lastIndex});
     await b.waitForFunction(kind=>document.getElementById('wildlife-effect').textContent===GolfI18n.t('effect.'+['','romeu','luna','frida','portal'][kind]),kind);
     for(const language of ['en','pt-BR','es']){
       const text=await b.evaluate(({language,kind})=>{GolfI18n.setLanguage(language);return [document.getElementById('wildlife-effect').textContent,GolfI18n.t('effect.'+['','romeu','luna','frida','portal'][kind])];},{language,kind});
@@ -89,5 +91,5 @@ try{
   }
   assert.deepEqual(errors,[]);fs.writeFileSync('../out/campaign-validation/budgets.json',JSON.stringify(budgets,null,2));
   await Promise.all(contexts.map(c=>c.close()));
-  console.log('80 family WebAssembly maps: desktop/mobile rendering, biome HUD, animal counts, buffers, EN/PT/ES and shared authority passed.');
+  console.log(`${indices.length} family WebAssembly maps (${indices[0]+1}–${lastIndex+1}): desktop/mobile rendering, biome HUD, animal counts, buffers, EN/PT/ES and shared authority passed.`);
 }finally{await browser?.close();app.close();}

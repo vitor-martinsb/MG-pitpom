@@ -40,7 +40,9 @@ try{
   // Keep a bot search pending while the real server interval and both real
   // clients continue. This catches awaiting AI inside the live tick loop.
   const originalPlan=room.physics.plan.bind(room.physics),gate=new Promise(resolve=>releasePlanner=resolve);
-  room.physics.plan=async(...args)=>{await gate;return originalPlan(...args);};bots[0].nextDecision=0;
+  // The responsiveness probe may finish a hole. Keep it separate from GPT-6,
+  // whose three short strokes and DNF score are asserted below.
+  room.physics.plan=async(...args)=>{await gate;return originalPlan(...args);};bots[1].nextDecision=0;
   for(let n=0;!room.botPlanning;n++){assert.ok(n<200,'bot search starts');await delay(10);}
   const pending=room.botPlanning,before=room.worldTime,snapshots=room.metrics.snapshots;
   await delay(450);

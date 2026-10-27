@@ -1,0 +1,14 @@
+{
+  "menu-stability": [["menu-flicker.mjs"]],
+  "menu-art": [["menu-alpha.mjs"], ["mascot-art.mjs", "--url", "http://localhost:3000"]],
+  "menu-motion": [["menu-motion.mjs"], ["living-menu.mjs"]],
+  "navigation": [["clean-play.mjs"], ["menu-readiness.mjs"], ["home-navigation.mjs"]],
+  "surfaces": [["visual-shaders.mjs"], ["course-features.mjs", "--url", "http://localhost:3000"], ["visual-refresh.mjs"]],
+  "evolution": [["evolution-browser.mjs", "--url", "http://localhost:3000"]],
+  "campaign-1": [["campaign-browser.mjs", "--shard", "1/4"]],
+  "campaign-2": [["campaign-browser.mjs", "--shard", "2/4"]],
+  "campaign-3": [["campaign-browser.mjs", "--shard", "3/4"]],
+  "campaign-4": [["campaign-browser.mjs", "--shard", "4/4"]],
+  "wildlife": [["juju-browser.mjs"], ["wildlife-render.mjs"], ["rescue-browser.mjs"]],
+  "social": [["loading-audio.mjs"], ["bot-updates-browser.mjs"]]
+}

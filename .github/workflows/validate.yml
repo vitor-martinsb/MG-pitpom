@@ -7,115 +7,215 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  linux-container:
+  checks:
+    name: Assets and CI contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v4
-      - name: Preserve original gameplay and generated shaders
-        run: |
-          python3 build/verify-gameplay-assets.py
-          python3 build/generate-visual-shaders.py --check
-          python3 build/generate-campaign.py --check
-          python3 -m unittest discover -s tests -p test_campaign_layouts.py
-      - name: Compile Linux physics, WebAssembly and Node container
-        run: docker build -t pitpom:ci .
-      - name: Validate languages and protocol in the built container
-        run: |
-          docker run -d --name pitpom -p 3000:10000 pitpom:ci
-          for attempt in $(seq 1 30); do
-            curl --fail http://localhost:3000/health && break
-            sleep 1
-          done
-          mkdir -p out/server-native
-          docker cp pitpom:/app/out/server-native/golf_physics_worker out/server-native/
-          docker cp pitpom:/app/out/web out/web
-          cd server
-          npm ci
-          npm run build
-          npm test
-          npm run test:deployment -- --url http://localhost:3000
-      - name: Share the validated build with browser checks
-        uses: actions/upload-artifact@v4
-        with:
-          name: validated-game
-          path: |
-            out/web
-            out/server-native/golf_physics_worker
-          retention-days: 2
-      - name: Container logs
-        if: always()
-        run: docker logs pitpom || true
-  browser-validation:
-    needs: linux-container
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [menus, courses, audio-and-updates]
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.3
+      - name: Preserve gameplay, generated files and complete test coverage
+        run: |
+          python3 build/verify-gameplay-assets.py
+          python3 build/generate-visual-shaders.py --check
+          python3 build/generate-campaign.py --check
+          python3 -m unittest discover -s tests -p test_campaign_layouts.py
+          node --test .github/ci/contracts.test.mjs
+
+  builds:
+    name: Build ${{ matrix.component }}
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [web, native]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Build once and export runtime files
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ci-${{ matrix.component }}-artifacts
+          outputs: type=local,dest=.ci-build
+          cache-from: type=gha,scope=pitpom-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=pitpom-${{ matrix.component }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-${{ matrix.component }}
+          path: .ci-build/out
+          if-no-files-found: error
+          retention-days: 2
+
+  native-tests:
+    name: Physics ${{ matrix.shard }}/5
+    needs: builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: validated-game
+          name: game-native
           path: out
-      - name: Prepare the exact validated build
+      - name: Regenerate local test paths without recompiling
+        run: |
+          chmod +x out/server-native/golf_* out/unit-tests/golf_*
+          cmake -S server/native -B out/server-native -DCMAKE_BUILD_TYPE=Release
+          cmake -S tests -B out/unit-tests
+      - name: Run a disjoint shard of all native tests
+        run: |
+          ctest --test-dir out/server-native -I '${{ matrix.shard }},,5' --parallel 2 --output-on-failure --no-tests=error --output-junit physics.xml
+          if [ '${{ matrix.shard }}' = '1' ]; then
+            ctest --test-dir out/unit-tests --output-on-failure --no-tests=error --output-junit units.xml
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: physics-results-${{ matrix.shard }}
+          path: |
+            out/server-native/physics.xml
+            out/unit-tests/units.xml
+            out/**/Testing/Temporary/LastTest.log
+          retention-days: 2
+
+  server-tests:
+    name: Protocol ${{ matrix.shard }}/2
+    needs: builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: game-native
+          path: out
+      - name: Validate languages, rooms, bots and protocol
+        working-directory: server
+        run: |
+          chmod +x ../out/server-native/golf_physics_worker
+          npm ci
+          npm run build
+          node --import tsx --test --test-concurrency=2 --test-shard=${{ matrix.shard }}/2 test/*.test.ts
+
+  browser-validation:
+    name: Browser ${{ matrix.suite }}
+    needs: builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      CI: 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [menu-stability, menu-art, menu-motion, navigation, surfaces, evolution, campaign-1, campaign-2, campaign-3, campaign-4, wildlife, social]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: game-*
+          merge-multiple: true
+          path: out
+      - name: Prepare compiled game and server
+        shell: bash
         run: |
           test -s out/web/golf.wasm
-          test -s out/server-native/golf_physics_worker
           chmod +x out/server-native/golf_physics_worker
           cd server
           npm ci
           npm run build
-          npx playwright install --with-deps chromium
-      - name: Start the application
-        run: |
-          PORT=3000 node server/dist/index.js > /tmp/pitpom-browser-server.log 2>&1 &
-          for attempt in $(seq 1 30); do
-            if curl --fail http://localhost:3000/health; then exit 0; fi
-            sleep 1
-          done
-          cat /tmp/pitpom-browser-server.log
-          exit 1
-      - name: Menu rendering and navigation
-        if: matrix.suite == 'menus'
-        working-directory: server
-        run: |
-          node test/menu-flicker.mjs
-          node test/menu-alpha.mjs
-          node test/menu-motion.mjs
-          node test/living-menu.mjs
-          node test/clean-play.mjs
-          node test/menu-readiness.mjs
-          node test/home-navigation.mjs
-          node test/mascot-art.mjs --url http://localhost:3000
-      - name: Course rendering and authority
-        if: matrix.suite == 'courses'
-        working-directory: server
-        run: |
-          node test/visual-shaders.mjs
-          node test/course-features.mjs --url http://localhost:3000
-          node test/evolution-browser.mjs --url http://localhost:3000
-          node test/campaign-browser.mjs
-          node test/juju-browser.mjs
-          node test/wildlife-render.mjs
-          node test/rescue-browser.mjs
-      - name: Loading, audio, bots and visual updates
-        if: matrix.suite == 'audio-and-updates'
-        working-directory: server
-        run: |
-          node test/loading-audio.mjs
-          node test/bot-updates-browser.mjs
-          node test/visual-refresh.mjs
-      - name: Preserve screenshots when a browser check fails
-        if: failure()
+      - name: Run browser suite with per-script timings
+        run: node .github/ci/run-browser.mjs '${{ matrix.suite }}'
+      - name: Preserve screenshots and campaign measurements
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-failure-${{ matrix.suite }}
-          path: out/**/*.png
+          name: browser-results-${{ matrix.suite }}
+          path: |
+            out/**/*.png
+            out/campaign-validation/budgets.json
           retention-days: 2
+
+  container-smoke:
+    name: Production container smoke check
+    needs: builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - uses: docker/setup-buildx-action@v4
+      - name: Assemble the same runtime from cached builds
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ci-runtime
+          load: true
+          tags: pitpom:ci
+          cache-from: |
+            type=gha,scope=pitpom-web
+            type=gha,scope=pitpom-native
+            type=gha,scope=pitpom-runtime
+          cache-to: type=gha,mode=max,scope=pitpom-runtime
+      - name: Validate health, WebAssembly headers and deployment
+        shell: bash
+        run: |
+          docker run -d --name pitpom -p 3000:10000 pitpom:ci
+          healthy=false
+          for attempt in $(seq 1 60); do
+            if curl --fail http://localhost:3000/health; then healthy=true; break; fi
+            sleep 1
+          done
+          test "$healthy" = true
+          cd server
+          npm ci
+          npm run test:deployment -- --url http://localhost:3000
+      - name: Container logs
+        if: always()
+        run: docker logs pitpom || true
+
+  validation-complete:
+    name: All validation passed
+    if: always()
+    needs: [checks, builds, native-tests, server-tests, browser-validation, container-smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every shard before deployment
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: test "$RESULTS" = 'success,success,success,success,success,success'
