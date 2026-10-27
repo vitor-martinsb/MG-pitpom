@@ -10,7 +10,7 @@ const app=createServer(),clients=[],errors=[];let browser;
 try{
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   const url=`http://127.0.0.1:${app.server.address().port}`;
-  browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
+  browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/\bERROR\b|INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});
@@ -67,9 +67,10 @@ try{
       assert.doesNotMatch(await page.locator('#wildlife-effect').innerText(),/undefined|effect\./);
     }
     assert.equal(room.busy,true,'the room stays frozen throughout the renderer fixture');
-    assert.ok(frame.actorVertices>0&&frame.actorVertices<24576,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
+    // Juju already expanded the production actor buffer to 40960 vertices.
+    assert.ok(frame.actorVertices>0&&frame.actorVertices<40960,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
     await page.screenshot({path:`../out/campaign-validation/maritaca-fifty-${name}.png`});
-    console.log(`${name}: 50 simultaneous maritaca rescues and five pets: ${frame.actorVertices}/24576 vertices.`);
+    console.log(`${name}: 50 simultaneous maritaca rescues and six pets: ${frame.actorVertices}/40960 vertices.`);
   }
   assert.deepEqual(errors,[]);
 }finally{for(const socket of clients)socket.terminate();await browser?.close();app.close();}

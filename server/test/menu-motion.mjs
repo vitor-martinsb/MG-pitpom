@@ -26,7 +26,12 @@ try{
   const still=await page.locator('.living-scene').screenshot();await page.waitForTimeout(80);assert.equal(Buffer.compare(still,await page.locator('.living-scene').screenshot()),0,'frozen scene is pixel-stable before testing each motion');
   // These comparisons inspect the browser's rendered PNG pixels, rather than
   // merely checking that a timer or a WAAPI animation object exists.
-  const cases=[['mill','[data-motion=mill]',.1],['cloud','[data-motion=cloud]',.02],['water','[data-motion=water]',.48],['wind','[data-motion=wind]',.43],['breathing','[data-pet=pituca]',.5],['head','[data-pet=pituca] [data-motion=head]',.73],['ear','[data-pet=pituca] [data-motion=ear]',.8],['tail','[data-pet=frida] [data-motion=tail]',.42],['blink','[data-pet=luna] [data-motion=blink]',.1535]];
+  // Blink timing is staggered by roster index. Seek the real closed-eye frame
+  // rather than assuming Luna is the first entry in the cast.
+  const blinkAt=await page.locator('[data-pet=luna] [data-motion=blink]').evaluate(e=>{
+   const a=e.getAnimations({subtree:true})[0];return a.effect.getKeyframes().find(f=>Number(f.opacity)===1).offset;
+  });assert.ok(blinkAt>0&&blinkAt<1);
+  const cases=[['mill','[data-motion=mill]',.1],['cloud','[data-motion=cloud]',.02],['water','[data-motion=water]',.48],['wind','[data-motion=wind]',.43],['breathing','[data-pet=pituca]',.5],['head','[data-pet=pituca] [data-motion=head]',.73],['ear','[data-pet=pituca] [data-motion=ear]',.8],['tail','[data-pet=frida] [data-motion=tail]',.42],['blink','[data-pet=luna] [data-motion=blink]',blinkAt]];
   for(const [kind,selector,offset]of cases){
    const seek=fraction=>page.locator(selector).first().evaluate((e,f)=>{const a=e.getAnimations().length?e.getAnimations():e.getAnimations({subtree:true});for(const item of a){const timing=item.effect.getTiming();item.currentTime=Number(timing.duration)*f+Number(timing.delay);}},fraction);
    await seek(0);await page.waitForTimeout(35);const before=await page.locator('.living-scene').screenshot();await seek(offset);await page.waitForTimeout(35);const after=await page.locator('.living-scene').screenshot();

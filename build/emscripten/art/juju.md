@@ -53,3 +53,17 @@ Juju has green eyes in the presentation illustration and the 3D model.
 The built-in imagegen tool edited the existing transparent asset with this prompt:
 
 > Use case: precise-object-edit. Edit this exact existing transparent Juju game character illustration. Change ONLY the colored irises of BOTH eyes from amber/brown to clear natural leafy GREEN, with lighter green lower iris and darker green upper iris. Keep black pupils and white eye highlights exactly intact. Preserve every other detail: same calico cat identity, orange left forehead/ear and black right forehead/ear, white face/chest/paws, exact pose, expression, head and body proportions, outlines, fur patches, ONE tail, mud on paws/body, complete mud puddle, framing and original 1536x1024 size. Keep the actual transparent background and alpha edges. No new elements, no redraw, no changes outside the iris color. This is a minimal eye-color correction of the production asset.
+
+## Updated menu cast
+
+`menu-pets-juju.png` is the user's supplied six-character RGBA sheet, preserved
+byte for byte. The menu now renders Luna, Romeu, Frida, Pituca, Pompom and Juju
+from this same reference. The existing bird and landscape remain in place.
+Runtime clips separate neighboring silhouettes and discard disconnected crop
+residue before articulating each character on the existing single Canvas 2D
+surface. Alpha edges are retained; no SVG filter surrounds the animal layer.
+
+The five existing anchors are unchanged. Juju stands on the free front-left
+green in landscape and the front-right in portrait, with enough space to keep
+her paws and tail visible beside the controls. The gameplay model, green eyes,
+three-shot mud state and synchronized muddy footsteps are unchanged.

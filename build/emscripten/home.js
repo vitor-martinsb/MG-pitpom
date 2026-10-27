@@ -14,7 +14,7 @@
     if(settings.parentElement!==parent)parent.append(settings);
   }
   const scene=$('home-scenery');
-  scene.innerHTML='<picture><source media="(orientation:portrait)" srcset="art/menu-garden-portrait.png"><img class="home-art" src="art/menu-garden.png" alt="Pituca, Pompom, Romeu, Luna, Frida, Maritaca" width="1672" height="941" fetchpriority="high"></picture>';
+  scene.innerHTML='<picture><source media="(orientation:portrait)" srcset="art/menu-garden-portrait.png"><img class="home-art" src="art/menu-garden.png" alt="Pituca, Pompom, Romeu, Luna, Frida, Juju, Maritaca" width="1672" height="941" fetchpriority="high"></picture>';
   const livingScene=document.createElement('div');livingScene.className='living-scene';scene.append(livingScene);
   const animation=window.GolfMenuScene.mount(livingScene,home);
   // Prepare both compositions before exposing controls, including after rotation.

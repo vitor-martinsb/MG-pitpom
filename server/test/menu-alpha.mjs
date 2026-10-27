@@ -13,13 +13,13 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const D=Date;globalThis.Date=class extends D{constructor(...a){super(...(a.length?a:['2026-10-24T15:00:00-03:00']));}};});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});
-  assert.equal(await page.locator('[data-pet]').count(),7,'six pets including vector Juju and the existing bird');
-  for(const pet of ['luna','romeu','frida','pituca','pompom']){
-   const file=`menu-pet-${pet}.png`;assert.equal(await page.locator(`[data-pet=${pet}]`).getAttribute('data-source-art'),file);
+  assert.equal(await page.locator('[data-pet]').count(),7,'six pets from the supplied atlas and the existing bird');
+  for(const pet of ['luna','romeu','frida','pituca','pompom','juju']){
+   const file='menu-pets-juju.png';assert.equal(await page.locator(`[data-pet=${pet}]`).getAttribute('data-source-art'),file);
    const local=fs.readFileSync('../build/emscripten/art/'+file),served=Buffer.from(await (await fetch(url+'/art/'+file)).arrayBuffer());
    assert.equal(createHash('sha256').update(served).digest('hex'),createHash('sha256').update(local).digest('hex'));
   }
-  assert.equal(await page.locator('[data-pet=juju]').getAttribute('data-source-art'),'menu-pet-juju.svg');
+  assert.equal(await page.locator('[data-pet=juju]').getAttribute('data-source-art'),'menu-pets-juju.png');
   assert.equal(await page.locator('#meet-juju').count(),0);
   const foliage=await page.locator('[data-motion=wind] image').first().evaluate(async e=>{
    const image=new Image();image.src=e.href.baseVal;await image.decode();const c=document.createElement('canvas');c.width=image.naturalWidth;c.height=image.naturalHeight;

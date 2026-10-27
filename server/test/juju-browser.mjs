@@ -7,14 +7,14 @@ import {visitMultiplayer} from './navigation-fixture.mjs';
 const app=createServer(),errors=[];let browser;
 try{
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
- browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});fs.mkdirSync('../out/juju-validation',{recursive:true});
+ browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});fs.mkdirSync('../out/juju-validation',{recursive:true});
  const pages=[];
  for(const [name,width,height,mobile]of [['desktop',1440,900,false],['mobile',390,844,true]]){
   const page=await browser.newPage({viewport:{width,height},isMobile:mobile,hasTouch:mobile});pages.push(page);page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await page.locator('#continue-home').click();assert.equal(await page.locator('#meet-juju').count(),0);
   await page.waitForFunction(()=>document.querySelector('[data-pet=juju]'));
-  assert.equal(await page.locator('[data-pet=juju]').getAttribute('data-source-art'),'menu-pet-juju.svg');
+  assert.equal(await page.locator('[data-pet=juju]').getAttribute('data-source-art'),'menu-pets-juju.png');
   await page.waitForFunction(()=>GolfAudio.status().state==='running');
   const sounds=await page.evaluate(()=>{const proto=AudioContext.prototype,original=proto.createOscillator;let count=0;proto.createOscillator=function(...args){count++;return original.apply(this,args);};try{GolfAudio.play('juju');return count;}finally{proto.createOscillator=original;}});
   assert.equal(sounds,3);
