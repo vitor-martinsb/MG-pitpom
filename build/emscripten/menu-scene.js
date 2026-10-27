@@ -3,7 +3,7 @@
   'use strict';
   const NS='http://www.w3.org/2000/svg';
   const el=(tag,attrs={},children=[])=>{const e=document.createElementNS(NS,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);e.append(...children);return e;};
-  // The established illustration mask is now used only by the unchanged bird.
+  // Character animation uses the exact supplied RGBA atlas.
   function birdSprite(original,p,contour){
     const x=Math.max(0,Math.floor(p.head[0]-p.head[2]-35)),y=Math.max(0,Math.floor(p.head[1]-p.head[3]-25));
     const w=Math.min(original.naturalWidth-x,Math.ceil(p.head[2]*2+115)),h=Math.ceil(p.anchor[1]-y+18),scale=2;
@@ -21,12 +21,13 @@
   // The supplied six-character RGBA atlas is retained byte for byte. Crops and
   // transparent gutters are composed at runtime, never re-encoded or recolored.
   const referenceRigs={
-    luna:{bounds:[0,100,490,670],feet:250,head:[255,270,220,165],ears:[[95,245,70,86],[402,180,80,77]],eyes:[[216,266,32,36,'#443228'],[340,251,31,35,'#443228']],tail:[0,486,95,145],pivot:[90,608],clip:'M0 0H500V235L460 255L437 290L412 320L397 353L397 395L385 430L393 483L387 569L399 600L383 654L378 672H0Z'},
-    romeu:{bounds:[384,180,830,670],feet:605,head:[611,357,216,167],ears:[[432,380,46,75],[782,380,42,75]],eyes:[[551,349,32,35,'#353236'],[674,351,31,35,'#353236']],tail:[385,550,67,95],pivot:[448,627],clip:'M500 180H830V320L816 360L806 435L798 480V680H378L383 654L399 600L387 569L393 483L385 430L397 395L397 353L412 320L437 290L460 255L500 235Z'},
-    frida:{bounds:[790,205,1165,680],feet:970,head:[963,416,168,143],ears:[[878,281,48,65],[1090,309,46,54]],eyes:[],tail:[1070,485,95,180],pivot:[1078,637],clip:'M830 205H1224V680H790V480L806 435L816 360L830 320Z'},
-    pituca:{bounds:[0,670,478,1155],feet:268,head:[247,826,228,151],ears:[[104,841,93,92],[402,747,72,69]],eyes:[[215,803,36,40,'#333238'],[337,772,35,39,'#333238']],clip:'M0 670H478V800L454 824L449 877L422 945L430 995L420 1055V1160H0Z'},
-    pompom:{bounds:[420,670,865,1160],feet:590,head:[602,862,162,148],ears:[[532,740,54,64],[726,787,46,59]],eyes:[[535,837,34,39,'#f1a150'],[640,870,34,38,'#eda04d']],tail:[730,890,127,250],pivot:[735,1118],clip:'M478 670H805V865L830 880L835 900L848 920L861 940L870 960L866 980L861 1000L860 1020L854 1040L840 1060L828 1080L800 1100L800 1120L775 1140V1160H420V1055L430 995L422 945L449 877L454 824L478 800Z'},
-    juju:{bounds:[780,675,1224,1205],feet:1002,head:[1003,891,178,150],ears:[[905,751,50,68],[1142,794,53,62]],eyes:[[937,877,38,42,'#f4ead9'],[1048,908,37,41,'#353236']],clip:'M840 675H1224V1210H775V1140L800 1120L800 1100L828 1080L840 1060L854 1040L860 1020L861 1000L866 980L870 960L861 940L848 920L835 900L830 880L840 850Z'}
+    luna:{bounds:[277,0,708,505],feet:500,head:[505,149,207,135],ears:[[359,127,67,92],[636,89,67,75]],eyes:[[462,150,31,35,'#443228'],[575,129,31,33,'#443228']],tail:[277,341,78,141],pivot:[350,461]},
+    romeu:{clip:'M687 55H1107V505H840L819 495L792 492L772 487L746 487L727 494L687 505Z',bounds:[687,55,1107,505],feet:900,head:[899,218,203,161],ears:[[751,243,55,67],[1040,245,57,67]],eyes:[[840,203,30,31,'#353236'],[959,202,30,31,'#353236']],tail:[688,374,78,96],pivot:[765,457]},
+    frida:{clip:'M1159 110H1500V512H1190L1174 483L1159 473Z',bounds:[1159,110,1500,512],feet:1320,head:[1318,243,155,128],ears:[[1246,150,37,47],[1438,196,37,46]],eyes:[],tail:[1417,352,81,151],pivot:[1420,471]},
+    pituca:{clip:'M506 483H746L772 487L792 492L819 495L840 505H969V887H506Z',bounds:[506,483,969,887],feet:748,head:[753,623,213,135],ears:[[605,635,80,82],[900,570,65,63]],eyes:[[704,604,30,33,'#333238'],[826,567,30,32,'#333238']]},
+    pompom:{clip:'M1043 455H1159V473L1174 483L1190 512H1496V887H1043Z',bounds:[1043,455,1496,887],feet:1230,head:[1224,605,158,139],ears:[[1134,503,46,53],[1331,548,42,47]],eyes:[[1150,607,31,34,'#f1a150'],[1251,640,31,35,'#eda04d']],tail:[1353,634,142,230],pivot:[1355,835]},
+    juju:{clip:'M129 451H315V506H493V887H129Z',bounds:[129,451,493,887],feet:300,head:[296,611,154,134],ears:[[218,505,43,52],[417,550,40,47]],eyes:[[234,615,28,30,'#fff3df'],[334,652,28,30,'#353236']],tail:[392,690,101,185],pivot:[398,843]},
+    maritaca:{bounds:[1498,82,1746,531],feet:1622,head:[1577,161,77,78],ears:[],eyes:[[1580,146,17,20,'#79ab25']],tail:[1670,239,76,158],pivot:[1674,271]}
   };
   function keepCharacter(canvas){
     // Atlas neighbors can extend whiskers into a transparent gutter. Retain the
@@ -158,7 +159,8 @@
   };
   // Keep all established anchors. The new companion occupies the open front green.
   layouts.landscape.pets.push({id:'juju',anchor:[470,837],head:[1180,713,70,65],ears:[[1130,663,20,26],[1230,679,20,25]],eyes:[]});
-  layouts.portrait.pets.push({id:'juju',anchor:[745,1205],head:[778,1085,64,60],ears:[[738,1042,18,24],[823,1063,18,24]],eyes:[]});
+  layouts.portrait.pets.push({id:'juju',anchor:[470,850],head:[530,745,58,55],ears:[],eyes:[]});
+  for(const [name,d]of Object.entries(layouts)){const bird=d.pets.find(p=>p.id==='maritaca');bird.anchor[1]=name==='portrait'?1039:647;}
   function mount(container,home){
     let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
     const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)');
@@ -197,15 +199,30 @@
         source.x=bounds[0];source.y=bounds[1];source.w*=ratio;source.h*=ratio;
         const cloud=el('g',{'data-motion':'cloud'});
         for(const dx of [-d.w,0,d.w])cloud.append(el('image',{href:source.url,x:source.x+dx,y:source.y,width:source.w,height:source.h}));
-        daylight.append(cloud);animate(cloud,[{transform:'translateX(0px)'},{transform:`translateX(${d.w}px)`}],{duration:d.w/(.65+i*.06)*1000,easing:'linear'});
+        daylight.append(cloud);animate(cloud,[{transform:'translateX(0px)'},{transform:`translateX(${d.w}px)`}],{duration:d.w/(1.4+i*.12)*1000,easing:'linear'});
       }
       daylight.append(sunset);
       const water=el('g',{'data-motion':'water','pointer-events':'none'}),waterMask=`menu-water-${++serial}`;
-      defs.append(el('clipPath',{id:waterMask},[el('path',{d:layout==='landscape'?'M1190 522H1672V768L1540 768L1513 626L1444 613L1385 635L1288 586L1190 564Z':'M779 900H941V974L800 988L749 961Z'})]));water.setAttribute('clip-path',`url(#${waterMask})`);
-      const surface=el('g');for(let i=0;i<16;i++){const x=layout==='landscape'?1195+(i*67)%460:778+(i*37)%180,y=layout==='landscape'?539+(i*29)%179:909+(i*19)%66;surface.append(el('path',{d:`M${x} ${y}q12 -3 25 0t25 0`,fill:'none',stroke:i%3?'#c2f2e6':'#f8ffed','stroke-width':i%3?1.2:1.8,'stroke-linecap':'round',opacity:.22+(i%3)*.05}));}water.append(surface);daylight.append(water);
+      defs.append(el('clipPath',{id:waterMask},[el('path',{d:layout==='landscape'?'M1190 522H1672V768L1540 768L1513 626L1444 613L1385 635L1288 586L1190 564Z':'M652 902Q770 884 941 897V995L815 970L748 959L704 929Z'})]));water.setAttribute('clip-path',`url(#${waterMask})`);
+      const surface=el('g');for(let i=0;i<16;i++){const x=layout==='landscape'?1195+(i*67)%460:680+(i*37)%260,y=layout==='landscape'?539+(i*29)%179:909+(i*19)%66;surface.append(el('path',{d:`M${x} ${y}q12 -3 25 0t25 0`,fill:'none',stroke:i%3?'#c2f2e6':'#f8ffed','stroke-width':i%3?1.2:1.8,'stroke-linecap':'round',opacity:.22+(i%3)*.05}));}water.append(surface);daylight.append(water);
       animate(surface,[{transform:'translate(0px,0px)',opacity:.55},{transform:'translate(8px,1px)',opacity:.95,offset:.48},{transform:'translate(0px,0px)',opacity:.55}],{duration:8100,easing:'ease-in-out'});
+      // Cloth folds travel along the existing flag silhouette: no static ghost.
+      const flagPath=layout==='landscape'?'M338 582L416 613L338 641Z':'M87 975L148 998L87 1021Z';
+      const flagId='menu-flag-'+(++serial),flagClip=el('clipPath',{id:flagId},[el('path',{d:flagPath})]);defs.append(flagClip);
+      const flag=el('g',{'data-motion':'flag','clip-path':'url(#'+flagId+')'});
+      flag.append(el('path',{d:flagPath,fill:'#ed4935'}));
+      const fold=el('g'),[flagX,flagY]=layout==='landscape'?[338,582]:[87,975];
+      for(let i=0;i<10;i++)fold.append(el('path',{d:'M'+(flagX-116+i*29)+' '+flagY+'q14 17 4 34t8 38',fill:'none',stroke:i%2?'#ffb37a':'#9c322b','stroke-width':9,opacity:.20}));
+      flag.append(fold);daylight.append(flag);
+      animate(fold,[{transform:'translateX(0px)'},{transform:'translateX(58px)'}],{duration:8600,easing:'linear'});
+      const grass=el('g',{'data-motion':'grass',fill:'#729447',opacity:.75});daylight.append(grass);
+      const tufts=layout==='landscape'?[[1160,820],[1160,848],[1308,842],[213,830],[1510,805]]:[[790,1130],[670,1375],[198,1285],[760,1260],[480,1490]];
+      for(const [i,[x,y]]of tufts.entries()){
+        const tuft=el('path',{d:'M'+x+' '+y+'q-16 -25 -17 -10l10 10q-6 -33 3 -26l4 26q22 -27 19 -13l-10 13Z'});grass.append(tuft);tuft.style.transformOrigin=x+'px '+y+'px';
+        animate(tuft,[{transform:'skewX(-2deg)'},{transform:'skewX(7deg)',offset:.46},{transform:'skewX(-2deg)'}],{duration:6100+i*133,delay:-i*930,easing:'ease-in-out'});
+      }
       const rotor=cut(d.blades,daylight,'mill');rotor.style.transformOrigin=`${d.hub[0]}px ${d.hub[1]}px`;animate(rotor,[{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:72000,easing:'linear'});
-      cut(d.post); // The parrot keeps its original perch even on the clean plate.
+      // The supplied bird includes its own perch; no duplicate post.
       const foliageSource=foliageSprite(originals[`menu-sky-clean${suffix}.png`]);
       const foliageMask=`menu-foliage-${++serial}`;
       const mask=el('mask',{id:foliageMask,maskUnits:'userSpaceOnUse',x:0,y:0,width:d.w,height:d.h});
@@ -218,7 +235,7 @@
       const pets=el('g',{'visibility':'hidden','data-pet-rig':'motion-only'});root.append(pets);painter=petPainter(root,d);
       const characterBounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
       for(const [index,template]of d.pets.entries()){
-        const source=referenceRigs[template.id]?referenceSprite(originals['menu-pets-juju.png'],template):birdSprite(originals[original],template,contours[layout][template.id].path);
+        const source=referenceRigs[template.id]?referenceSprite(originals['menu-cast-reference.png'],template):birdSprite(originals[original],template,contours[layout][template.id].path);
         characterBounds.left=Math.min(characterBounds.left,source.x);characterBounds.top=Math.min(characterBounds.top,source.y);
         characterBounds.right=Math.max(characterBounds.right,source.x+source.w);characterBounds.bottom=Math.max(characterBounds.bottom,source.y+source.h);
         const p=source.rig??template,rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
@@ -226,7 +243,7 @@
           const [x,y]=[p.anchor[0],p.anchor[1]+1],rx=p.head[2]*.85,shadow=el('ellipse',{cx:x,cy:y,rx,ry:12,fill:'#224a31',opacity:'.24'});pets.append(shadow);
           painter.shape(shadow,x-rx-1,y-13,rx*2+2,26,c=>{c.fillStyle='#224a31';c.beginPath();c.ellipse(x,y,rx,12,0,0,Math.PI*2);c.fill();});
         }
-        const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?'menu-pets-juju.png':original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
+        const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?'menu-cast-reference.png':original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
         animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
         if(source.tail){const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;animate(tail,[{transform:'rotate(-2deg)'},{transform:'rotate(2.4deg)',offset:.42},{transform:'rotate(-2deg)'}],{duration:6100+index*587,delay:-index*1700,easing:'ease-in-out'});}
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
@@ -279,7 +296,7 @@
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
-    const images=['menu-pets-juju.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
+    const images=['menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
     return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,petFrames:painter?.frames??0,petRenderer:'canvas-2d',lastClock};}});
   }

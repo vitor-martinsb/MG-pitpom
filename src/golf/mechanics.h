@@ -5,6 +5,10 @@
 #include "golf/navigation.h"
 #include "golf/wildlife.h"
 
+typedef struct golf_resident_layout {
+    vec3 cat,dog,direction,across;float span;
+    golf_wild_animal_t animals[GOLF_WILDLIFE_COUNT];
+} golf_resident_layout_t;
 /* Shared, allocation-free state: native authority and the offline game. */
 typedef struct golf_mechanics {
     bool enabled, impact, cat_valid, dog_valid;
@@ -17,6 +21,7 @@ typedef struct golf_mechanics {
     vec3 bounds_min, bounds_max;
     float cat_span, cat_slap_time, dog_wake_time;
     golf_wildlife_t wildlife;
+    golf_resident_layout_t resident_base;
 } golf_mechanics_t;
 void golf_mechanics_init(golf_mechanics_t *, golf_level_t *, golf_bvh_t *);
 void golf_mechanics_seed(golf_mechanics_t *,uint32_t,int previous_pet);

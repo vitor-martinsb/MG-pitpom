@@ -24,3 +24,21 @@ test('Juju is a stable fourth companion candidate; authority includes clean mud 
   await p.configure(false,selected,.5,3);assert.notEqual((await p.step(0)).mascots.thirdKind,3);
  }finally{p.close();}
 });
+
+test('resident layouts vary between seeds, replay exactly and stay synchronized in two authorities',async()=>{
+ const workers=[new Physics(root,'data/levels/level-3.level'),new Physics(root,'data/levels/level-3.level')];
+ try{
+  for(const p of workers)await p.add(0,1);
+  const dogs=new Set<string>();let saved:any;
+  for(let seed=1;seed<=12;seed++){
+   const frames=await Promise.all(workers.map(async p=>{await p.configure(false,seed);return p.step(0);}));
+   assert.deepEqual(frames[0]!.mascots,frames[1]!.mascots);
+   const m=frames[0]!.mascots;dogs.add(JSON.stringify(m.dog));
+   assert.equal(m.wildlife!.filter(a=>a.visible).length,1);
+   assert.ok(m.catVisible&&m.dogVisible);
+   if(seed===1)saved=structuredClone(m);
+  }
+  assert.ok(dogs.size>=3,'stationary Pituca must have multiple actual start locations');
+  await workers[0]!.configure(false,1);assert.deepEqual((await workers[0]!.step(0)).mascots,saved);
+ }finally{for(const p of workers)p.close();}
+});

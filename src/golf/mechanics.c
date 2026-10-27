@@ -87,6 +87,8 @@ void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh
         m->cat_span=span;
     }
     golf_wildlife_init(&m->wildlife,level,bvh,&navigation,m->start,m->hole,m->cat,m->dog,moving_zones,moving_zone_count);
+    m->resident_base=(golf_resident_layout_t){.cat=m->cat_center,.dog=m->dog,.direction=m->direction,.across=m->across,.span=m->cat_span};
+    memcpy(m->resident_base.animals,m->wildlife.animals,sizeof(m->resident_base.animals));
     golf_mechanics_animate(m,0);
 }
 void golf_mechanics_animate(golf_mechanics_t *m,float time) {
@@ -103,12 +105,59 @@ void golf_mechanics_animate(golf_mechanics_t *m,float time) {
     float phase=sinf(time*.75f+m->cat_phase);
     m->cat=vec3_add(m->cat_center,vec3_scale(m->across,m->cat_span*phase));
 }
+// Seeded relocation runs once at field setup, shared by solo and authority.
+// Every sampled path retains its clearance, height and separation. Constrained
+// fields fall back to their validated authored placement.
+static bool resident_clear(const golf_mechanics_t *m,vec3 p,float radius){
+    return vec3_distance(p,m->start)>1.5f&&vec3_distance(p,m->hole)>1.6f&&golf_wildlife_safe(&m->wildlife,p,radius);
+}
+static void resident_shuffle(golf_mechanics_t *m,uint32_t key){
+    golf_resident_layout_t *base=&m->resident_base;
+    m->cat_center=m->cat=base->cat;m->dog=base->dog;m->direction=base->direction;m->across=base->across;m->cat_span=base->span;
+    memcpy(m->wildlife.animals,base->animals,sizeof(base->animals));
+    const golf_navigation_t *nav=m->wildlife.nav;if(!nav||!nav->count)return;
+    for(int actor=0;actor<2+GOLF_WILDLIFE_COUNT;actor++){
+        vec3 origin=actor==0?m->cat_center:actor==1?m->dog:m->wildlife.animals[actor-2].a;
+        if(actor>1&&!m->wildlife.animals[actor-2].active)continue;
+        for(int attempt=0;attempt<48;attempt++){
+            unsigned j=random_word(key^(actor+1)*0x9e3779b9u^(attempt+1)*0x85ebca6bu)%(unsigned)nav->count;
+            if(!nav->nodes[j].reachable)continue;
+            vec3 delta=vec3_sub(nav->nodes[j].pos,origin);if(vec3_length(delta)<.4f)continue;
+            bool safe=true;
+            float length=actor==0?2*m->cat_span:actor==1?0:vec3_distance(m->wildlife.animals[actor-2].a,m->wildlife.animals[actor-2].b);
+            int samples=(int)ceilf(length/.04f);if(samples<1)samples=1;
+            for(int sample=0;sample<=samples&&safe;sample++){
+                float t=sample/(float)samples;vec3 p;
+                if(actor==0)p=vec3_add(m->cat_center,vec3_scale(m->across,(t*2-1)*m->cat_span));
+                else if(actor==1)p=m->dog;
+                else {golf_wild_animal_t *a=&m->wildlife.animals[actor-2];p=vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),t));}
+                p=vec3_add(p,delta);
+                if(!resident_clear(m,p,actor<2?.72f:.48f)||!golf_wildlife_safe(&m->wildlife,p,.44f))safe=false;
+                if(actor==0){vec3 hit;if(!golf_nav_floor(m->wildlife.floor,p,&hit,0)||fabsf(hit.y-p.y)>.12f)safe=false;}
+                if(actor!=0&&vec3_distance(p,m->cat_center)<1.45f+m->cat_span)safe=false;
+                if(actor!=1&&vec3_distance(p,m->dog)<1.45f)safe=false;
+                if(actor<2)for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
+                    golf_wild_animal_t *a=&m->wildlife.animals[k];
+                    for(int n=0;n<=8;n++)if(k==m->third_kind&&a->active&&vec3_distance(p,vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),n/8.f)))<1.45f)safe=false;
+                }
+                for(int portal=0;portal<m->wildlife.portal_count;portal++)if(vec3_distance(p,m->wildlife.portals[portal].pos)<1.6f)safe=false;
+            }
+            if(!safe)continue;
+            if(actor==0)m->cat_center=m->cat=vec3_add(m->cat_center,delta);
+            else if(actor==1)m->dog=vec3_add(m->dog,delta);
+            else {golf_wild_animal_t *a=&m->wildlife.animals[actor-2];a->a=vec3_add(a->a,delta);a->b=vec3_add(a->b,delta);a->pos=a->a;}
+            break;
+        }
+    }
+    memset(m->wildlife.mud_prints,0,sizeof(m->wildlife.mud_prints));m->wildlife.next_mud_print=0;m->wildlife.print_distance=0;m->wildlife.time=-1;
+}
 void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
     m->seed=seed;
     uint32_t key=random_word(seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
     // Choose once per field; exclude the previous companion without reducing
     // the other companions to a fixed rotation. Animation never changes this ID.
     m->third_kind=previous_pet>=0&&previous_pet<GOLF_WILDLIFE_COUNT?(previous_pet+1+(int)(key%(GOLF_WILDLIFE_COUNT-1)))%GOLF_WILDLIFE_COUNT:(int)(key%GOLF_WILDLIFE_COUNT);
+    resident_shuffle(m,key);
     // All pets coexist: trim only the lateral crossing when it approaches a
     // third-pet route. Positions and route endpoints remain fixed for the field.
     golf_wild_animal_t *pet=&m->wildlife.animals[m->third_kind];

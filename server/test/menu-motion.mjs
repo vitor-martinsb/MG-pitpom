@@ -15,7 +15,12 @@ try{
   const initial=await page.locator('[data-motion=mill]').evaluate(e=>getComputedStyle(e).transform);await page.screenshot({path:`../out/menu-motion/${name}-before.png`});await page.waitForTimeout(2300);
   assert.notEqual(await page.locator('[data-motion=mill]').evaluate(e=>getComputedStyle(e).transform),initial,'mill must actually advance automatically, also on reduced-motion desktops');await page.screenshot({path:`../out/menu-motion/${name}-after.png`});
   assert.equal(await page.locator('#home').getAttribute('data-motion'),reducedMotion==='reduce'?'gentle':'full');
-  const alpha=await page.locator('[data-pet=frida] [data-motion=body] image').evaluate(async e=>{const i=new Image();i.src=e.href.baseVal;await i.decode();const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);const [x,y]=[Number(e.getAttribute('x')),Number(e.getAttribute('y'))],portrait=matchMedia('(orientation:portrait)').matches,points=portrait?[[679,1002],[570,1010]]:[[1060,600],[934,617]];const scale=i.naturalWidth/Number(e.getAttribute('width'));return points.map(([a,b])=>ctx.getImageData(Math.floor((a-x)*scale),Math.floor((b-y)*scale),1,1).data[3]);});assert.deepEqual(alpha,[0,0],'no static right tail or second left appendage in Frida body sprite');
+  const tailCoverage=await page.locator('[data-pet=frida]').evaluate(async e=>{
+   const nodes=['body','tail'].map(part=>e.querySelector('[data-motion='+part+'] image'));
+   const pixels=await Promise.all(nodes.map(async node=>{const i=new Image();i.src=node.href.baseVal;await i.decode();const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);return ctx.getImageData(0,0,c.width,c.height).data;}));
+   let tail=0,duplicate=0;for(let k=3;k<pixels[1].length;k+=4)if(pixels[1][k]>240){tail++;if(pixels[0][k]>20)duplicate++;}
+   return {tail,duplicate};
+  });assert.ok(tailCoverage.tail>20);assert.equal(tailCoverage.duplicate,0,'the one tail cannot also remain in the body layer');
   const edges=await page.locator('[data-pet=romeu] [data-motion=body] image').evaluate(async e=>{
    const i=new Image();i.src=e.href.baseVal;await i.decode();const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);
    const scale=i.naturalWidth/Number(e.getAttribute('width')),x=Number(e.getAttribute('x')),y=Number(e.getAttribute('y')),point=matchMedia('(orientation:portrait)').matches?[395,975]:[735,575],pixels=ctx.getImageData(0,0,c.width,c.height).data;let smooth=0;
@@ -31,7 +36,7 @@ try{
   const blinkAt=await page.locator('[data-pet=luna] [data-motion=blink]').evaluate(e=>{
    const a=e.getAnimations({subtree:true})[0];return a.effect.getKeyframes().find(f=>Number(f.opacity)===1).offset;
   });assert.ok(blinkAt>0&&blinkAt<1);
-  const cases=[['mill','[data-motion=mill]',.1],['cloud','[data-motion=cloud]',.02],['water','[data-motion=water]',.48],['wind','[data-motion=wind]',.43],['breathing','[data-pet=pituca]',.5],['head','[data-pet=pituca] [data-motion=head]',.73],['ear','[data-pet=pituca] [data-motion=ear]',.8],['tail','[data-pet=frida] [data-motion=tail]',.42],['blink','[data-pet=luna] [data-motion=blink]',blinkAt]];
+  const cases=[['mill','[data-motion=mill]',.1],['cloud','[data-motion=cloud]',.02],['water','[data-motion=water]',.48],['flag','[data-motion=flag]',.48],['grass','[data-motion=grass]',.46],['wind','[data-motion=wind]',.43],['breathing','[data-pet=pituca]',.5],['head','[data-pet=pituca] [data-motion=head]',.73],['ear','[data-pet=pituca] [data-motion=ear]',.8],['tail','[data-pet=frida] [data-motion=tail]',.42],['blink','[data-pet=luna] [data-motion=blink]',blinkAt]];
   for(const [kind,selector,offset]of cases){
    const seek=fraction=>page.locator(selector).first().evaluate((e,f)=>{const a=e.getAnimations().length?e.getAnimations():e.getAnimations({subtree:true});for(const item of a){const timing=item.effect.getTiming();item.currentTime=Number(timing.duration)*f+Number(timing.delay);}},fraction);
    await seek(0);await page.waitForTimeout(35);const before=await page.locator('.living-scene').screenshot();await seek(offset);await page.waitForTimeout(35);const after=await page.locator('.living-scene').screenshot();

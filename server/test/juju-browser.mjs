@@ -14,7 +14,7 @@ try{
   page.on('console',m=>{if(/INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await page.locator('#continue-home').click();assert.equal(await page.locator('#meet-juju').count(),0);
   await page.waitForFunction(()=>document.querySelector('[data-pet=juju]'));
-  assert.equal(await page.locator('[data-pet=juju]').getAttribute('data-source-art'),'menu-pets-juju.png');
+  assert.equal(await page.locator('[data-pet=juju]').getAttribute('data-source-art'),'menu-cast-reference.png');
   await page.waitForFunction(()=>GolfAudio.status().state==='running');
   const sounds=await page.evaluate(()=>{const proto=AudioContext.prototype,original=proto.createOscillator;let count=0;proto.createOscillator=function(...args){count++;return original.apply(this,args);};try{GolfAudio.play('juju');return count;}finally{proto.createOscillator=original;}});
   assert.equal(sounds,3);

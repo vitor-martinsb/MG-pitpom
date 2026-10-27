@@ -54,11 +54,11 @@ int main(int argc,char **argv){
    golf_mechanics_t resident=m;golf_mechanics_seed(&resident,seed,-1);
    golf_wild_animal_t *a=&resident.wildlife.animals[GOLF_JUJU];
    assert(a->active&&golf_wildlife_safe(&resident.wildlife,a->pos,.44f));
-   assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&vec3_distance(a->pos,m.dog)>1.24f);
+   assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&(resident.third_kind!=GOLF_JUJU||vec3_distance(a->pos,resident.dog)>1.24f));
    float distance=0;for(int tick=0;tick<200;tick++){
     vec3 before=a->pos;golf_mechanics_tick(&resident,NULL,0,tick/10.f);
     assert(a->active&&golf_wildlife_safe(&resident.wildlife,a->pos,.44f));
-    assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&vec3_distance(a->pos,m.dog)>1.24f);
+    assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&(resident.third_kind!=GOLF_JUJU||(vec3_distance(a->pos,resident.dog)>1.24f&&vec3_distance(a->pos,resident.cat)>1.24f)));
     distance+=vec3_distance(before,a->pos);
    }
    assert(vec3_distance(a->a,a->b)>.1f&&distance>.5f);
