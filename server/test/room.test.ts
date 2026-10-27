@@ -97,15 +97,20 @@ test('loading waits, deadline rejects shots, grace simulates and DNF accumulates
     // This deadline/grace fixture exercises the original first-course trajectory;
     // separate tests validate the production shuffle rather than depending on luck.
     room.selectedLevels=[0,1,2];await (room as any).load();
+    await (room as any).physics.configure(false,1234);
     room.ready(host,0);assert.equal(room.phase,'loading');
     now=101;await room.tick();assert.equal(room.phase,'playing');
     await assert.rejects(room.shot(other,{sequence:1,direction:[0,0,-1],power:.2}),/indisponível/);
     room.ready(other,0);
+    // Launch shortly before the deadline. A weak shot launched a full second
+    // earlier can already be resting by grace, so unchanged position would
+    // not mean that the server stopped simulating the settling phase.
+    now=1001;await room.tick();assert.equal(room.phase,'playing');
     await room.shot(host,{sequence:1,direction:[0,0,-1],power:.2});
     await assert.rejects(room.shot(host,{sequence:1,direction:[0,0,-1],power:.2}),/duplicada/);
     await assert.rejects(room.shot(host,{sequence:2,direction:[0,0,-1],power:.2}),/indisponível/);
     now=1101;await assert.rejects(room.shot(other,{sequence:2,direction:[0,0,-1],power:.2}),/indisponível/);
-    await room.tick();assert.equal(room.phase,'settling');const before=host.ball!.pos[2]!;
+    await room.tick();assert.equal(room.phase,'settling');assert.equal(host.ball!.moving,true);const before=host.ball!.pos[2]!;
     now=1400;await room.tick();assert.notEqual(host.ball!.pos[2],before);
     now=1601;await room.tick();assert.equal(room.phase,'results');assert.deepEqual(host.scores,[13]);assert.deepEqual(host.dnf,[true]);
     for(let hole=1;hole<3;hole++){
