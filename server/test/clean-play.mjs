@@ -8,7 +8,7 @@ import {canvasClick} from './canvas-input.mjs';
 const app=createServer(),errors=[];let browser;
 try{
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${app.server.address().port}`;
-  browser=await chromium.launch({...(process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
+  browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),headless:true,args:['--enable-unsafe-swiftshader']});
   fs.mkdirSync('../out/clean-play',{recursive:true});
   const pages=[];
   for(const [width,height,mobile]of [[1200,900,false],[390,844,true]]){

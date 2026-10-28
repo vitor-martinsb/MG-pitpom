@@ -67,12 +67,12 @@
     if(profilePending&&me.nickname===current.nickname&&me.color.toLowerCase()===current.color.toLowerCase()&&me.avatar===current.avatar){profilePending=false;profileDirty=false;}
     if(!profileDirty){$('nickname').value=me.nickname;$('color').value=me.color;$('avatar').value=String(me.avatar);}
     $('profile-display-name').textContent=me.nickname;$('save-profile').disabled=profilePending||phase!=='lobby'||!connected;
-    for(const id of ['nickname','color','avatar'])$(id).disabled=phase!=='lobby';
+    for(const id of ['nickname','color','avatar'])$(id).disabled=profilePending||phase!=='lobby';
     try{localStorage.setItem('golf-profile',JSON.stringify({nickname:me.nickname,color:me.color,avatar:me.avatar}));}catch{}
     previewProfile();
   }
   for(const id of ['nickname','color','avatar'])$(id).addEventListener('input',()=>{profileDirty=true;previewProfile();});
-  $('profile-form').onsubmit=e=>{e.preventDefault();if(!room||phase!=='lobby')return;profilePending=true;startState();$('save-profile').disabled=true;send({type:'profile',...profile()});};
+  $('profile-form').onsubmit=e=>{e.preventDefault();if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar'])$(id).disabled=true;send({type:'profile',...submitted});};
   function modeControls(){
     if(!room)return;const host=room.host===identity?.id&&phase==='lobby';
     for(const button of document.querySelectorAll('[data-mode]')){button.disabled=!host;button.setAttribute('aria-pressed',String(button.dataset.mode===(pendingConfig?.mode??room.mode)));}
@@ -242,7 +242,7 @@
       } else if(m.type==='shot'){call(m);
       } else if(m.type==='error'){
         if(m.scope!=='chat')call(m);toast(GolfI18n.error(m));
-        if(m.scope==='profile'){profilePending=false;$('save-profile').disabled=false;}
+        if(m.scope==='profile'){profilePending=false;renderProfile();}
         if(m.scope==='configure'){pendingConfig=undefined;if(room){$('holes').value=String(room.holes);$('game-mode').value=room.mode;modeControls();}}if(m.scope==='map-pool'){pendingPool=undefined;poolControls();}startState();
         if(!identity){$('create').disabled=false;$('join').disabled=false;GolfAdventure.busy(false);}
         if(m.code==='RECONNECT_EXPIRED'||m.message==='Reconexão expirada.'||identity&&m.code==='ROOM_NOT_FOUND')leave();
