@@ -8,7 +8,7 @@ const workflow=fs.readFileSync(new URL('../workflows/validate.yml',import.meta.u
 
 test('parallel browser groups retain every original validation script',()=>{
   const original=[
-    'menu-flicker','menu-alpha','menu-motion','living-menu','clean-play',
+    'menu-flicker','menu-alpha','menu-pet-help','menu-motion','living-menu','clean-play',
     'menu-readiness','home-navigation','mascot-art','visual-shaders',
     'course-features','evolution-browser','campaign-browser','juju-browser',
     'wildlife-render','rescue-browser','loading-audio','bot-updates-browser','visual-refresh'

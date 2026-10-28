@@ -1,6 +1,6 @@
 {
   "menu-stability": [["menu-flicker.mjs"]],
-  "menu-art": [["menu-alpha.mjs"], ["mascot-art.mjs", "--url", "http://localhost:3000"]],
+  "menu-art": [["menu-alpha.mjs"], ["mascot-art.mjs", "--url", "http://localhost:3000"], ["menu-pet-help.mjs"]],
   "menu-motion": [["menu-motion.mjs"], ["living-menu.mjs"]],
   "navigation": [["clean-play.mjs"], ["menu-readiness.mjs"], ["home-navigation.mjs"]],
   "surfaces": [["visual-shaders.mjs"], ["course-features.mjs", "--url", "http://localhost:3000"], ["visual-refresh.mjs"]],

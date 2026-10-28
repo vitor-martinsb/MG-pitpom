@@ -161,13 +161,79 @@
   layouts.landscape.pets.push({id:'juju',anchor:[470,837],head:[1180,713,70,65],ears:[[1130,663,20,26],[1230,679,20,25]],eyes:[]});
   layouts.portrait.pets.push({id:'juju',anchor:[755,1205],head:[815,1100,58,55],ears:[],eyes:[]});
   for(const [name,d]of Object.entries(layouts)){const bird=d.pets.find(p=>p.id==='maritaca');bird.anchor[1]=name==='portrait'?1039:647;}
+  // Interaction uses the same sprite bounds as the canvas painter. The hidden
+  // SVG rig and animated artwork never need to intercept pointer events.
+  function petHelp(home,getRoot){
+    const layer=document.createElement('div'),tooltip=document.createElement('div');
+    layer.className='menu-pet-help';tooltip.className='menu-pet-tooltip';
+    tooltip.id='menu-pet-tooltip';tooltip.setAttribute('role','tooltip');tooltip.hidden=true;
+    const name=document.createElement('strong'),description=document.createElement('span');
+    tooltip.append(name,description);home.append(layer,tooltip);
+    let items=[],active,pinned=false;
+    const text=(id,part)=>GolfI18n.t(`pet.${id}.${part}`);
+    function hide(){
+      active?.button.removeAttribute('aria-describedby');active=undefined;pinned=false;tooltip.hidden=true;
+    }
+    function place(){
+      if(!active||tooltip.hidden)return;
+      const host=home.getBoundingClientRect(),box=active.button.getBoundingClientRect();
+      const width=tooltip.offsetWidth,height=tooltip.offsetHeight,gap=12;
+      const left=Math.max(gap,Math.min(host.width-width-gap,box.x-host.x+box.width/2-width/2));
+      const above=box.y-host.y-height-gap;
+      const top=Math.max(gap,Math.min(host.height-height-gap,above>=gap?above:box.bottom-host.y+gap));
+      tooltip.style.left=`${left}px`;tooltip.style.top=`${top}px`;
+    }
+    function translate(){
+      for(const item of items)item.button.setAttribute('aria-label',text(item.id,'name'));
+      if(active){name.textContent=text(active.id,'name');description.textContent=text(active.id,'description');place();}
+    }
+    function show(item){
+      if(home.hidden||home.dataset.screen!=='menu')return;
+      if(active!==item){hide();active=item;}
+      active.button.setAttribute('aria-describedby',tooltip.id);tooltip.dataset.pet=item.id;
+      tooltip.hidden=false;translate();
+    }
+    function layout(){
+      const matrix=getRoot()?.getScreenCTM();if(!matrix)return;
+      const host=home.getBoundingClientRect();
+      for(const {button,bounds}of items){
+        const [x,y,w,h]=bounds;
+        Object.assign(button.style,{left:`${matrix.e+x*matrix.a-host.x}px`,top:`${matrix.f+y*matrix.d-host.y}px`,width:`${w*matrix.a}px`,height:`${h*matrix.d}px`});
+      }
+      place();
+    }
+    function add(id,source){
+      const button=document.createElement('button');button.type='button';button.className='menu-pet-target';button.dataset.petHelp=id;
+      const item={id,button,bounds:[source.x,source.y,source.w,source.h]};items.push(item);layer.append(button);
+      button.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch'){pinned=false;show(item);}});
+      button.addEventListener('pointerleave',()=>{if(active===item&&!pinned&&document.activeElement!==button)hide();});
+      button.addEventListener('focus',()=>show(item));
+      button.addEventListener('blur',()=>{if(active===item)hide();});
+      button.addEventListener('click',()=>{if(active===item&&pinned)hide();else {show(item);pinned=true;}});
+    }
+    document.addEventListener('pointerdown',event=>{if(!layer.contains(event.target))hide();});
+    // Register before the engine's window capture handlers. It consumes game
+    // keys globally; pet controls need native Tab and their own activation.
+    for(const type of ['keydown','keyup','keypress'])window.addEventListener(type,event=>{
+      const item=items.find(item=>item.button===event.target);
+      if(!item||home.hidden||home.dataset.screen!=='menu')return;
+      event.stopImmediatePropagation();
+      if(event.key==='Escape'){event.preventDefault();if(type==='keydown')hide();}
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();if(type==='keydown'&&!event.repeat)item.button.click();}
+    },true);
+    window.addEventListener('languagechange',translate);
+    new ResizeObserver(layout).observe(home);
+    new MutationObserver(()=>{if(home.hidden||home.dataset.screen!=='menu')hide();else layout();}).observe(home,{attributes:true,attributeFilter:['hidden','data-screen']});
+    return {add,layout,reset(){hide();items=[];layer.replaceChildren();},ready(){translate();requestAnimationFrame(layout);}};
+  }
   function mount(container,home){
     let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
+    const help=petHelp(home,()=>root);
     const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)');
     function image(file,w,h){return el('image',{href:`art/${file}`,width:w,height:h});}
     function build(){
       const layout=portrait.matches?'portrait':'landscape';if(current===layout)return;
-      current=layout;loaded=false;painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];
+      current=layout;loaded=false;help.reset();painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];
       const d=layouts[layout],suffix=layout==='portrait'?'-portrait':'',original=`menu-garden${suffix}.png`;
       root=el('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'xMidYMid slice','aria-hidden':'true',class:'living-menu-art'});
       const defs=el('defs');root.append(defs);
@@ -236,6 +302,7 @@
       const characterBounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
       for(const [index,template]of d.pets.entries()){
         const source=referenceRigs[template.id]?referenceSprite(originals['menu-cast-reference.png'],template):birdSprite(originals[original],template,contours[layout][template.id].path);
+        help.add(template.id,source);
         characterBounds.left=Math.min(characterBounds.left,source.x);characterBounds.top=Math.min(characterBounds.top,source.y);
         characterBounds.right=Math.max(characterBounds.right,source.x+source.w);characterBounds.bottom=Math.max(characterBounds.bottom,source.y+source.h);
         const p=source.rig??template,rectangle=`M${source.x} ${source.y}h${source.w}v${source.h}h-${source.w}Z`;
@@ -267,7 +334,7 @@
       painter.bounds({x:characterBounds.left-32,y:characterBounds.top-32,w:characterBounds.right-characterBounds.left+64,h:characterBounds.bottom-characterBounds.top+64});
       const lamps=el('g',{'data-night':'lamps'}),lights=layout==='portrait'?[[709,791],[712,741],[855,1000],[917,1010],[200,839],[76,804]]:[[1259,409],[1259,358],[1434,638],[1521,655],[209,421],[1109,441]];
       for(const [x,y]of lights){lamps.append(el('circle',{cx:x,cy:y,r:15,fill:'#ffd76a',opacity:'.08'}),el('circle',{cx:x,cy:y,r:8,fill:'#ffd76a',opacity:'.15'}),el('rect',{x:x-2.6,y:y-4,width:5.2,height:8,rx:1.8,fill:'#fff1aa'}));}root.append(lamps);
-      root._matrix=matrix;container.replaceChildren(root,painter.canvas);home.dataset.sceneReady='true';loaded=true;updateLight();visibility();
+      root._matrix=matrix;container.replaceChildren(root,painter.canvas);home.dataset.sceneReady='true';loaded=true;help.ready();updateLight();visibility();
     }
     const colors={morning:{ink:[22,62,39],surface:[255,249,227],accent:[73,108,55]},afternoon:{ink:[40,59,30],surface:[255,244,217],accent:[79,101,49]},sunset:{ink:[59,35,38],surface:[255,226,191],accent:[115,66,52]},night:{ink:[231,243,255],surface:[22,43,72],accent:[48,77,107]}};
     const attribute=(node,key,value)=>{value=String(value);if(node.getAttribute(key)!==value)node.setAttribute(key,value);};
