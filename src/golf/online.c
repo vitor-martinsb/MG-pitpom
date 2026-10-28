@@ -97,7 +97,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             const char *name=json_object_get_string(m,"nickname"), *color=json_object_get_string(m,"color"); unsigned rgb=0xffffff;
             if(color) sscanf(color,"#%x",&rgb);
             if(!p->id) golf_player_init(p,id,name?name:"Player",V4(1,1,1,1),(uint32_t)json_object_get_number(m,"avatar"));
-            snprintf(p->name,sizeof(p->name),"%s",name?name:"Player"); p->color=V4(((rgb>>16)&255)/255.f,((rgb>>8)&255)/255.f,(rgb&255)/255.f,1);
+            snprintf(p->name,sizeof(p->name),"%s",name?name:"Player"); p->color=V4(((rgb>>16)&255)/255.f,((rgb>>8)&255)/255.f,(rgb&255)/255.f,1);p->avatar_id=(int)json_object_get_number(m,"avatar");
             p->connected=json_object_get_boolean(m,"connected")==1;
         }
     } else if (!strcmp(type,"load") && online.active) {

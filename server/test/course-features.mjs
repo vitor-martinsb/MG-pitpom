@@ -1,3 +1,4 @@
+import {createLobby,joinLobby,lobbyTab,selectLobbyMode} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,14 +17,14 @@ try{
   for(const page of [a,b]){page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/\bERROR\b|failed to compile|INVALID_OPERATION/i.test(m.text()))errors.push(m.text());});}
   await Promise.all([visitMultiplayer(a,url),visitMultiplayer(b,url)]);
   await Promise.all([a,b].map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
-  await a.locator('#nickname').fill('Pituca');await a.locator('#create').click();
+  await createLobby(a,{nickname:'Pituca'});
   await a.locator('#lobby').waitFor({state:'visible'});
-  const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Pompom');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
-  await a.locator('#game-mode').selectOption('impact');assert.equal(await b.locator('#game-mode').isDisabled(),true);
+  const code=await a.locator('#room-code').textContent();await joinLobby(b,{code:code,nickname:'Pompom'});await b.locator('#lobby').waitFor({state:'visible'});
+  await selectLobbyMode(a,'impact');assert.equal(await b.locator('#game-mode').isDisabled(),true);
   // This smoke test specifically observes a lateral Pompom crossing. Original
   // fields all reserve that corridor; a narrow evolution can safely have a
   // resting cat instead. The campaign tests cover those eighty-field layouts.
-  await a.locator('#map-pool').selectOption('originals');
+  await lobbyTab(a,'maps');await a.locator('#map-pool').selectOption('originals');
   await b.waitForFunction(()=>document.getElementById('map-pool').value==='originals');
   await a.locator('#start').click();
   await Promise.all([a,b].map(p=>p.locator('#presentation').waitFor({state:'visible'})));

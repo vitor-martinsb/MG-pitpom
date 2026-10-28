@@ -1,3 +1,4 @@
+import {createLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
@@ -16,18 +17,19 @@ try {
   page.on('pageerror',error=>errors.push(String(error)));
   await visitMultiplayer(page,url);
   await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+  await createLobby(page);await page.locator('#profile-editor summary').tap();
   await page.locator('#nickname').tap();
   await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('MobileHost');
   assert.equal(await page.locator('#nickname').inputValue(),'MobileHost');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  await page.locator('#create').tap();await page.locator('#lobby').waitFor({state:'visible'});
+  await page.locator('#save-profile').tap();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('golf-profile')).nickname==='MobileHost');await page.locator('#profile-editor summary').tap();await page.locator('#lobby').waitFor({state:'visible'});
   const room=[...app.rooms.values()][0];
   assert.equal(room.members.get(1).nickname,'MobileHost');
   // A second mobile browser joins using an actual room-code input.
   const guestContext=await browser.newContext({viewport:{width:360,height:640},isMobile:true,hasTouch:true});
   const guest=await guestContext.newPage();await visitMultiplayer(guest,url);
   await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});
-  await guest.locator('#join-code').tap();await guest.keyboard.type(room.code);
+  await guest.locator('#open-join').tap();await guest.locator('#join-code').tap();await guest.keyboard.type(room.code);
   await guest.locator('#join').tap();await guest.locator('#lobby').waitFor({state:'visible'});
   await page.locator('#start').tap();
   await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});

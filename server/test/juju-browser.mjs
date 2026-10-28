@@ -1,3 +1,5 @@
+import {createLobby} from './navigation-fixture.mjs';
+import {joinLobby} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -20,10 +22,10 @@ try{
   assert.equal(sounds,3);
   await page.screenshot({path:'../out/juju-validation/menu-'+name+'.png'});
   await page.locator('#open-multiplayer').click();await page.waitForFunction(()=>!document.getElementById('create').disabled);
-  await page.locator('#color').evaluate(e=>{e.value='#ffffff';e.dispatchEvent(new Event('input',{bubbles:true}));});
+
  }
- const [host,guest]=pages;await host.locator('#create').click();await host.locator('#lobby').waitFor({state:'visible'});const code=await host.locator('#room-code').textContent();
- await guest.locator('#join-code').fill(code);await guest.locator('#join').click();await guest.locator('#lobby').waitFor({state:'visible'});
+ const [host,guest]=pages;await createLobby(host,{color:'#ffffff'});const code=await host.locator('#room-code').textContent();
+ await joinLobby(guest,{code:code,color:'#ffffff'});await guest.locator('#lobby').waitFor({state:'visible'});
  const room=app.rooms.get(code),owner=[...room.members.values()][0];room.configurePool(owner,'custom',[0]);room.configure(owner,1,'classic');
  await host.waitForFunction(()=>document.getElementById('holes').value==='1');await host.locator('#start').click();
  await Promise.all(pages.map(page=>page.waitForFunction(()=>GolfCourse.inspect().frame?.active)));

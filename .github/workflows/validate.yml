@@ -133,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [menu-stability, menu-art, menu-motion, navigation, surfaces, evolution, campaign-1, campaign-2, campaign-3, campaign-4, wildlife, social]
+        suite: [menu-stability, menu-art, menu-motion, navigation, surfaces, evolution, campaign-1, campaign-2, campaign-3, campaign-4, wildlife, social, lobby, lobby-webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

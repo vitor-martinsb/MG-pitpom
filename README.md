@@ -194,3 +194,5 @@ vento local e rajadas previsíveis. Os vinte Campos 1 permanecem preservados.
 [Desenho dos percursos e mecânicas ambientais](docs/course-redesign.md).
 
 Menu cast: the supplied seven-animal RGBA artwork is retained byte for byte in build/emscripten/art/menu-cast-reference.png, with runtime crops and independent animation. Clouds drift continuously; water, flag cloth folds, trees and grass share a gentle rightward wind. Resident positions are deterministically shuffled from each field seed using fully sampled safe paths, and remain stable through play and reconnects. Constrained fields retain validated placements rather than lose a resident.
+
+O multijogador abre com **Criar sala** e **Entrar na sala**. No lobby, use as abas **Jogadores**, **Mapas** e **Modo**; personalize a própria bola depois de entrar. [Fluxos, permissões e validação](docs/multiplayer-lobby.md).

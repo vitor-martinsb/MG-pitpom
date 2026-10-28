@@ -1,3 +1,4 @@
+import {createLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
@@ -26,7 +27,7 @@ try {
     };
   });
   await visitMultiplayer(page,url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
-  await page.locator('#nickname').fill('GardenTester');await page.locator('#create').click();await page.locator('#lobby').waitFor({state:'visible'});
+  await createLobby(page,{nickname:'GardenTester'});await page.locator('#lobby').waitFor({state:'visible'});
   await page.locator('#start').click();
   const room=[...app.rooms.values()][0],counts=[];
   await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});

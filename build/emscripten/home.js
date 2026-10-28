@@ -43,7 +43,8 @@
     $('main-menu').hidden=next!=='menu';$('continue-home').hidden=next!=='splash';
     $('connect').hidden=next!=='multiplayer';
     if(!home.hidden){window.GolfAudio?.phase('menu');$('music-controls').open=false;}
-    if(focus)requestAnimationFrame(()=>{(next==='menu'?$('offline'):next==='splash'?$('continue-home'):next==='multiplayer'?$('nickname'):null)?.focus({preventScroll:true});});
+    if(next==='multiplayer')window.GolfOnline?.entry();
+    if(focus)requestAnimationFrame(()=>{(next==='menu'?$('offline'):next==='splash'?$('continue-home'):next==='multiplayer'?$('create'):null)?.focus({preventScroll:true});});
   }
   function proceed(){if(!bootComplete||route!=='splash')return;window.GolfAudio?.play('ui');show('menu');}
   home.addEventListener('click',e=>{if(route==='splash'&&!e.target.closest('summary,input,select')&&(!e.target.closest('button')||e.target.closest('button').id==='continue-home'))proceed();});

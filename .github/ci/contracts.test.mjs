@@ -11,7 +11,7 @@ test('parallel browser groups retain every original validation script',()=>{
     'menu-flicker','menu-alpha','menu-pet-help','menu-motion','living-menu','clean-play',
     'menu-readiness','home-navigation','mascot-art','visual-shaders',
     'course-features','evolution-browser','campaign-browser','juju-browser',
-    'wildlife-render','rescue-browser','loading-audio','bot-updates-browser','visual-refresh'
+    'wildlife-render','rescue-browser','loading-audio','bot-updates-browser','visual-refresh','lobby-tabs','lobby-webkit'
   ].map(name=>`${name}.mjs`).sort();
   const files=Object.values(suites).flat().map(([file])=>file);
   assert.deepEqual([...new Set(files)].sort(),original);

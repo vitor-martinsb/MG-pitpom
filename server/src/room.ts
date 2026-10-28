@@ -94,6 +94,15 @@ export class Room {
     this.send(m,{ type:'welcome',id,token:m.token,code:this.code });
     this.send(m,{type:'chat-history',messages:this.chatHistory}); this.publish(); return m;
   }
+  updateProfile(m:Member,settings:any){
+    if(this.members.get(m.id)!==m||!m.socket||m.bot||this.phase!=='lobby')throw Error('Personalização disponível apenas no lobby.');
+    const nickname=settings?.nickname??m.nickname,color=settings?.color??m.color,avatar=settings?.avatar??m.avatar;
+    if(typeof nickname!=='string'||!/^[\x20-\x7e]{1,24}$/.test(nickname.trim()))throw Error('Use um nickname ASCII de 1 a 24 caracteres.');
+    if(typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw Error('Cor inválida.');
+    if(!Number.isInteger(avatar)||avatar<0||avatar>7)throw Error('Avatar inválido.');
+    if([...this.members.values()].some(p=>p.bot&&p.nickname.toLowerCase()===nickname.trim().toLowerCase()))throw Error('Nome de bot já utilizado.');
+    m.nickname=nickname.trim();m.color=color;m.avatar=avatar;this.publish();
+  }
   async reconnect(socket: WebSocket, token: unknown): Promise<Member> {
     const m=[...this.members.values()].find(m=> typeof token==='string' && m.token===token);
     if (!m || m.bot || (m.disconnectedAt !== undefined && this.now()-m.disconnectedAt>this.options.reconnectTTL)) throw new Error('Reconexão expirada.');

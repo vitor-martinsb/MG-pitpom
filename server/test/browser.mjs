@@ -1,3 +1,4 @@
+import {createLobby,joinLobby,enterMultiplayer} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
@@ -17,8 +18,8 @@ try{
     const context=await browser.newContext({viewport:{width:1100,height:720}}),page=await context.newPage();pages.push(page);
     page.on('pageerror',error=>{errors.push(String(error));console.log('PAGE ERROR:',String(error));});page.on('console',message=>{if(process.env.GOLF_BROWSER_VERBOSE||message.type()==='error'||message.text().includes('WARNING'))console.log('BROWSER:',message.type(),message.text());});
     await visitMultiplayer(page,url);await page.locator('#create').waitFor({state:'visible'});await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
-    await page.locator('#nickname').fill(`Browser${i+1}`);await page.locator('#color').fill(['#ff0000','#0000ff','#00ff00','#ffff00','#ff00ff'][i]);
-    if(!i)await page.locator('#create').click();else{await page.locator('#join-code').fill([...app.rooms.keys()][0]);await page.locator('#join').click();}
+    const profile={nickname:`Browser${i+1}`,color:['#ff0000','#0000ff','#00ff00','#ffff00','#ff00ff'][i]};
+    if(!i)await createLobby(page,profile);else await joinLobby(page,{code:[...app.rooms.keys()][0],...profile});
     await page.locator('#lobby').waitFor({state:'visible'});console.log('Joined browser',i+1);
   }
   const room=[...app.rooms.values()][0];assert.equal(room.members.size,5);
@@ -46,7 +47,7 @@ try{
   await pages[4].screenshot({path:path.resolve('../out/multiplayer-validation/five-colors.png')});
   assert.ok([...room.members.values()].every(m=>m.ball.strokes===1));
 
-  await pages[0].locator('#leave').click();await pages[0].locator('#nickname').fill('FiftyHost');await pages[0].locator('#create').click();
+  await pages[0].locator('#leave').click();await enterMultiplayer(pages[0]);await createLobby(pages[0],{nickname:'FiftyHost'});
   await pages[0].locator('#lobby').waitFor({state:'visible'});
   const fifty=[...app.rooms.values()].find(r=>r!==room),code=fifty.code;
   for(let i=1;i<50;i++)await new Promise((resolve,reject)=>{

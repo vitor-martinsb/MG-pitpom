@@ -1,3 +1,5 @@
+import {showBotRoster} from './navigation-fixture.mjs';
+import {createLobby,fillBotCount,joinLobby} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -74,14 +76,15 @@ try{
     await page.reload();await page.waitForFunction(()=>window.GolfCourse?.initialized,{},{timeout:90000});await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await enterMultiplayer(page);
   }
   const [a,b]=pages;
-  await a.locator('#nickname').fill('Garden Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
-  const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Garden Guest');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
+  await createLobby(a,{nickname:'Garden Host'});await a.locator('#lobby').waitFor({state:'visible'});
+  const room=[...app.rooms.values()][0];await joinLobby(b,{code:room.code,nickname:'Garden Guest'});await b.locator('#lobby').waitFor({state:'visible'});
   for(const id of ['bot-count','bot-difficulty-all','add-bot','apply-bot-count'])assert.equal(await b.locator('#'+id).isDisabled(),true);
-  await a.locator('#bot-count').fill('5');await a.locator('#bot-difficulty-all').selectOption('hard');await a.locator('#apply-bot-count').click();
+  await fillBotCount(a,'5');await a.locator('#bot-difficulty-all').selectOption('hard');await a.locator('#apply-bot-count').click();
   await b.locator('#bot-roster').waitFor({state:'visible'});
-  assert.equal(await a.locator('#bot-members').locator('.bot-row').count(),0);
-  assert.equal(await b.locator('#bot-members .bot-badge').count(),0);
-  await a.locator('#bot-roster>summary').click();await b.locator('#bot-roster>summary').click();
+  await a.waitForFunction(()=>document.querySelectorAll('#bot-members .bot-row').length===5);
+  assert.equal(await a.locator('#bot-members').locator('.bot-row').count(),5);
+  assert.equal(await b.locator('#bot-members .bot-badge').count(),5);
+  await showBotRoster(a);await showBotRoster(b);
   await b.waitForFunction(()=>document.querySelectorAll('#bot-members .bot-badge').length===5);
   assert.equal(room.members.size,7);assert.ok((await b.locator('#count').textContent()).includes('7/50'));
   await a.locator('.bot-controls select').first().selectOption('easy');await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes(GolfI18n.t('difficulty.easy')));

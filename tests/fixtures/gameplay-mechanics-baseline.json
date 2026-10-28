@@ -2,7 +2,7 @@
   "server/native/worker.c": "333a89777d881b5793e25c75717def0f036555707f6c011dfc8e964b0bdb895c",
   "src/golf/physics.c": "aa1fa6c6dd54a06ea9aecbf85dac9c8bc23f78afa34ee850c87a827f147821fc",
   "src/golf/game.c": "c2b73689ac8e8f9f28f97dc0095df945507654744fa02b6ff05520f55c2de7fe",
-  "src/golf/online.c": "1959f20b3f06188b07d27f606a46c26ea9d5fe94a34e546fe595950dd0b56f47",
-  "server/src/room.ts": "4c1fbbd3f50cf9c70262a8ffce1b150388008623c039253d3eb05f83de79ae6b",
+  "src/golf/online.c": "5565744a37011a9baeeaacc238e71b396f4a780bd6992a69a795262fa8cff23b",
+  "server/src/room.ts": "11d7dbdf4d7d8658393de52c1357904f9ee1835409f2e8db4ec31e25410eb718",
   "server/native/physics_test.c": "99a08368acaa0e747cdc67fc11f8eb4c189f037a40d9b9325905079650e52e17"
 }

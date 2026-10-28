@@ -1,3 +1,4 @@
+import {createLobby,joinLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
@@ -18,10 +19,10 @@ try{
   assert.equal(await host.locator('html').getAttribute('lang'),'en');assert.equal(await nativeLanguage(host),'en');assert.equal(await host.locator('#create').textContent(),'Create room');
   assert.equal(await host.evaluate(()=>GolfI18n.t('strokes.one',{count:1})),'1 stroke');assert.equal(await host.evaluate(()=>GolfI18n.t('strokes.other',{count:2})),'2 strokes');
   await language(host,'pt-BR');assert.equal(await host.locator('#create').textContent(),'Criar sala');assert.equal(await nativeText(host,'c.you'),'VOCÊ');assert.equal(await nativeText(host,'c.success'),'CONCLUÍDO!');
-  await host.locator('#nickname').fill('LanguageHost');await host.locator('#create').click();await host.locator('#lobby').waitFor({state:'visible'});
+  await createLobby(host,{nickname:'LanguageHost'});await host.locator('#lobby').waitFor({state:'visible'});
   const room=[...app.rooms.values()][0];
   await visitMultiplayer(guest,url);await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});await language(guest,'es');
-  await guest.locator('#nickname').fill('LanguageGuest');await guest.locator('#join-code').fill(room.code);await guest.locator('#join').click();await guest.locator('#lobby').waitFor({state:'visible'});
+  await joinLobby(guest,{code:room.code,nickname:'LanguageGuest'});await guest.locator('#lobby').waitFor({state:'visible'});
   assert.equal(await guest.locator('#start').textContent(),'Iniciar partida');assert.equal(await nativeText(guest,'c.next'),'SIGUIENTE');
   await host.locator('#start').click();for(const page of [host,guest])await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:30000});
   await host.locator('#open-chat').click();await host.locator('#chat-input').fill('Olá! ¡Hola! Hello!');await host.keyboard.press('Enter');await guest.waitForFunction(()=>document.getElementById('chat-messages').textContent.includes('Olá!'));

@@ -1,3 +1,4 @@
+import {createLobby,joinLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
@@ -16,7 +17,7 @@ try {
   for(const page of [host,guest])page.on('pageerror',error=>errors.push(String(error)));
   await visitMultiplayer(host,url);await host.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
   assert.equal(await host.evaluate(()=>GolfMusic.status().state),'idle');
-  await host.locator('#nickname').fill('MusicHost');await host.locator('#create').tap();await host.locator('#lobby').waitFor({state:'visible'});
+  await createLobby(host,{nickname:'MusicHost'});await host.locator('#lobby').waitFor({state:'visible'});
   const room=[...app.rooms.values()][0];
   await host.waitForFunction(()=>GolfMusic.status().state==='running'&&GolfMusic.level()>0.000001);
   assert.equal(await host.evaluate(()=>GolfMusic.status().bpm),62);
@@ -31,7 +32,7 @@ try {
   assert.ok(await host.evaluate(()=>GolfMusic.status().volume<.24));
   await host.locator('#music-controls summary').tap();
   await visitMultiplayer(guest,url);await guest.waitForFunction(()=>!document.getElementById('join').disabled,{},{timeout:90000});
-  await guest.locator('#nickname').fill('Guest');await guest.locator('#join-code').fill(room.code);await guest.locator('#join').click();await guest.locator('#lobby').waitFor({state:'visible'});
+  await joinLobby(guest,{code:room.code,nickname:'Guest'});await guest.locator('#lobby').waitFor({state:'visible'});
   await host.locator('#open-chat').tap();
   await host.keyboard.type('Olá, vamos jogar? ⛳');await host.keyboard.press('Enter');
   await guest.waitForFunction(()=>document.getElementById('chat-messages').textContent.includes('vamos jogar'));

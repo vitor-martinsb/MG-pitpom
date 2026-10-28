@@ -8,6 +8,7 @@
     const viewport=window.visualViewport;
     document.documentElement.style.setProperty('--overlay-height',`${viewport?.height??innerHeight}px`);
     document.documentElement.style.setProperty('--overlay-top',`${viewport?.offsetTop??0}px`);
+    const active=document.activeElement;if(active?.matches('input,select,textarea')&&active.closest('#lobby,#connect'))requestAnimationFrame(()=>active.scrollIntoView({block:'nearest',inline:'nearest'}));
   }
   window.addEventListener('resize',fitPanels);
   window.visualViewport?.addEventListener('resize',fitPanels);
@@ -27,25 +28,102 @@
   const send=m=>{if(socket?.readyState===WebSocket.OPEN) socket.send(JSON.stringify(m));};
   const call=m=>{if(initialized) Module.ccall('golf_online_receive',null,['string'],[JSON.stringify(m.type==='room'?{...m,players:m.players.map(p=>p.bot?{...p,nickname:'[BOT] '+p.nickname}:p)}:m)]);};
   const speedLabel=document.createElement('small');speedLabel.id='bot-speed';speedLabel.hidden=true;speedLabel.setAttribute('role','status');$('hud').append(speedLabel);
+  let activeLobbyTab='players',profileDirty=false,profilePending=false,pendingConfig,pendingPool;
+  function startState(){if(room)$('start').disabled=room.host!==identity?.id||!connected||phase!=='lobby'||profilePending||!!pendingConfig||!!pendingPool;}
+  const tabScroll={players:0,maps:0,mode:0};
+  function selectLobbyTab(name,focus=false){
+    const body=document.querySelector('.lobby-body');tabScroll[activeLobbyTab]=body.scrollTop;
+    activeLobbyTab=name;
+    for(const id of ['players','maps','mode']){
+      const selected=id===name;$(`panel-${id}`).hidden=!selected;
+      $(`tab-${id}`).setAttribute('aria-selected',String(selected));$(`tab-${id}`).tabIndex=selected?0:-1;
+    }
+    body.scrollTop=tabScroll[name];if(focus)$(`tab-${name}`).focus();
+  }
+  for(const name of ['players','maps','mode'])$('tab-'+name).onclick=()=>selectLobbyTab(name);
+  document.querySelector('.lobby-tabs').addEventListener('keydown',e=>{
+    const ids=['players','maps','mode'],i=ids.indexOf(activeLobbyTab);let next;
+    if(e.key==='ArrowRight')next=(i+1)%3;else if(e.key==='ArrowLeft')next=(i+2)%3;
+    else if(e.key==='Home')next=0;else if(e.key==='End')next=2;else return;
+    e.preventDefault();selectLobbyTab(ids[next],true);
+  });
+  function entryView(joining=false){
+    $('entry-actions').hidden=joining;$('join-form').hidden=!joining;
+    if(joining){$('join-nickname').value=$('nickname').value;$('join-code').focus();}
+  }
+  $('open-join').onclick=()=>entryView(true);$('join-back').onclick=()=>entryView(false);
+  $('copy-room-code').onclick=async()=>{
+    if(!room)return;
+    try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(room.code);toast(t('lobby.codeCopied'));}
+    catch{const range=document.createRange();range.selectNodeContents($('room-code'));const selection=getSelection();selection.removeAllRanges();selection.addRange(range);toast(t('lobby.copyManually'));}
+  };
+  function previewProfile(){
+    $('ball-preview').style.setProperty('--ball-color',$('color').value);
+    $('ball-preview').textContent=avatars[Number($('avatar').value)]??avatars[0];
+  }
+  function renderProfile(){
+    const me=room?.players.find(p=>p.id===identity?.id);if(!me)return;
+    const current=profile();
+    if(profilePending&&me.nickname===current.nickname&&me.color.toLowerCase()===current.color.toLowerCase()&&me.avatar===current.avatar){profilePending=false;profileDirty=false;}
+    if(!profileDirty){$('nickname').value=me.nickname;$('color').value=me.color;$('avatar').value=String(me.avatar);}
+    $('profile-display-name').textContent=me.nickname;$('save-profile').disabled=profilePending||phase!=='lobby'||!connected;
+    for(const id of ['nickname','color','avatar'])$(id).disabled=phase!=='lobby';
+    try{localStorage.setItem('golf-profile',JSON.stringify({nickname:me.nickname,color:me.color,avatar:me.avatar}));}catch{}
+    previewProfile();
+  }
+  for(const id of ['nickname','color','avatar'])$(id).addEventListener('input',()=>{profileDirty=true;previewProfile();});
+  $('profile-form').onsubmit=e=>{e.preventDefault();if(!room||phase!=='lobby')return;profilePending=true;startState();$('save-profile').disabled=true;send({type:'profile',...profile()});};
+  function modeControls(){
+    if(!room)return;const host=room.host===identity?.id&&phase==='lobby';
+    for(const button of document.querySelectorAll('[data-mode]')){button.disabled=!host;button.setAttribute('aria-pressed',String(button.dataset.mode===(pendingConfig?.mode??room.mode)));}
+  }
+  for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>{if(room?.host!==identity?.id)return;$('game-mode').value=button.dataset.mode;$('game-mode').dispatchEvent(new Event('change'));};
+  function roomLabels(){
+    if(!room)return;
+    const connected=room.players.filter(p=>p.connected);
+    $('count').textContent=t('lobby.count',{count:connected.length,bots:connected.filter(p=>p.bot).length});
+    $('host-identity').textContent=t('lobby.hostName',{name:room.players.find(p=>p.id===room.host)?.nickname??'—'});
+  }
+  function mapDraftCount(){
+    const inputs=[...$('map-options').querySelectorAll('[data-map-id]')],count=inputs.filter(i=>i.checked).length;
+    $('map-draft-count').textContent=t('lobby.mapDraft',{count});
+    $('apply-maps').disabled=room?.host!==identity?.id||!count;
+    for(const checkbox of $('map-options').querySelectorAll('[data-world-id]:not([data-map-id])')){
+      const choices=inputs.filter(i=>i.dataset.worldId===checkbox.dataset.worldId),selected=choices.filter(i=>i.checked).length;
+      checkbox.checked=choices.length>0&&selected===choices.length;checkbox.indeterminate=selected>0&&selected<choices.length;
+    }
+  }
+  $('map-options').addEventListener('change',e=>{
+    const input=e.target;if(input.matches('[data-world-id]:not([data-map-id])'))
+      for(const child of $('map-options').querySelectorAll('[data-map-id]'))if(child.dataset.worldId===input.dataset.worldId)child.checked=input.checked;
+    mapDraftCount();
+  });
   let poolSignature='';
   function poolControls(force=false){
     if(!room)return;const host=room.host===identity?.id&&phase==='lobby';
-    const ids=room.mapPool??GOLF_CAMPAIGN.courses.map((_,i)=>i),kind=room.mapPoolKind??'all';
+    const ids=room.mapPool??GOLF_CAMPAIGN.courses.map((_,i)=>i),kind=pendingPool?.kind??room.mapPoolKind??'all';
     $('map-pool').value=kind;$('map-pool').disabled=!host;$('custom-maps').hidden=kind!=='custom';$('apply-maps').disabled=!host;
     $('selected-maps').textContent=t('selectedMaps',{count:ids.length});
     const signature=JSON.stringify([ids,kind,GolfI18n.language]);
     if(force||poolSignature!==signature){
       poolSignature=signature;$('map-options').replaceChildren();
-      for(let family=1;family<=20;family++){
-        const group=document.createElement('fieldset');group.className='map-family';group.append(text('legend',GolfI18n.familyName(family)));
-        for(const [id,course]of GOLF_CAMPAIGN.courses.entries())if(course.family===family){
-          const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.dataset.mapId=String(id);input.checked=ids.includes(id);input.disabled=!host;
-          label.append(input,document.createTextNode(GolfI18n.courseName(course)));group.append(label);
+      for(const world of GOLF_CAMPAIGN.worlds){
+        const group=document.createElement('fieldset');group.className='map-family';
+        const legend=document.createElement('legend'),worldLabel=document.createElement('label'),worldChoice=document.createElement('input');
+        worldChoice.type='checkbox';worldChoice.dataset.worldId=String(world.id);worldChoice.disabled=!host;worldLabel.className='world-choice';
+        worldLabel.append(worldChoice,document.createTextNode(world.names[GolfI18n.language]??world.names.en));legend.append(worldLabel);group.append(legend);
+        const choices=document.createElement('details');choices.className='map-world';const summary=text('summary',t('lobby.showCourses',{count:GOLF_CAMPAIGN.courses.filter(c=>c.world===world.id).length}));choices.append(summary);group.append(choices);
+        for(const [id,course]of GOLF_CAMPAIGN.courses.entries())if(course.world===world.id){
+          const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.dataset.mapId=String(id);input.dataset.worldId=String(world.id);input.checked=ids.includes(id);input.disabled=!host;
+          label.append(input);
+          if(course.thumbnail){const img=document.createElement('img');img.src=course.thumbnail;img.alt='';img.loading='lazy';img.className='map-thumbnail';label.append(img);}
+          label.append(document.createTextNode(GolfI18n.courseName(course)));choices.append(label);
         }
         $('map-options').append(group);
       }
     }
     for(const input of $('map-options').querySelectorAll('input'))input.disabled=!host;
+    mapDraftCount();
   }
   function syncClock(m){playbackSpeed=m.simulationSpeed??1;if(Number.isFinite(m.remaining))deadline=performance.now()+m.remaining/playbackSpeed;}
   function botControls(){
@@ -57,7 +135,7 @@
   function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5000);}
   function profile(){return {nickname:$('nickname').value.trim(),color:$('color').value,avatar:Number($('avatar').value)};}
   function text(tag,value){const e=document.createElement(tag);e.textContent=value;return e;}
-  function playerRow(p){const row=document.createElement('div');row.className='player';const dot=document.createElement('span');dot.className='dot';dot.style.background=p.color;row.append(dot,text('span',`${p.bot?'🤖':avatars[p.avatar]??''} ${p.nickname}${p.id===identity?.id?' · '+t('you'):''}${p.connected?'':' · '+t('disconnected')}`));if(p.bot){const badge=text('small',t('difficulty.'+p.bot));badge.className='bot-badge';row.append(badge);}if(room?.mode==='impact'&&!lastBalls.get(p.id)?.firstComplete){const shield=text('small','🛡');shield.title=t('protected');row.append(shield);}return row;}
+  function playerRow(p){const row=document.createElement('div');row.className='player';const dot=document.createElement('span');dot.className='dot';dot.style.background=p.color;row.append(dot,text('span',`${p.bot?'🤖':avatars[p.avatar]??''} ${p.nickname}${p.id===identity?.id?' · '+t('you'):''}${p.connected?'':' · '+t('disconnected')}`));if(p.bot){const badge=text('small',t('difficulty.'+p.bot));badge.className='bot-badge';row.append(badge);}if(room?.mode==='impact'&&!lastBalls.get(p.id)?.firstComplete){const shield=text('small','🛡');shield.title=t('protected');row.append(shield);}if(p.id===room?.host){const badge=text('small',t('lobby.host'));badge.className='host-badge';row.append(badge);}return row;}
   function lobbyRow(p){
     if(!p.bot||room.host!==identity?.id)return playerRow(p);
     const row=document.createElement('div');row.className='bot-row';row.append(playerRow(p));
@@ -81,7 +159,7 @@
   function renderMembers(){
     if(!room)return;
     const bots=room.players.filter(p=>p.bot);
-    $('members').replaceChildren(...room.players.filter(p=>!p.bot).map(playerRow));
+    $('members').replaceChildren(...room.players.filter(p=>!p.bot&&p.connected).map(playerRow));
     $('bot-roster').hidden=!bots.length;
     $('bot-roster-label').textContent=t('botsSummary',{count:bots.length});
     $('bot-colors').replaceChildren(...bots.slice(0,8).map(p=>{const dot=document.createElement('i');dot.style.background=p.color;return dot;}));
@@ -117,19 +195,24 @@
       let m;try{m=JSON.parse(e.data);}catch{return;}
       if(m.type==='welcome'){
         identity={id:m.id,token:m.token,code:m.code};sequence=m.sequence??0;online=true;reconnectStart=0;
-        sessionStorage.setItem('golf-session',JSON.stringify(identity));window.GolfHome?.show('game',false);call(m);$('connect').hidden=true;$('actions').hidden=false;$('send-chat').disabled=false;
+        sessionStorage.setItem('golf-session',JSON.stringify(identity));call(m);$('send-chat').disabled=false;
       } else if(m.type==='chat-history'){
         lastChatId=0;unreadChat=0;$('open-chat').textContent=t('chat');$('chat-messages').replaceChildren();
         for(const message of m.messages)appendChat(message,true);
       } else if(m.type==='chat'){
         appendChat(m);
       } else if(m.type==='room'){
-        const previous=phase;room=m;phase=m.phase;window.GolfHome?.roomPhase(phase);syncClock(m);call(m);
+        if(!$('connect').hidden)window.GolfHome?.show('game',false);
+        const previous=phase,previousCode=room?.code;room=m;phase=m.phase;
+        if(phase==='lobby'&&(previousCode!==m.code||previous!=='lobby')){selectLobbyTab('players');profileDirty=profilePending=false;}window.GolfHome?.roomPhase(phase);syncClock(m);call(m);
+        if(m.host!==identity?.id)pendingConfig=pendingPool=undefined;
+        if(pendingConfig&&pendingConfig.holes===m.holes&&pendingConfig.mode===m.mode)pendingConfig=undefined;
+        if(pendingPool&&pendingPool.kind===m.mapPoolKind&&JSON.stringify(pendingPool.ids)===JSON.stringify(m.mapPool))pendingPool=undefined;
         $('lobby').hidden=phase!=='lobby';$('hud').hidden=phase==='lobby';$('help').hidden=phase==='lobby';
-        $('room-code').textContent=m.code;$('count').textContent=t('roomComposition',{humans:m.players.filter(p=>!p.bot).length,bots:m.players.filter(p=>p.bot).length,total:m.players.length});$('actions').hidden=phase==='lobby';
-        renderMembers();$('start').hidden=m.host!==identity?.id;$('start').disabled=m.host!==identity?.id;
-        $('holes').disabled=m.host!==identity?.id;$('holes').value=String(m.holes);$('game-mode').value=m.mode;
-        for(const option of $('holes').options)option.disabled=Number(option.value)>(m.mapPool?.length??m.availableMaps);
+        $('room-code').textContent=m.code;roomLabels();renderProfile();modeControls();$('actions').hidden=phase==='lobby';
+        renderMembers();$('start').hidden=m.host!==identity?.id;startState();
+        $('holes').disabled=m.host!==identity?.id;$('holes').value=String(pendingConfig?.holes??m.holes);$('game-mode').value=pendingConfig?.mode??m.mode;
+        for(const option of $('holes').options){option.disabled=Number(option.value)>(m.mapPool?.length??m.availableMaps);option.hidden=option.disabled;}
         poolControls();
         $('add-bot').disabled=m.host!==identity?.id||m.players.length>=50;
         botControls();
@@ -159,14 +242,16 @@
       } else if(m.type==='shot'){call(m);
       } else if(m.type==='error'){
         if(m.scope!=='chat')call(m);toast(GolfI18n.error(m));
+        if(m.scope==='profile'){profilePending=false;$('save-profile').disabled=false;}
+        if(m.scope==='configure'){pendingConfig=undefined;if(room){$('holes').value=String(room.holes);$('game-mode').value=room.mode;modeControls();}}if(m.scope==='map-pool'){pendingPool=undefined;poolControls();}startState();
         if(!identity){$('create').disabled=false;$('join').disabled=false;GolfAdventure.busy(false);}
-        if(['RECONNECT_EXPIRED','ROOM_NOT_FOUND'].includes(m.code)||m.message==='Reconexão expirada.'||m.message==='Sala não encontrada.') leave();
+        if(m.code==='RECONNECT_EXPIRED'||m.message==='Reconexão expirada.'||identity&&m.code==='ROOM_NOT_FOUND')leave();
       }
     };
     socket.onerror=()=>{if(generation===epoch)toast(t('connectionFailed'));};
     socket.onclose=()=>{
       if(generation!==epoch)return;
-      connected=false;call({type:'disconnected'});
+      connected=false;profilePending=false;pendingConfig=pendingPool=undefined;if(room)renderProfile();call({type:'disconnected'});
       if(online&&identity){
         if(!reconnectStart)reconnectStart=performance.now();
         if(performance.now()-reconnectStart<60000){toast(t('reconnecting'));retryTimer=setTimeout(()=>connect({type:'reconnect',...identity}),1500);}
@@ -175,13 +260,13 @@
     };
   }
   function join(create){
-    const p=profile();if(!/^[\x20-\x7e]{1,24}$/.test(p.nickname)){toast(t('error.INVALID_NICKNAME'));return;}
-    localStorage.setItem('golf-profile',JSON.stringify(p));$('create').disabled=true;$('join').disabled=true;
+    const p=profile();if(!create)p.nickname=$('join-nickname').value.trim();if(!/^[\x20-\x7e]{1,24}$/.test(p.nickname)){toast(t('error.INVALID_NICKNAME'));return;}
+    try{localStorage.setItem('golf-profile',JSON.stringify(p));}catch{}$('nickname').value=p.nickname;$('create').disabled=true;$('join').disabled=true;
     GolfAdventure.busy(true);celebrated=false;$('winner-banner').hidden=true;GolfAudio?.phase('menu');
     connect({type:create?'create':'join',code:$('join-code').value.trim().toUpperCase(),...p});
   }
   function leave(){++epoch;connected=false;online=false;identity=undefined;room=undefined;phase='lobby';lastBalls.clear();clearTimeout(retryTimer);sessionStorage.removeItem('golf-session');socket?.close();call({type:'leave'});
-    $('bot-roster').open=false;$('bot-members').replaceChildren();closeChat();clearTimeout(chatCooldown);$('send-chat').disabled=false;$('chat-input').value='';$('chat-messages').replaceChildren();lastChatId=0;unreadChat=0;$('open-chat').textContent=t('chat');
+    entryView(false);profileDirty=profilePending=false;pendingConfig=pendingPool=undefined;$('profile-editor').open=false;$('bot-roster').open=true;$('bot-members').replaceChildren();closeChat();clearTimeout(chatCooldown);$('send-chat').disabled=false;$('chat-input').value='';$('chat-messages').replaceChildren();lastChatId=0;unreadChat=0;$('open-chat').textContent=t('chat');
     for(const id of ['lobby','hud','actions','help','scores','loading','adventure-modal','celebration'])$(id).hidden=true;window.GolfHome?.show('menu');$('create').disabled=false;$('join').disabled=false;GolfAdventure.reset();GolfAdventure.busy(false);GolfAudio?.phase('menu');}
   function sorted(){return room?[...room.players].sort((a,b)=>a.total-b.total||a.id-b.id):[];}
   function renderSummary(){
@@ -209,6 +294,7 @@
     if(options.some(o=>o.value===old))$('spectate').value=old;else $('spectate').value=String(identity?.id);
   }
   window.GolfOnline={
+    entry(){entryView(false);},
     active(){return online;},
     initialized(){initialized=true;window.GolfCourse.initialized=true;GolfI18n.ready();GolfAdventure.busy(false);$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;window.GolfHome?.ready();
       if(window.GOLF_CAMPAIGN){$('holes').replaceChildren(...GOLF_CAMPAIGN.courses.map((_,i)=>{const option=new Option(String(i+1),String(i+1));option.selected=i===2;return option;}));}
@@ -225,7 +311,7 @@
     $('engine-status').textContent=t(initialized?'engineReady':'engineLoading');
     $('open-chat').textContent=unreadChat?t('chatUnread',{count:unreadChat}):t('chat');
     if(!room)return;
-    $('count').textContent=t('roomComposition',{humans:room.players.filter(p=>!p.bot).length,bots:room.players.filter(p=>p.bot).length,total:room.players.length});
+    roomLabels();modeControls();renderProfile();
     renderMembers();
     botControls();
     poolControls(true);
@@ -237,13 +323,23 @@
     $('loading-count').textContent=t('readyCount',{ready:room.players.filter(p=>p.ready&&p.connected).length,total:room.players.filter(p=>p.connected).length});
     renderSummary();if(!$('scores').hidden)showScores(scoresForced);
   });
-  $('create').onclick=()=>join(true);$('join').onclick=()=>join(false);$('start').onclick=()=>send({type:'start',holes:Number($('holes').value),mode:$('game-mode').value});
-  $('holes').onchange=$('game-mode').onchange=()=>send({type:'configure',holes:Number($('holes').value),mode:$('game-mode').value});
-  $('map-pool').onchange=()=>send({type:'map-pool',kind:$('map-pool').value,ids:room?.mapPool});
+  $('create').onclick=()=>join(true);$('join-form').onsubmit=e=>{e.preventDefault();join(false);};$('start').onclick=()=>{
+    if(!room||room.host!==identity?.id)return;
+    let holes=Number($('holes').value);
+    if(room.mapPoolKind==='custom'){
+      const ids=[...$('map-options').querySelectorAll('[data-map-id]:checked')].map(i=>Number(i.dataset.mapId));
+      if(!ids.length){toast(t('selectOneMap'));return;}
+      if(JSON.stringify(ids)!==JSON.stringify(room.mapPool))send({type:'map-pool',kind:'custom',ids});
+      holes=Math.min(holes,ids.length);
+    }
+    send({type:'start',holes,mode:$('game-mode').value});
+  };
+  $('holes').onchange=$('game-mode').onchange=()=>{pendingConfig={holes:Number($('holes').value),mode:$('game-mode').value};startState();modeControls();send({type:'configure',...pendingConfig});};
+  $('map-pool').onchange=()=>{const kind=$('map-pool').value;const ids=GOLF_CAMPAIGN.courses.map((_,i)=>i).filter(i=>kind==='custom'?room.mapPool.includes(i):kind==='all'||(kind==='originals'?GOLF_CAMPAIGN.courses[i].revision===0:GOLF_CAMPAIGN.courses[i].revision!==0));pendingPool={kind,ids};startState();send({type:'map-pool',...pendingPool});};
   $('apply-maps').onclick=()=>{
-    const ids=[...$('map-options').querySelectorAll('input:checked')].map(input=>Number(input.dataset.mapId));
+    const ids=[...$('map-options').querySelectorAll('[data-map-id]:checked')].map(input=>Number(input.dataset.mapId));
     if(!ids.length){toast(t('selectOneMap'));return;}
-    send({type:'map-pool',kind:'custom',ids});
+    pendingPool={kind:'custom',ids};startState();send({type:'map-pool',...pendingPool});
   };
   $('add-bot').onclick=()=>send({type:'bot',action:'add',settings:{difficulty:$('bot-difficulty-all').value}});
   $('apply-bot-count').onclick=()=>send({type:'bot',action:'count',settings:{count:Number($('bot-count').value),difficulty:$('bot-difficulty-all').value}});
@@ -260,9 +356,10 @@
   };
   $('lobby-leave').onclick=leave;
   $('lobby-open-chat').onclick=openChat;
-  document.addEventListener('keydown',e=>{if(e.key==='Tab'&&online){e.preventDefault();showScores(phase==='results'||phase==='finished');}});
+  document.addEventListener('keydown',e=>{if(e.key==='Tab'&&online&&!['lobby','loading'].includes(phase)){e.preventDefault();showScores(phase==='results'||phase==='finished');}});
   document.addEventListener('keyup',e=>{if(e.key==='Tab'&&online&&!['results','finished'].includes(phase))$('scores').hidden=true;});
   let lastCountdown;
   setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())*playbackSpeed/1000));$('timer').textContent=phase==='finished'?t('final'):seconds+'s';if(phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
   try{const p=JSON.parse(localStorage.getItem('golf-profile'));if(p){$('nickname').value=p.nickname;$('color').value=p.color;$('avatar').value=String(p.avatar);}}catch{}
+  previewProfile();
 })();

@@ -1,3 +1,4 @@
+import {createLobby,selectLobbyMode} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ try{
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/\bERROR\b|INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});
   await visitMultiplayer(page,url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
-  await page.locator('#nickname').fill('Wildlife Host');await page.locator('#create').click();
+  await createLobby(page,{nickname:'Wildlife Host'});
   await page.locator('#lobby').waitFor({state:'visible'});const room=[...app.rooms.values()][0];
   for(let i=1;i<50;i++)await new Promise((resolve,reject)=>{
     const socket=new WebSocket(url.replace('http','ws')+'/ws');clients.push(socket);
@@ -23,7 +24,7 @@ try{
     socket.on('open',()=>socket.send(JSON.stringify({type:'join',code:room.code,nickname:`Wildlife${i}`,color:'#66aa88',avatar:i%8})));
     socket.on('message',data=>{const m=JSON.parse(data.toString());if(m.type==='welcome')resolve();if(m.type==='load')socket.send(JSON.stringify({type:'ready',hole:m.hole}));if(m.type==='error')reject(Error(m.message));});
   });
-  await page.locator('#game-mode').selectOption('impact');await page.locator('#start').click();
+  await selectLobbyMode(page,'impact');await page.locator('#start').click();
   await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();
   await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));
   room.selectedLevels=[76];room.holes=1;room.hole=0;await room.load();

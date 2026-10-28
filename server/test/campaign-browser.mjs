@@ -1,3 +1,4 @@
+import {createLobby,joinLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -17,8 +18,8 @@ try{
   for(const p of pages){p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(/\bERROR\b|INVALID_OPERATION|failed to compile/i.test(m.text()))errors.push(m.text());});}
   await Promise.all(pages.map(p=>visitMultiplayer(p,url)));await Promise.all(pages.map(p=>p.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000})));
   assert.equal(await a.locator('#holes option').count(),80);
-  await a.locator('#nickname').fill('Campaign Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
-  const code=await a.locator('#room-code').textContent();await b.locator('#nickname').fill('Mobile Guest');await b.locator('#join-code').fill(code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
+  await createLobby(a,{nickname:'Campaign Host'});await a.locator('#lobby').waitFor({state:'visible'});
+  const code=await a.locator('#room-code').textContent();await joinLobby(b,{code:code,nickname:'Mobile Guest'});await b.locator('#lobby').waitFor({state:'visible'});
   await b.evaluate(()=>GolfI18n.setLanguage('pt-BR'));await a.locator('#start').click();
   await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.active)));
   await Promise.all(pages.map(p=>p.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]))));

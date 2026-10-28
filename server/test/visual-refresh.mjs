@@ -1,3 +1,4 @@
+import {createLobby,joinLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,8 +17,8 @@ try{
   for(const selector of ['body','#create','#nickname','#music-controls'])assert.match(await p.locator(selector).evaluate(e=>getComputedStyle(e).fontFamily),/Poppins/);
   await p.evaluate(()=>{window.mapTextCalls=0;const canvas=document.getElementById('minimap-canvas'),c=canvas.getContext('2d');c.fillText=()=>window.mapTextCalls++;c.strokeText=()=>window.mapTextCalls++;});
  }
- await a.locator('#nickname').fill('Visual Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
- const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Mobile');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
+ await createLobby(a,{nickname:'Visual Host'});await a.locator('#lobby').waitFor({state:'visible'});
+ const room=[...app.rooms.values()][0];await joinLobby(b,{code:room.code,nickname:'Mobile'});await b.locator('#lobby').waitFor({state:'visible'});
  await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));
  room.selectedLevels=[3];room.holes=1;room.hole=0;await room.load();
  await Promise.all(pages.map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame?.course===4&&GolfCourse.inspect().frame.intro)));

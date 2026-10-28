@@ -1,3 +1,4 @@
+import {createLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import { chromium } from '@playwright/test';
 import { createServer } from '../dist/index.js';
@@ -11,6 +12,8 @@ try {
   const page=await browser.newPage();
   await visitMultiplayer(page,`http://127.0.0.1:${app.server.address().port}`);
   await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
+  await page.locator('#open-join').click();const code=page.locator('#join-code');await code.click();await page.keyboard.type('RD7K2');assert.equal(await code.inputValue(),'RD7K2');await page.locator('#join-back').click();
+  await createLobby(page);await page.locator('#profile-editor summary').click();
   // fill() bypasses key events and cannot catch the engine swallowing typing.
   const nickname=page.locator('#nickname');
   await nickname.click();
@@ -25,14 +28,11 @@ try {
   assert.equal(await nickname.inputValue(),'itor Golf');
   await page.keyboard.press('Tab');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'color');
-  const code=page.locator('#join-code');
-  await code.click();
-  await page.keyboard.type('RD7K2');
-  assert.equal(await code.inputValue(),'RD7K2');
   await nickname.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('Vitor Golf');
-  await page.locator('#create').click();
+  await page.locator('#save-profile').click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('golf-profile')).nickname==='Vitor Golf');
   await page.locator('#lobby').waitFor({state:'visible'});
   assert.equal([...app.rooms.values()][0].members.get(1).nickname,'Vitor Golf');
   await page.locator('#start').click();

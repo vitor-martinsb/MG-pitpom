@@ -1,3 +1,5 @@
+import {showBotRoster} from './navigation-fixture.mjs';
+import {createLobby,fillBotCount,joinLobby,lobbyTab} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,11 +18,11 @@ try{
     page.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(page,url);await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
     await page.evaluate(()=>{const call=Module.ccall;Module.ccall=function(...args){if(args[0]==='golf_online_receive'){const m=JSON.parse(args[3][0]);if(m.type==='room')window.nativeRoster=m.players;}return call.apply(Module,args);};});
   }
-  await a.locator('#nickname').fill('Human Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
-  const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Jogador PT');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});await b.evaluate(()=>GolfI18n.setLanguage('pt-BR'));
+  await createLobby(a,{nickname:'Human Host'});await a.locator('#lobby').waitFor({state:'visible'});
+  const room=[...app.rooms.values()][0];await joinLobby(b,{code:room.code,nickname:'Jogador PT'});await b.locator('#lobby').waitFor({state:'visible'});await b.evaluate(()=>GolfI18n.setLanguage('pt-BR'));
   for(const id of ['bot-count','bot-difficulty-all','apply-bot-count'])assert.equal(await b.locator('#'+id).isDisabled(),true);
-  await a.locator('#bot-count').fill('3');await a.locator('#bot-difficulty-all').selectOption('expert');await a.locator('#apply-bot-count').click();
-  await b.locator('#bot-roster').waitFor({state:'visible'});await a.locator('#bot-roster>summary').click();await b.locator('#bot-roster>summary').click();
+  await fillBotCount(a,'3');await a.locator('#bot-difficulty-all').selectOption('expert');await a.locator('#apply-bot-count').click();
+  await b.locator('#bot-roster').waitFor({state:'visible'});await showBotRoster(a);await showBotRoster(b);
   await b.waitForFunction(()=>document.querySelectorAll('#bot-members .bot-badge').length===3);
   assert.deepEqual([...room.members.values()].filter(m=>m.bot).map(m=>m.nickname),['GPT-6','Claude','Gemini']);
   await b.evaluate(()=>{document.getElementById('bot-count').value='20';document.getElementById('apply-bot-count').disabled=false;document.getElementById('apply-bot-count').click();});
@@ -29,7 +31,7 @@ try{
   await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes('Fácil'));
   await a.waitForFunction(()=>window.nativeRoster?.filter(p=>p.nickname.startsWith('[BOT] ')).length===3);
   const roster=await a.evaluate(()=>window.nativeRoster);assert.equal(roster.find(p=>p.nickname==='Human Host').bot,undefined);assert.equal(roster.filter(p=>p.nickname.startsWith('[BOT] ')).length,3);
-  await a.locator('#holes').selectOption('1');await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));
+  await lobbyTab(a,'maps');await a.locator('#holes').selectOption('1');await a.locator('#start').click();await Promise.all(pages.map(p=>p.locator('#presentation').waitFor({state:'visible'})));
   room.selectedLevels=[0];room.holes=1;room.hole=0;await room.load();
   // Keep the real mascot mechanics, but use a repeatable patrol for the
   // completion/three-stroke fixture instead of a random match seed.

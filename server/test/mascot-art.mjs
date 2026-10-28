@@ -1,3 +1,4 @@
+import {createLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -25,9 +26,8 @@ try{
     assert.ok(panel.width>100&&panel.x>=0&&panel.x+panel.width<=viewport.width);
     await page.screenshot({path:`../out/mascot-validation/${name}.png`});
     await page.waitForFunction(()=>!document.getElementById('create').disabled,{},{timeout:90000});
-    await page.locator('#nickname').fill('Pituca & Pompom');
-    assert.equal(await page.locator('#nickname').inputValue(),'Pituca & Pompom');
-    await page.locator('#create').click();await page.locator('#lobby').waitFor({state:'visible'});
+    await createLobby(page,{nickname:'Pituca & Pompom'});
+    assert.equal(await page.locator('#profile-display-name').textContent(),'Pituca & Pompom');
     assert.deepEqual(errors,[]);await context.close();
   }
   console.log('Multiplayer: existing art asset preserved, decorative header removed, desktop/mobile layout and accessible nickname/create controls passed.');

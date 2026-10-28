@@ -1,3 +1,4 @@
+import {createLobby,fillBotCount,joinLobby,lobbyTab} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -19,25 +20,25 @@ try{
     assert.equal(await page.locator('#toggle-match-info').isHidden(),true);
   }
   const [a,b]=pages;
-  await a.locator('#nickname').fill('Clean Host');await a.locator('#create').click();await a.locator('#lobby').waitFor({state:'visible'});
-  const room=[...app.rooms.values()][0];await b.locator('#nickname').fill('Clean Guest');await b.locator('#join-code').fill(room.code);await b.locator('#join').click();await b.locator('#lobby').waitFor({state:'visible'});
-  await a.locator('#bot-count').fill('30');await a.locator('#apply-bot-count').click();
+  await createLobby(a,{nickname:'Clean Host'});await a.locator('#lobby').waitFor({state:'visible'});
+  const room=[...app.rooms.values()][0];await joinLobby(b,{code:room.code,nickname:'Clean Guest'});await b.locator('#lobby').waitFor({state:'visible'});
+  await fillBotCount(a,'30');await a.locator('#apply-bot-count').click();
   await b.waitForFunction(()=>document.getElementById('bot-roster-label').textContent.startsWith('30 '));
   const bots=[...room.members.values()].filter(m=>m.bot);assert.equal(new Set(bots.map(m=>m.color)).size,30);
   assert.ok(bots.every(m=>/^#[0-9a-f]{6}$/.test(m.color)));
   for(const page of pages){
     await page.waitForFunction(()=>document.querySelectorAll('#bot-colors i').length===8);
-    assert.equal(await page.locator('#members .player').count(),2);assert.equal(await page.locator('#bot-members .player').count(),0);
-    assert.equal(await page.locator('#bot-roster').getAttribute('open'),null);assert.equal(await page.locator('#bot-colors i').count(),8);
+    assert.equal(await page.locator('#members .player').count(),2);assert.equal(await page.locator('#bot-members .player').count(),30);
+    assert.equal(await page.locator('#bot-roster').evaluate(e=>e.open),true);assert.equal(await page.locator('#bot-colors i').count(),8);
   }
   assert.deepEqual(await a.locator('#bot-colors i').evaluateAll(items=>items.map(e=>e.style.background)),await b.locator('#bot-colors i').evaluateAll(items=>items.map(e=>e.style.background)));
   await a.screenshot({path:'../out/clean-play/lobby-desktop.png'});await b.screenshot({path:'../out/clean-play/lobby-mobile.png'});
-  await a.locator('#bot-roster>summary').click();await a.locator('.bot-row').last().waitFor();assert.equal(await a.locator('.bot-row').count(),30);
+  assert.equal(await a.locator('.bot-row').count(),30);
   await a.locator('#bot-roster>summary').click();await a.waitForFunction(()=>!document.querySelectorAll('#bot-members .bot-row').length);
   for(const id of ['bot-count','bot-difficulty-all','apply-bot-count','add-bot'])assert.equal(await b.locator('#'+id).isDisabled(),true);
   // Live input checks use the existing original first course, without AI load.
-  await a.locator('#bot-count').fill('0');await a.locator('#apply-bot-count').click();await b.locator('#bot-roster').waitFor({state:'hidden'});
-  room.configurePool([...room.members.values()][0],'custom',[0]);await a.locator('#holes').selectOption('1');await a.locator('#start').click();
+  await fillBotCount(a,'0');await a.locator('#apply-bot-count').click();await b.locator('#bot-roster').waitFor({state:'hidden'});
+  room.configurePool([...room.members.values()][0],'custom',[0]);await lobbyTab(a,'maps');await a.locator('#holes').selectOption('1');await a.locator('#start').click();
   for(const page of pages){await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();}
   for(const page of pages)await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));
   for(const [page,name,id]of [[a,'desktop',1],[b,'mobile',2]]){
