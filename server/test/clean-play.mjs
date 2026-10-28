@@ -79,5 +79,5 @@ try{
   await canvasClick(a,1200-80*900/720,80*900/720);await a.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===7);
   await canvasClick(a,600,450+160*900/720);await a.locator('#main-menu').waitFor({state:'visible'});
   assert.deepEqual(errors,[]);
-  console.log('30 bots collapsed by default, unique replicated colors, host permissions, hidden HUD and labels, mouse/touch shots, persistent quiet mode, mandatory results, native pause and EN/PT/ES passed.');
+  console.log('30-bot roster visibility and collapse, unique replicated colors, host permissions, hidden HUD and labels, mouse/touch shots, persistent quiet mode, mandatory results, native pause and EN/PT/ES passed.');
 }finally{await browser?.close();app.close();}
