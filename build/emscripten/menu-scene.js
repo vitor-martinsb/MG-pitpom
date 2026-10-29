@@ -65,7 +65,7 @@
       const [a,b,cw,ch]=r.tail.map((v,i)=>i<2?(v-(i?top:left))*ratio:v*ratio);
       const t=document.createElement('canvas');t.width=c.width;t.height=c.height;
       const tc=t.getContext('2d');tc.drawImage(c,0,0);tc.globalCompositeOperation='destination-in';tc.fillRect(a*scale,b*scale,cw*scale,ch*scale);
-      tail={url:t.toDataURL(),x,y,w,h,canvas:t,scale};ctx.clearRect(a,b,cw,ch);
+      tail={url:t.toDataURL(),x,y,w,h,canvas:t,scale,flex:{x:a*scale,y:b*scale,w:cw*scale,h:ch*scale}};ctx.clearRect(a,b,cw,ch);
       const pivot=point(r.pivot);rig.tail=['',...pivot];
     }
     return {url:c.toDataURL(),tail,x,y,w,h,canvas:c,scale,rig};
@@ -101,8 +101,12 @@
       const data=cctx.getImageData(0,0,c.width,c.height);let left=c.width,top=c.height,right=-1,bottom=-1;
       for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(data.data[(y*c.width+x)*4+3]){left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);}
       if(right<left)return;
+      // Keep the complete cut boundary for tails. Rotating a rectangular atlas
+      // cut also rotates body pixels and opens a hole at its stationary socket.
+      if(source.flex){left=Math.floor(source.flex.x);top=Math.floor(source.flex.y);right=Math.ceil(source.flex.x+source.flex.w)-1;bottom=Math.ceil(source.flex.y+source.flex.h)-1;}
+      if(source.flex)node.dataset.flexBounds=JSON.stringify([source.x+left/scale,source.y+top/scale,(right-left+1)/scale,(bottom-top+1)/scale]);
       const trimmed=document.createElement('canvas');trimmed.width=right-left+1;trimmed.height=bottom-top+1;const t=trimmed.getContext('2d');t.drawImage(c,-left,-top);
-      parts.push({node,canvas:trimmed,ctx:t,base:t.getImageData(0,0,trimmed.width,trimmed.height),x:source.x+left/scale,y:source.y+top/scale,w:trimmed.width/scale,h:trimmed.height/scale});
+      parts.push({node,canvas:trimmed,ctx:t,base:t.getImageData(0,0,trimmed.width,trimmed.height),flex:source.flex,frames:new Map(),x:source.x+left/scale,y:source.y+top/scale,w:trimmed.width/scale,h:trimmed.height/scale});
     }
     function shape(node,x,y,w,h,draw){
       const c=document.createElement('canvas');c.width=Math.ceil(w*2);c.height=Math.ceil(h*2);const context=c.getContext('2d');context.scale(2,2);context.translate(-x,-y);draw(context);
@@ -111,9 +115,24 @@
     function light(values){
       const key=values.join(',');if(key===paletteKey)return;paletteKey=key;
       const [r,g,b,blue]=values;
-      for(const p of parts){const data=p.ctx.createImageData(p.canvas.width,p.canvas.height),src=p.base.data,dst=data.data;
+      for(const p of parts){p.frames.clear();const data=p.ctx.createImageData(p.canvas.width,p.canvas.height),src=p.base.data,dst=data.data;
         for(let k=0;k<src.length;k+=4){dst[k]=src[k]*r;dst[k+1]=src[k+1]*g;dst[k+2]=src[k+2]*b+blue*255;dst[k+3]=src[k+3];}p.ctx.putImageData(data,0,0);
       }
+    }
+    function flexTail(p,angle){
+      const key=Math.round(angle*180/Math.PI*8);if(p.frames.has(key))return p.frames.get(key);
+      const c=document.createElement('canvas'),w=c.width=p.canvas.width,h=c.height=p.canvas.height,t=c.getContext('2d');
+      const middle=Math.floor(w/2),guard=Math.min(8,Math.floor(Math.min(w,h)/6)),amplitude=Math.sin(key/8*Math.PI/180)*h*.45;
+      // Each scanline remains continuous and both sides stay fixed. The smooth
+      // envelope also fixes the top/bottom: no missing wedge, copied tail, new
+      // outline, or invented pixels are needed to cover the joint.
+      t.drawImage(p.canvas,0,0);t.clearRect(guard,guard,w-guard*2,h-guard*2);
+      for(let y=guard;y<h-guard;y++){
+        const shift=amplitude*Math.sin(Math.PI*(y-guard)/(h-guard*2-1))**2,split=Math.max(guard+1,Math.min(w-guard-1,middle+shift));
+        t.drawImage(p.canvas,guard,y,middle-guard,1,guard,y,split-guard,1);
+        t.drawImage(p.canvas,middle,y,w-middle-guard,1,split,y,w-split-guard,1);
+      }
+      p.frames.set(key,c);return c;
     }
     function paint(){
       const screen=root.getScreenCTM();if(!screen)return;
@@ -124,9 +143,10 @@
       if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
       ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,width,height);
       const inverse=root.getCTM()?.inverse();if(!inverse)return;
-      for(const p of parts){const matrix=p.node.getCTM();if(!matrix)continue;const m=inverse.multiply(matrix);
+      for(const p of parts){const matrix=p.node.getCTM();if(!matrix)continue;let m=inverse.multiply(matrix),image=p.canvas;
+        if(p.flex){const parent=p.node.parentNode.getCTM(),local=parent.inverse().multiply(matrix);image=flexTail(p,Math.atan2(local.b,local.a));m=inverse.multiply(parent);}
         ctx.setTransform(width/region.w*m.a,height/region.h*m.b,width/region.w*m.c,height/region.h*m.d,width/region.w*(m.e-region.x),height/region.h*(m.f-region.y));
-        ctx.globalAlpha=Number(getComputedStyle(p.node).opacity);ctx.drawImage(p.canvas,p.x,p.y,p.w,p.h);
+        ctx.globalAlpha=Number(getComputedStyle(p.node).opacity);ctx.drawImage(image,p.x,p.y,p.w,p.h);
       }
       ctx.globalAlpha=1;painted++;
     }

@@ -46,6 +46,34 @@ try{
    assert.ok(movement.changed>5,`${name}: ${movement.id} must change actual painted pixels`);
    assert.ok(movement.visible>movement.wasVisible*.97,`${name}: animals remain visible while tails move`);
   }
+  // Opaque pixels at the cut/body socket must remain opaque through an entire
+  // wag. Total visible area alone misses the rectangular wedges seen in-game.
+  const joints=await page.evaluate(async()=>{
+   const svg=document.querySelector('.living-menu-art'),canvas=document.querySelector('[data-pet-surface]'),ctx=canvas.getContext('2d'),region=JSON.parse(canvas.dataset.region);
+   const settle=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+   const tails=[...svg.querySelectorAll('[data-flex-bounds]')].map(node=>({node,a:node.getAnimations()[0],bounds:JSON.parse(node.dataset.flexBounds),points:[],minimum:1}));
+   for(const t of tails)t.a.currentTime=Number(t.a.effect.getTiming().duration)*.25;
+   await settle();
+   const before=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+   const project=(t,x,y)=>{const m=svg.getCTM().inverse().multiply(t.node.parentNode.getCTM()),q=new DOMPoint(x,y).matrixTransform(m);return [Math.floor((q.x-region.x)/region.w*canvas.width),Math.floor((q.y-region.y)/region.h*canvas.height)];};
+   for(const t of tails){const [x,y,w,h]=t.bounds;
+    for(let iy=.5;iy<h;iy+=.5)for(let ix=.5;ix<w;ix+=.5){
+     if(Math.min(ix,iy,w-ix,h-iy)>3)continue;
+     const [px,py]=project(t,x+ix,y+iy);
+     if([[-1,0],[0,0],[1,0],[0,-1],[0,1]].every(([dx,dy])=>before[((py+dy)*canvas.width+px+dx)*4+3]>250))t.points.push([px,py]);
+    }
+   }
+   for(let phase=0;phase<=16;phase++){
+    for(const t of tails)t.a.currentTime=Number(t.a.effect.getTiming().duration)*phase/16;
+    await settle();const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    for(const t of tails)if(t.points.length)t.minimum=Math.min(t.minimum,t.points.filter(([x,y])=>pixels[(y*canvas.width+x)*4+3]>240).length/t.points.length);
+   }
+   return tails.map(t=>({id:t.node.closest('[data-pet]').dataset.pet,samples:t.points.length,minimum:t.minimum}));
+  });
+  assert.equal(joints.length,6,'all existing tail sockets are exercised');
+  assert.ok(joints.reduce((n,joint)=>n+joint.samples,0)>40,'socket samples cover the actual opaque cut boundaries');
+  for(const joint of joints)assert.ok(joint.minimum>.98,`${name}: ${joint.id} must not expose scenery at its cut boundary: ${JSON.stringify(joint)}`);
+  await page.screenshot({path:`../out/menu-motion/${name}-joined.png`});
   // These comparisons inspect the browser's rendered PNG pixels, rather than
   // merely checking that a timer or a WAAPI animation object exists.
   // Blink timing is staggered by roster index. Seek the real closed-eye frame

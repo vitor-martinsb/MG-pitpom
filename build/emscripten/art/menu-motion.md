@@ -78,10 +78,20 @@ Images are written to `out/menu-motion`. These rendered images must be visually
 inspected in addition to the test assertions. `living-menu.mjs` retains the four
 Brasilia periods, palette continuity, contrast and pause/resume tests.
 
-Tail motion uses its own short clock: dogs swing around their original tail
-roots by 9 degrees, cats by 5 degrees and Cocota by 2.5 degrees, with staggered
+Tail motion uses its own short clock: dogs use a 9-degree driving signal,
+cats 5 degrees and Cocota 2.5 degrees, with staggered
 2.2–3 second cycles. Reduced motion decreases swing to 32% and playback to 65%
 instead of stretching tiny movements over roughly half a minute. The existing
 canvas painter, body cutouts, anchors and tailless Pituca stay unchanged.
 Browser regression checks every painted tail advancing automatically in 750 ms
 on desktop, reduced-motion desktop and mobile, independently from body motion.
+
+The atlas tail cuts are rectangles, not anatomical outlines: some contain body
+pixels. Rigidly rotating them exposes wedges of background at the socket. The
+canvas now uses the same clock to flex each cut internally, keeping its complete
+border (including a small guard band) stationary in the animal's coordinate
+system. Continuous scanlines resample the original pixels without duplicating
+the tail or painting over the gap. Cached frames are invalidated when lighting
+changes. No source art, character position, or gameplay resource changes.
+The browser regression sweeps 17 phases of every tail cycle and checks opaque
+socket pixels directly, in addition to the existing area/movement checks.
