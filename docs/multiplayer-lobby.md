@@ -39,3 +39,10 @@ keyboard sizing, footer placement and starting without repeat courses.
 `lobby-webkit.mjs` runs that same integration against WebKit in CI. Existing
 browser regressions use the public create/join/profile/tab helpers in
 `navigation-fixture.mjs`; no hidden pre-entry setup form is retained.
+
+The illustrated entry keeps the original `GolfMenuScene` mounted behind its
+transparent controls, including the original animals and motion. It does not
+create a second scene or re-encode the artwork. The in-room panels use a green
+header, segmented tabs and cream cards. Color/avatar shortcuts edit the same
+profile form fields and wait for the same server acknowledgement. The mode
+illustrations are static UI diagrams; the physics values remain unchanged.

@@ -37,7 +37,7 @@
   function show(next,focus=true){
     if(['splash','menu'].includes(next)&&!bootComplete)return;
     if(next!=='menu')campaignRequested=false;
-    route=next;home.hidden=!['splash','menu'].includes(next);home.dataset.screen=next;
+    route=next;home.hidden=!['splash','menu','multiplayer'].includes(next);home.dataset.screen=next;
     if(next!=='game')roomPhase('');
     document.body.dataset.home=next;
     $('main-menu').hidden=next!=='menu';$('continue-home').hidden=next!=='splash';

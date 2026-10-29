@@ -4,18 +4,19 @@ import {chromium,webkit} from '@playwright/test';
 import {createServer} from '../dist/index.js';
 import {visitMultiplayer,createLobby,joinLobby,customizePlayer,lobbyTab,selectLobbyMode,fillBotCount} from './navigation-fixture.mjs';
 const useWebkit=process.argv.includes('--webkit'),app=createServer();let browser;
+fs.mkdirSync('../out/lobby-redesign',{recursive:true});
 try{
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
  browser=await(useWebkit?webkit:chromium).launch({headless:true,...(!useWebkit?{...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.env.CI?{}:{channel:'chrome'}),args:['--enable-unsafe-swiftshader']}:{} )});
  const a=await browser.newPage({viewport:{width:1200,height:900}}),b=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];
- for(const p of [a,b]){p.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(p,url);await p.evaluate(()=>GolfI18n.setLanguage('pt-BR'));assert.equal(await p.locator('#entry-actions button:visible').count(),2);assert.equal(await p.locator('#connect input:visible,#connect select:visible').count(),0);assert.equal(await p.locator('#connect #color,#connect #avatar').count(),0);}
+ for(const p of [a,b]){p.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(p,url);await p.evaluate(()=>GolfI18n.setLanguage('pt-BR'));assert.equal(await p.locator('#entry-actions button:visible').count(),2);assert.equal(await p.locator('#connect input:visible,#connect select:visible').count(),0);assert.equal(await p.locator('#connect #color,#connect #avatar').count(),0);assert.equal(await p.locator('#home').isVisible(),true,'entry retains the original living menu');assert.equal(await p.locator('#home-scenery .living-menu-art').count(),1);assert.equal(await p.locator('#home .home-brand').isVisible(),false);await p.screenshot({path:`../out/lobby-redesign/entry-${p===a?'desktop':useWebkit?'ios':'android'}.png`});}
  console.log('Lobby: entry choices verified');
  await createLobby(a);const room=[...app.rooms.values()][0],owner=[...room.members.values()][0];
  await joinLobby(b,{code:room.code,nickname:'Convidado'});assert.equal(room.members.size,2);
  assert.equal(await b.locator('#tab-players').getAttribute('aria-selected'),'true');assert.equal(await b.locator('#start').isHidden(),true);assert.match(await b.locator('#host-note').textContent(),/Aguardando/);
- await a.locator('#profile-editor summary').click();await a.locator('#nickname').fill('Anfitriao');
+ await a.locator('#profile-editor summary').click();await a.locator('#nickname').fill('Anfitriao');await a.locator('[data-field=color][data-value="#2685dc"]').click();await a.locator('[data-field=avatar][data-value="2"]').click();assert.equal(await a.locator('#color').inputValue(),'#2685dc');assert.equal(await a.locator('#avatar').inputValue(),'2');
  assert.equal(await a.evaluate(()=>{document.getElementById('profile-form').requestSubmit();return ['nickname','color','avatar','save-profile','start'].every(id=>document.getElementById(id).disabled);}),true,'profile inputs and Start wait for the authoritative acknowledgement');
- await a.waitForFunction(()=>!document.getElementById('save-profile').disabled);await a.locator('#profile-editor summary').click();
+ await a.waitForFunction(()=>!document.getElementById('save-profile').disabled);assert.equal(owner.color,'#2685dc');assert.equal(owner.avatar,2);assert.equal(await a.locator('[data-field=color][aria-pressed=true]').count(),1);await a.locator('#profile-editor summary').click();
  await customizePlayer(a,{nickname:'Anfitriao',color:'#3366aa',avatar:4});await b.waitForFunction(()=>document.getElementById('host-identity').textContent.includes('Anfitriao'));
  await customizePlayer(b,{color:'#ff9900',avatar:7});const guest=[...room.members.values()][1];assert.equal(owner.color,'#3366aa');assert.equal(guest.color,'#ff9900');assert.equal(guest.avatar,7);
  // The same room event updates the real native player cosmetics.

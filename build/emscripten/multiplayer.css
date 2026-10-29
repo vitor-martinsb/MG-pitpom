@@ -348,3 +348,117 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #connect,#lobby{color-scheme:light}
 
 @media(max-width:600px){#lobby #lobby-settings-slot .music-controls summary{min-height:44px;display:grid;place-items:center}}
+/* The entry shares the original living menu; room controls use the same palette. */
+.home-screen[data-screen=multiplayer]{z-index:4;pointer-events:none}
+.home-screen[data-screen=multiplayer] .home-brand{display:none}
+#connect.overlay{background:linear-gradient(0deg,#183d2455,transparent 42%);backdrop-filter:none}
+#connect .welcome-wrap{display:flex;justify-content:flex-end;align-items:stretch;width:100%;max-width:none;padding:0;overflow:auto}
+#connect .multiplayer-entry{display:flex;flex-direction:column;width:min(360px,32vw);height:100%;max-height:none;overflow:visible;padding:8px;background:none;border:0;box-shadow:none;border-radius:0}
+#connect .entry-heading{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+#connect .entry-heading h2{order:3;width:100%;text-align:center;margin:clamp(16px,7vh,70px) 0 0;padding:18px 12px;border:3px solid #967044;border-radius:12px;background:linear-gradient(174deg,#f3d49d,#d9aa6d);color:#45351e;box-shadow:inset 0 0 0 2px #ffe7b8,0 5px 0 #674b2d55;font-size:clamp(1.3rem,2.2vw,2rem);text-shadow:0 1px #ffe6b2}
+#connect .entry-heading>button,#connect-settings-slot .music-controls summary{background:#fff7e4;color:#36513d;border:1px solid #b8b78e;border-radius:12px}
+#connect .multiplayer-entry>.muted:first-of-type{margin:auto 0 12px;padding:12px 14px;border:1px solid #c1ad7a;border-radius:12px;background:#fff4dbeF;color:#36513d;font-size:.82rem;line-height:1.5;letter-spacing:0;text-align:center;box-shadow:0 3px 0 #2e4a2926}
+#connect .entry-actions{margin:0 0 12px;gap:12px}
+#connect .entry-actions button{display:grid;grid-template-columns:32px 1fr 16px;align-items:center;text-align:left;gap:10px;min-height:66px;border:2px solid #f8e7b4;box-shadow:0 4px 0 #24472966;padding:14px 18px;border-radius:18px;font-size:1.05rem}
+#connect .entry-actions .entry-icon{font-size:1.65rem;text-align:center}
+#connect #create{background:#365e3deF}
+#connect #open-join{background:#fff3d8f5;border-color:#d9c292}
+#connect #engine-status{font-size:.7rem;text-align:center;margin:0;color:#fff6df;text-shadow:0 1px 3px #183d24}
+#connect #engine-loader{background:#fff5e4;border-radius:12px;padding:8px}
+#connect[data-entry=join] .multiplayer-entry{justify-content:center}
+#connect[data-entry=join] .entry-heading h2{margin-top:12px}
+#connect[data-entry=join] .multiplayer-entry>.muted:first-of-type{display:none}
+#connect #join-form{background:#fff8e8f5;border:2px solid #b8bb8c;border-radius:18px;padding:18px;margin:16px 0;box-shadow:0 10px 30px #173b2433}
+#connect #join-form h3{margin:0 0 14px}
+#lobby.overlay{background:linear-gradient(#244c29c9,#426038c9),url(art/menu-garden.png) center/cover;backdrop-filter:none}
+#lobby .lobby-panel{border:3px solid #a8bd85;border-radius:22px;background:#fff8e7;box-shadow:0 12px 40px #17351c55,inset 0 0 0 2px #fff8e7}
+#lobby .lobby-header{padding:0 16px 10px;background:#fff5de}
+#lobby .lobby-header>.chat-heading{margin:0 -16px;padding:10px 14px;background:#355d3c;color:#fff9e5;border-bottom:2px solid #b8c394}
+#lobby .chat-heading h2{color:#fff9e5;font-size:1.06rem}
+#lobby .chat-heading button,#lobby .chat-heading summary{min-height:40px;padding:8px 12px;box-shadow:none;border-radius:10px;font-size:.78rem}
+#lobby .room-banner{margin-top:10px}
+#lobby .code{font-size:1.45rem;color:#294d32}
+#lobby .room-presence{padding-left:12px;border-left:1px solid #ded8b9}
+#lobby .lobby-tabs{gap:2px;padding:5px 10px 9px;background:#fff5de;border-bottom:1px solid #e1d9bb}
+#lobby .lobby-tabs button{border:0;border-radius:10px;min-height:44px;background:#efe5c9;box-shadow:none;font-size:.82rem;padding:9px 6px}
+#lobby .lobby-tabs button[aria-selected=true]{color:#fff9e7;background:#426b42;box-shadow:inset 0 1px 0 #ffffff26,0 2px 3px #294c321f}
+#lobby .lobby-tab-panel{padding:16px}
+#lobby .profile-card{padding:10px 12px;background:#fffbee;border-color:#dfd5b6;border-radius:12px;margin-bottom:16px}
+#lobby .ball-preview{width:42px;height:42px;font-size:23px}
+#lobby .profile-choices{display:grid;grid-template-columns:repeat(8,minmax(44px,1fr));overflow:auto;gap:4px;margin:0 0 12px}
+#lobby .profile-choices button{padding:0;min-width:0;min-height:44px;border-radius:10px;background:#f3ebd4;color:#2c5135;border:2px solid transparent;box-shadow:none;font-size:23px;display:grid;place-items:center}
+#lobby .color-choices button::before{content:'';width:23px;height:23px;border-radius:50%;background:var(--choice-color);box-shadow:inset -3px -4px 5px #0003,inset 2px 2px 3px #fff6;border:1px solid #0002}
+#lobby .profile-choices button[aria-pressed=true]{border-color:#4d7146;background:#e9efd6}
+#lobby .player{background:#fffbed;border-color:#e6dcc0;padding:8px 10px;border-radius:9px;min-height:46px}
+#lobby .dot{width:22px;height:22px;box-shadow:inset -3px -3px 5px #0003,inset 2px 2px 4px #fff5;border:1px solid #344e3926}
+#lobby .host-badge{padding:3px 6px;background:#e0eacb;border-radius:5px;font-size:.64rem}
+#lobby .bot-roster{padding:8px;background:#faf3df;border:1px solid #ddd0a9;border-radius:10px}
+#lobby .bot-roster>summary{font-size:.76rem}
+#lobby .bot-row{padding:10px;background:#fffbed;border:1px solid #e6dcc0;border-radius:9px}
+#lobby .bot-badge{background:#e6e1f4;color:#63538d}
+#lobby #panel-maps>h3::before{content:'▧';margin-right:8px}
+#lobby #panel-mode>h3::before{content:'♧';margin-right:8px}
+#lobby [data-i18n=mapPolicy]{background:#e8edcf;border:1px solid #d8dfb6;border-radius:10px;padding:12px 14px;color:#4b6543}
+#lobby .mode-card{position:relative;grid-template-columns:20px 1fr;gap:8px 10px;padding:14px;border-radius:13px;border-width:1px;min-height:184px;background:#fffbf0}
+#lobby .mode-card .mode-icon{grid-row:1;grid-column:1;align-self:start;margin-top:3px;width:18px;height:18px;border:2px solid #b5ba9d;border-radius:50%}
+#lobby .mode-card[aria-pressed=true]{border-color:#557b4d;background:#f3f7e8;box-shadow:inset 0 0 0 1px #557b4d}
+#lobby .mode-card[aria-pressed=true] .mode-icon{background:#fff;border:6px solid #557b4d}
+#lobby .mode-card strong{grid-column:2;grid-row:1;font-size:.9rem}
+#lobby .mode-card>span:last-child{grid-column:2;grid-row:3;font-size:.8rem;line-height:1.45}
+#lobby .mode-illustration{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:center;position:relative;isolation:isolate;height:72px;width:190px;max-width:100%;justify-self:center}
+#lobby .diagram-ball{display:block;width:48px;height:48px;border-radius:50%;border:1px solid #bec4b0;background:radial-gradient(circle at 32% 25%,#fff,#f5f5e9 35%,#bbc2b1);box-shadow:2px 7px 0 -3px #476c3e30;z-index:1}
+#lobby .classic-diagram{background:radial-gradient(ellipse at 55% 70%,#d4e69e 0,transparent 65%)}
+#lobby .diagram-trail{position:absolute;width:90px;height:24px;transform:translate(-33px,5px) rotate(-16deg);border-top:3px solid #a6bf77;border-bottom:2px solid #6c974f;border-radius:50%}
+#lobby .collision-diagram .diagram-ball:first-child{background:radial-gradient(circle at 32% 25%,#a6d8ff,#278bda 45%,#2762a4);border-color:#4079a1}
+#lobby .collision-diagram .diagram-ball:last-child{background:radial-gradient(circle at 32% 25%,#ffc1ac,#e84d44 45%,#b32b32);border-color:#b84c3f}
+#lobby .diagram-impact{font-style:normal;font-size:66px;line-height:1;color:#e9b33d;margin:0 -3px;text-shadow:0 1px #b68c3a}
+#lobby .lobby-footer{background:#fff5de;border-color:#e1d9bb;padding:10px 16px}
+#lobby #start{background:#426b42;border:1px solid #789663;border-radius:12px;box-shadow:inset 0 1px #ffffff24}
+@media(min-width:760px){#lobby .mode-cards{grid-template-columns:1fr 1fr}#lobby .mode-card{min-height:240px;align-content:start}#lobby .mode-illustration{height:110px}}
+@media(orientation:portrait){
+ #connect .welcome-wrap{justify-content:center}
+ #connect .multiplayer-entry{width:min(440px,100%);padding:0 8px}
+ #connect .entry-heading h2{margin-top:clamp(12px,7vh,60px);font-size:clamp(1.5rem,6.5vw,2rem);padding:14px 8px}
+ #connect .entry-actions button{min-height:60px;padding:11px 18px}
+ #connect .multiplayer-entry>.muted:first-of-type{margin-bottom:10px;font-size:.75rem;padding:9px 12px}
+}
+@media(max-width:600px){
+ #lobby .lobby-header{padding:0 10px 8px}
+ #lobby .lobby-header>.chat-heading{margin:0 -10px;padding:8px 10px}
+ #lobby .lobby-tabs{padding:4px 8px 8px}
+ #lobby .lobby-tab-panel{padding:12px}
+ #lobby .lobby-footer{padding:10px 12px}
+ #lobby .profile-card summary{gap:8px}
+}
+@media(max-height:550px) and (orientation:landscape){
+ #connect .multiplayer-entry{width:38vw;min-height:360px}
+ #connect .entry-heading h2{margin-top:8px;padding:10px}
+ #connect .multiplayer-entry>.muted:first-of-type{margin:12px 0 10px;padding:8px}
+ #connect .entry-actions button{min-height:48px;padding:8px 12px}
+}
+@media(orientation:portrait) and (max-height:680px){
+ #connect .entry-heading h2{margin-top:6px;padding:10px}
+ #connect .multiplayer-entry>.muted:first-of-type{padding:6px 10px;font-size:.7rem;margin-bottom:6px}
+ #connect .entry-actions{gap:8px;margin-bottom:6px}
+ #connect .entry-actions button{min-height:50px;padding:8px 14px}
+}
+
+@media(max-width:430px){#lobby .profile-choices{grid-template-columns:repeat(4,minmax(44px,1fr))}}
+/* Reveal the entry controls together without fading away the underlying art. */
+#connect.overlay{transition:none}
+#connect .welcome-wrap{animation:none}
+
+@media(orientation:portrait) and (max-height:680px){
+ #connect .multiplayer-entry>.muted:first-of-type{display:none}
+ #connect .entry-actions{margin-top:auto}
+}
+@media(max-height:550px) and (orientation:landscape){
+ #connect[data-entry=choices] .multiplayer-entry{min-height:0}
+ #connect[data-entry=choices] .entry-heading h2{position:absolute;left:3%;top:9%;width:40vw;margin:0}
+ #connect[data-entry=choices] .multiplayer-entry>.muted:first-of-type{display:none}
+ #connect[data-entry=choices] .entry-actions{margin-top:16px;flex:none}
+}
+
+#connect .entry-heading h2{display:flex;align-items:center;justify-content:center;gap:10px}
+#connect .entry-heading h2::before{content:'';flex:none;width:24px;height:24px;border-radius:50%;border:1px solid #b49362;background:radial-gradient(circle at 30% 25%,#fffbe8,#eedbb5 60%,#bba67b);box-shadow:0 2px 2px #6a4f3433}
+#connect .entry-actions .entry-icon{width:30px;height:30px}

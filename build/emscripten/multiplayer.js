@@ -48,7 +48,7 @@
     e.preventDefault();selectLobbyTab(ids[next],true);
   });
   function entryView(joining=false){
-    $('entry-actions').hidden=joining;$('join-form').hidden=!joining;
+    $('entry-actions').hidden=joining;$('join-form').hidden=!joining;$('connect').dataset.entry=joining?'join':'choices';
     if(joining){$('join-nickname').value=$('nickname').value;$('join-code').focus();}
   }
   $('open-join').onclick=()=>entryView(true);$('join-back').onclick=()=>entryView(false);
@@ -60,6 +60,7 @@
   function previewProfile(){
     $('ball-preview').style.setProperty('--ball-color',$('color').value);
     $('ball-preview').textContent=avatars[Number($('avatar').value)]??avatars[0];
+    for(const button of $('profile-shortcuts').querySelectorAll('button')){const field=$(button.dataset.field);button.disabled=field.disabled;button.setAttribute('aria-pressed',String(field.value.toLowerCase()===button.dataset.value));}
   }
   function renderProfile(){
     const me=room?.players.find(p=>p.id===identity?.id);if(!me)return;
@@ -71,8 +72,17 @@
     try{localStorage.setItem('golf-profile',JSON.stringify({nickname:me.nickname,color:me.color,avatar:me.avatar}));}catch{}
     previewProfile();
   }
+  // Quick choices edit the existing fields; saving still uses the same profile intent.
+  for(const [field,values]of [['color',['#ee6255','#2685dc','#33964b','#f3be38','#a253ce','#ee73a0','#ffffff','#20292b']],['avatar',avatars.map((_,i)=>String(i))]]){
+    const group=document.createElement('div');group.className='profile-choices '+field+'-choices';group.setAttribute('role','group');group.dataset.i18nLabel=field==='color'?'ballColor':'avatar';group.setAttribute('aria-label',t(group.dataset.i18nLabel));
+    for(const value of values){const button=document.createElement('button');button.type='button';button.dataset.field=field;button.dataset.value=value;
+      if(field==='color'){button.style.setProperty('--choice-color',value);button.setAttribute('aria-label',value);}else{button.textContent=avatars[Number(value)];button.setAttribute('aria-label',t('avatar'+value));}
+      button.onclick=()=>{if($(field).disabled)return;$(field).value=value;$(field).dispatchEvent(new Event('input',{bubbles:true}));};group.append(button);
+    }
+    $('profile-shortcuts').append(group);
+  }
   for(const id of ['nickname','color','avatar'])$(id).addEventListener('input',()=>{profileDirty=true;previewProfile();});
-  $('profile-form').onsubmit=e=>{e.preventDefault();if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar'])$(id).disabled=true;send({type:'profile',...submitted});};
+  $('profile-form').onsubmit=e=>{e.preventDefault();if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar'])$(id).disabled=true;previewProfile();send({type:'profile',...submitted});};
   function modeControls(){
     if(!room)return;const host=room.host===identity?.id&&phase==='lobby';
     for(const button of document.querySelectorAll('[data-mode]')){button.disabled=!host;button.setAttribute('aria-pressed',String(button.dataset.mode===(pendingConfig?.mode??room.mode)));}
@@ -309,6 +319,7 @@
   };
   window.addEventListener('languagechange',()=>{
     $('engine-status').textContent=t(initialized?'engineReady':'engineLoading');
+    for(const group of $('profile-shortcuts').children)group.setAttribute('aria-label',t(group.dataset.i18nLabel));for(const button of $('profile-shortcuts').querySelectorAll('[data-field=avatar]'))button.setAttribute('aria-label',t('avatar'+button.dataset.value));
     $('open-chat').textContent=unreadChat?t('chatUnread',{count:unreadChat}):t('chat');
     if(!room)return;
     roomLabels();modeControls();renderProfile();
