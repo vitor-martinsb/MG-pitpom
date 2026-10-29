@@ -73,12 +73,13 @@ try{
   await lobbyTab(a,'players');await a.locator('#add-bot').click();await b.locator('#bot-roster').waitFor({state:'visible'});await showBotRoster(a);await showBotRoster(b);await a.locator('.bot-controls').waitFor();
   await a.locator('.bot-controls select').selectOption('hard');await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes(GolfI18n.t('difficulty.hard')));await a.locator('.bot-cosmetics summary').click();await a.locator('.bot-cosmetics input:not([type=color])').fill('Garden Bot');
   await a.locator('.bot-cosmetics button').click();await b.waitForFunction(()=>document.getElementById('bot-members').textContent.includes('Garden Bot'));
-  await a.locator('#music-controls').click();for(const [id,value]of [['master-volume','61'],['effects-volume','37'],['ui-volume','19']])await a.locator('#'+id).evaluate((e,value)=>{e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));},value);
-  await a.locator('#music-controls summary').click();
   await a.locator('#start').click();await a.locator('#loading').waitFor({state:'visible'});await a.screenshot({path:'../out/evolution-validation/loading.png'});
   await Promise.all([a,b].map(p=>p.locator('#presentation').waitFor({state:'visible'})));
   await Promise.all([a,b].map(p=>p.locator('#skip-presentation').click()));
   await Promise.all([a,b].map(p=>p.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('status').textContent===GolfI18n.t('phase.playing'))));
+  // Settings are available inside the match, following the current UI.
+  await a.locator('#music-controls summary').click();for(const [id,value]of [['master-volume','61'],['effects-volume','37'],['ui-volume','19']])await a.locator('#'+id).evaluate((e,value)=>{e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));},value);
+  await a.locator('#music-controls summary').click();
   const initial=await a.evaluate(()=>GolfCourse.inspect().frame);assert.equal(initial.players.filter(p=>p.visible).length,3);
   assert.equal(initial.players.find(p=>p.id===initial.local).firstComplete,false);
   await a.locator('#open-adventure').click();await a.locator('#adventure-modal').waitFor({state:'visible'});

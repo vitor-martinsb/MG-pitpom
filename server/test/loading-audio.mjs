@@ -60,7 +60,7 @@ try{
     await page.evaluate(()=>{document.getElementById('loading').hidden=true;document.getElementById('connect').hidden=false;});
     console.log(`${name}: independent eight-frame runs, spacing, continuous orbit, resize and no dotted lines passed.`);
   }
-  const page=pages[0];await page.locator('#music-controls summary').click();await page.waitForFunction(()=>GolfMusic.status().state==='running');
+  const page=pages[0];await page.locator('#back-main').click();await page.locator('#main-menu').waitFor({state:'visible'});await page.locator('#music-controls summary').click();await page.waitForFunction(()=>GolfMusic.status().state==='running');
   const hashes=new Set(),metrics=[];
   for(let world=1;world<=10;world++){
     const audio=await page.evaluate(async world=>{

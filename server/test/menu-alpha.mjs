@@ -40,8 +40,7 @@ try {
   assert.equal(await page.locator('[data-pet=pituca] [data-motion=tail]').count(),0);assert.equal(await page.locator('[data-pet=frida] [data-motion=tail]').count(),1);
   if(mobile)await page.locator('#continue-home').tap();else await page.locator('#continue-home').click();
   await page.locator('#main-menu').waitFor({state:'visible'});
-  // The welcome button deliberately pulses outside the scene. Inspect the menu
-  // so that pulse cannot be mistaken for a trail in the SVG screenshot.
+  // Inspect the scene independently from the static title and controls.
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));
   const scene=page.locator('.living-scene'),still=await scene.screenshot();await page.waitForTimeout(100);
   assert.equal(Buffer.compare(still,await scene.screenshot()),0,'frozen frames must not accumulate trails');
@@ -52,7 +51,7 @@ try {
   }
   assert.notEqual(Buffer.compare(frames[0],frames[1]),0,'retain visible motion');
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>a.play()));
-  await page.locator('#open-multiplayer').click();await page.locator('#connect').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>GolfHome.scene.running),0);
+  await page.locator('#open-multiplayer').click();await page.locator('#connect').waitFor({state:'visible'});assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35,'illustrated multiplayer entry retains animated scenery');
   await page.locator('#back-main').click();assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35);
   assert.deepEqual(errors,[]);await context.close();console.log(`${name}: reference RGBA pets, sky-free tree alpha, stable compositing, moving frames and navigation passed.`);
  }
