@@ -88,6 +88,17 @@ EMSCRIPTEN_KEEPALIVE int golf_ui_open_level_selection(void) {
     if(golf->state!=GOLF_STATE_MAIN_MENU||ui.fade_out.active||golf_online_active())return 0;
     ui.main_menu.is_level_select_open=true;return 1;
 }
+EMSCRIPTEN_KEEPALIVE int golf_ui_set_solo_profile(const char *name,const char *color,int avatar){
+    if(golf_online_active()||golf->state!=GOLF_STATE_MAIN_MENU||!name||!name[0]||strlen(name)>24||!color||strlen(color)!=7||color[0]!='#'||avatar<0||avatar>7)return 0;
+    for(const unsigned char *c=(const unsigned char *)name;*c;c++)if(*c<32||*c>126)return 0;
+    unsigned rgb=0;for(int i=1;i<7;i++){char c=color[i];unsigned digit=c>='0'&&c<='9'?c-'0':c>='a'&&c<='f'?c-'a'+10:c>='A'&&c<='F'?c-'A'+10:16;if(digit>15)return 0;rgb=(rgb<<4)|digit;}
+    golf_player_t *p=golf_game_get_local_player();snprintf(p->name,sizeof(p->name),"%s",name);p->color=V4(((rgb>>16)&255)/255.f,((rgb>>8)&255)/255.f,(rgb&255)/255.f,1);p->avatar_id=avatar;return 1;
+}
+EMSCRIPTEN_KEEPALIVE const char *golf_ui_solo_profile(void){
+    static char text[512];golf_player_t *p=golf_game_get_local_player();JSON_Value *value=json_value_init_object();JSON_Object *o=json_value_get_object(value);
+    json_object_set_string(o,"nickname",p->name);json_object_set_number(o,"avatar",p->avatar_id);json_object_set_number(o,"r",p->color.x);json_object_set_number(o,"g",p->color.y);json_object_set_number(o,"b",p->color.z);
+    char *serialized=json_serialize_to_string(value);snprintf(text,sizeof(text),"%s",serialized?serialized:"{}");json_free_serialized_string(serialized);json_value_free(value);return text;
+}
 EMSCRIPTEN_KEEPALIVE void golf_ui_set_progression(int enabled){solo_progression=enabled!=0;}
 EMSCRIPTEN_KEEPALIVE const char *golf_ui_level_selection(void) {
     static char text[4096];

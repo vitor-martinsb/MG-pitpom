@@ -309,11 +309,14 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     }
     int warm_trials=plan.candidates;
     for(int candidate=0;!reused&&candidate<counts[difficulty]-warm_trials;candidate++){
-        // A CPU target may stop only after a full heading/power sweep has
-        // found useful safe progress. Recovery and ramp searches keep their
-        // original quality even if they need longer in the background.
-        if(candidate>=12&&bot_budget_expired()&&plan.safe&&best<initial_cost-1.5f&&speed==0&&(!memory||!memory->stalled))break;
-        int choice=candidate;
+        // Return a safe result promptly on shared hosts instead of spending
+        // the whole turn allowance on repeated recovery/lookahead searches.
+        if(candidate>=4&&bot_budget_expired()&&plan.safe&&(best<initial_cost-1.5f||candidate>=12))break;
+        // Under the shared-host budget, test useful range estimates before
+        // tiny taps; full-resource searches retain their original sweep.
+        static const int power_order[]={10,11,5,3,7,4,6,8,9,2,1,0};
+        static const int priority[]={10,11,5,3,22,34,46,82,17,29,7,6};
+        int choice=bot_budget.enabled?(candidate<12?priority[candidate]:((candidate-12)/12)*12+power_order[(candidate-12)%12]):candidate;
         float angle=angles[choice/12],power=powers[choice%12];vec3 direction=V3(sinf(angle),0,cosf(angle));
         trial_t t=simulate(world,&dynamic,m,nav,p,direction,power,horizons[difficulty]);plan.candidates++;
         float score=t.cost+repeated(memory,p,direction,power);
@@ -329,13 +332,12 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
         if(difficulty==2&&candidate>=47&&speed==0&&(!memory||!memory->stalled)&&best<initial_cost-1.5f)break;
     }
     /* A bounded second ply resolves staged ramp approaches and obstructed exits. */
-    bool recovery=speed>0||(memory&&memory->stalled)||!plan.safe||best>=initial_cost-1.5f;
-    if(!reused&&(!bot_budget_expired()||recovery)&&difficulty>=2&&best>-9999&&(speed>0||(memory&&memory->stalled)||difficulty==3)){
+    if(!reused&&(!bot_budget_expired())&&difficulty>=2&&best>-9999&&(speed>0||(memory&&memory->stalled)||difficulty==3)){
         int width=difficulty==3?beam_count:(beam_count<2?beam_count:2);
-        for(int i=0;i<width&&(!bot_budget_expired()||recovery);i++){
+        for(int i=0;i<width&&(!bot_budget_expired());i++){
             float launch;vec3 q=target(nav,beams[i].player.ball.pos,3.3f,&launch),d=vec3_sub(q,beams[i].player.ball.pos);float length=horizontal(q,beams[i].player.ball.pos);
             float power=power_for_speed(world,launch>0?launch:sqrtf(5.88f*length+19.6f*fmaxf(0,d.y)));
-            for(int k=0;k<(difficulty==3?6:3)&&(!bot_budget_expired()||recovery);k++){
+            for(int k=0;k<(difficulty==3?6:3)&&(!bot_budget_expired());k++){
                 float a=atan2f(d.x,d.z)+(k>=3?(k%2?.13f:-.13f):0),scale=k%3==0?.85f:k%3==1?1:1.2f;
                 golf_physics_world_t w=*world;w.time=beams[i].time;
                 trial_t t=simulate(&w,&dynamic,&beams[i].mechanics,nav,&beams[i].player,V3(sinf(a),0,cosf(a)),golf_clampf(power*scale,0,1),1440);plan.lookahead++;

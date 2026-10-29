@@ -79,7 +79,9 @@ try{
   await b.waitForFunction(()=>GolfOnline.active()&&GolfCourse.inspect().frame?.course===1&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden);
   await b.waitForFunction(()=>!document.getElementById('bot-speed').hidden);assert.match(await b.locator('#bot-speed').textContent(),/Acelerando/);
   for(const bot of bots.slice(1))bot.nextDecision=0;
-  for(let tick=0;tick<500&&!['results','finished'].includes(room.phase);tick++)await advance();
+  for(let tick=0;tick<500&&!bots.slice(1).every(m=>m.ball.hole);tick++)await advance();
+  assert.ok(bots.slice(1).every(m=>m.ball.hole),'active bots finish before the actual deadline');
+  if(!['results','finished'].includes(room.phase))await advance(Math.max(100,room.deadline-clock)+room.options.grace+1);
   assert.ok(['results','finished'].includes(room.phase));assert.equal(bots[0].scores[0],15);assert.equal(bots[0].dnf[0],true);
   assert.ok(bots.slice(1).every(m=>m.ball.hole),'remaining expert bots finish using accelerated original physics');
   await Promise.all(pages.map(p=>p.locator('#scores').waitFor({state:'visible'})));

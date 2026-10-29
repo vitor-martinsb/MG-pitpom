@@ -43,6 +43,7 @@
     $('connect').hidden=next!=='multiplayer';
     if(!home.hidden){window.GolfAudio?.phase('menu');$('music-controls').open=false;}
     if(next==='multiplayer')window.GolfOnline?.entry();
+    if(next==='campaign')window.GolfOnline?.editSoloProfile();
     if(focus)requestAnimationFrame(()=>{(next==='menu'?$('offline'):next==='splash'?$('continue-home'):next==='multiplayer'?$('create'):null)?.focus({preventScroll:true});});
   }
   function proceed(){if(!bootComplete||route!=='splash')return;window.GolfAudio?.play('ui');show('menu');}

@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Physics} from '../src/physics.js';
 import {Room,defaults} from '../src/room.js';
-import {cpuBudget,loadingBudget} from '../src/resources.js';
+import {cpuBudget,loadingBudget,plannerEnvironment} from '../src/resources.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 function worker(level:string,env:Record<string,string>={}){
   const saved={...process.env};Object.assign(process.env,env);
@@ -79,4 +79,32 @@ test('Render CPU budget preserves 1x under load and allows 5x with headroom',asy
     (room as any).cpuRate=.005;await room.tick();assert.equal(room.simulationSpeed,5);
     (room as any).cpuRate=.04;await room.tick();assert.equal(room.simulationSpeed,1);
   }finally{room.close();if(old===undefined)delete process.env.GOLF_CPU_BUDGET;else process.env.GOLF_CPU_BUDGET=old;}
+});
+
+test('interactive search budget still completes straight, curved and moving-obstacle courses with real shots',async()=>{
+  for(const level of ['data/levels/level-3.level','data/campaign/family-04-3.level','data/levels/level-7.level']){
+    // Same 20 ms search allowance as Render; omit artificial CPU sleeps so
+    // this checks shot quality independently of the CI machine's wall clock.
+    const p=worker(level,{GOLF_BOT_CPU_FRACTION:'1',GOLF_BOT_SEARCH_MS:'20'});
+    try{
+      await p.configure(false,12345);await p.add(0,2);await p.prepareBots();let frame=await p.step(120);
+      for(let i=0;i<300&&!frame.players[0]!.hole&&frame.players[0]!.strokes<48;i++){
+        const ball=frame.players[0]!;
+        if(!ball.moving&&!ball.captureUntil){const plan=await p.plan(0,'hard');assert.equal(plan.ok,true);assert.ok(plan.direction.every(Number.isFinite));assert.equal(await p.shot(0,plan.direction,plan.power),true);}
+        frame=await p.step(1200);
+      }
+      assert.equal(frame.players[0]!.hole,true,`${level}: the bounded search must finish without teleporting or awarding a hole`);
+      assert.ok(frame.players[0]!.strokes<=48);
+    }finally{p.close();}
+  }
+});
+
+test('the free-host planner caps legacy search settings without changing the live worker environment',()=>{
+  const saved={...process.env};
+  try{
+    process.env.GOLF_CPU_BUDGET='.1';process.env.GOLF_BOT_SEARCH_MS='150';process.env.GOLF_BOT_CPU_FRACTION='.02';
+    assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'20');assert.equal(plannerEnvironment().GOLF_BOT_CPU_FRACTION,'.02');assert.equal(process.env.GOLF_BOT_SEARCH_MS,'150');
+    process.env.GOLF_BOT_SEARCH_MS='5';assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'5');
+    delete process.env.GOLF_CPU_BUDGET;process.env.GOLF_BOT_SEARCH_MS='150';assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'150');
+  }finally{for(const key of ['GOLF_CPU_BUDGET','GOLF_BOT_SEARCH_MS','GOLF_BOT_CPU_FRACTION'])if(saved[key]===undefined)delete process.env[key];else process.env[key]=saved[key];}
 });

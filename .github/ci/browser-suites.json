@@ -11,6 +11,6 @@
   "campaign-4": [["campaign-browser.mjs", "--shard", "4/4"]],
   "wildlife": [["juju-browser.mjs"], ["wildlife-render.mjs"], ["rescue-browser.mjs"]],
   "social": [["loading-audio.mjs"], ["bot-updates-browser.mjs"]],
-  "lobby": [["lobby-tabs.mjs"]],
+  "lobby": [["lobby-tabs.mjs"], ["solo-profile.mjs"]],
   "lobby-webkit": [["lobby-webkit.mjs"]]
 }

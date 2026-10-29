@@ -275,16 +275,16 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #lobby .lobby-tab-panel{padding:16px 20px 24px}
 #lobby h3{margin:0 0 12px;color:#405b3e;font-size:.98rem}
 #lobby .muted{color:#68715c;font-size:.8rem}
-#lobby input,#lobby select{background:#fffdf5;color:#344e39;border-color:#b8b69b;margin-top:6px;margin-bottom:12px;border-radius:10px}
-#lobby label{font-size:.85rem}
-#lobby .profile-card{border:1px solid #c7c6aa;border-radius:14px;background:#fffaf0;margin-bottom:18px;padding:12px}
-#lobby .profile-card summary{display:flex;gap:12px;align-items:center;cursor:pointer;min-height:48px;list-style:none}
-#lobby .profile-card summary::-webkit-details-marker{display:none}
-#lobby .profile-card summary small{display:block;font-size:.75rem;color:#68715c;margin-top:2px}
-#lobby .profile-edit-label{margin-left:auto;font-size:.8rem;color:#4d6947}
-#lobby .ball-preview{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:50%;font-size:24px;background:var(--ball-color,#ee6255);box-shadow:inset -6px -7px 9px #0003,inset 4px 4px 7px #fff8,0 3px 0 #36513d25}
-#lobby #profile-form{padding-top:16px}
-#lobby #save-profile{width:100%}
+:is(#lobby,#solo-profile-slot) input,:is(#lobby,#solo-profile-slot) select{background:#fffdf5;color:#344e39;border-color:#b8b69b;margin-top:6px;margin-bottom:12px;border-radius:10px}
+:is(#lobby,#solo-profile-slot) label{font-size:.85rem}
+:is(#lobby,#solo-profile-slot) .profile-card{border:1px solid #c7c6aa;border-radius:14px;background:#fffaf0;margin-bottom:18px;padding:12px}
+:is(#lobby,#solo-profile-slot) .profile-card summary{display:flex;gap:12px;align-items:center;cursor:pointer;min-height:48px;list-style:none}
+:is(#lobby,#solo-profile-slot) .profile-card summary::-webkit-details-marker{display:none}
+:is(#lobby,#solo-profile-slot) .profile-card summary small{display:block;font-size:.75rem;color:#68715c;margin-top:2px}
+:is(#lobby,#solo-profile-slot) .profile-edit-label{margin-left:auto;font-size:.8rem;color:#4d6947}
+:is(#lobby,#solo-profile-slot) .ball-preview{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:50%;font-size:24px;background:var(--ball-color,#ee6255);box-shadow:inset -6px -7px 9px #0003,inset 4px 4px 7px #fff8,0 3px 0 #36513d25}
+:is(#lobby,#solo-profile-slot) #profile-form{padding-top:16px}
+:is(#lobby,#solo-profile-slot) #save-profile{width:100%}
 #lobby .participants-section{margin-bottom:20px}
 #lobby #members,#lobby #bot-members{max-height:none;overflow:visible;margin:0;gap:8px}
 #lobby .player{background:#fffaf0;border-radius:10px;padding:10px;border:1px solid #ded6be;font-size:.85rem;flex-wrap:wrap}
@@ -318,7 +318,7 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #lobby #host-note{margin:0 0 8px;font-size:.8rem;text-align:center;color:#56664d}
 #lobby #host-note:only-child{margin:0}
 #lobby #start{width:100%;margin:0;background:#486444;color:#fff7e5;min-height:48px;border-radius:12px}
-#lobby :focus-visible,#connect :focus-visible{outline:3px solid #6e8a56;outline-offset:2px}
+:is(#lobby,#solo-profile-slot) :focus-visible,#connect :focus-visible{outline:3px solid #6e8a56;outline-offset:2px}
 @media(max-width:600px){
  #lobby.overlay{padding:max(8px,var(--safe-top)) max(8px,var(--safe-right)) max(8px,var(--safe-bottom)) max(8px,var(--safe-left))}
  #lobby .lobby-header{padding:12px 12px 8px}
@@ -332,7 +332,7 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
  #lobby .room-presence{max-width:45%}
  #lobby .room-presence small{overflow-wrap:anywhere}
  #lobby #lobby-leave{padding:8px 12px}
- #lobby .profile-edit-label{font-size:.75rem}
+ :is(#lobby,#solo-profile-slot) .profile-edit-label{font-size:.75rem}
  #connect .multiplayer-entry{padding:20px}
 }
 @media(max-height:500px){#lobby .lobby-header{padding:8px 12px}#lobby .room-banner{margin-top:4px}#lobby .lobby-footer{padding:8px 12px}#lobby .lobby-tabs button{min-height:44px}#lobby #host-note{margin-bottom:4px}}
@@ -383,12 +383,12 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #lobby .lobby-tabs button{border:0;border-radius:10px;min-height:44px;background:#efe5c9;box-shadow:none;font-size:.82rem;padding:9px 6px}
 #lobby .lobby-tabs button[aria-selected=true]{color:#fff9e7;background:#426b42;box-shadow:inset 0 1px 0 #ffffff26,0 2px 3px #294c321f}
 #lobby .lobby-tab-panel{padding:16px}
-#lobby .profile-card{padding:10px 12px;background:#fffbee;border-color:#dfd5b6;border-radius:12px;margin-bottom:16px}
-#lobby .ball-preview{width:42px;height:42px;font-size:23px}
-#lobby .profile-choices{display:grid;grid-template-columns:repeat(8,minmax(44px,1fr));overflow:auto;gap:4px;margin:0 0 12px}
-#lobby .profile-choices button{padding:0;min-width:0;min-height:44px;border-radius:10px;background:#f3ebd4;color:#2c5135;border:2px solid transparent;box-shadow:none;font-size:23px;display:grid;place-items:center}
-#lobby .color-choices button::before{content:'';width:23px;height:23px;border-radius:50%;background:var(--choice-color);box-shadow:inset -3px -4px 5px #0003,inset 2px 2px 3px #fff6;border:1px solid #0002}
-#lobby .profile-choices button[aria-pressed=true]{border-color:#4d7146;background:#e9efd6}
+:is(#lobby,#solo-profile-slot) .profile-card{padding:10px 12px;background:#fffbee;border-color:#dfd5b6;border-radius:12px;margin-bottom:16px}
+:is(#lobby,#solo-profile-slot) .ball-preview{width:42px;height:42px;font-size:23px}
+:is(#lobby,#solo-profile-slot) .profile-choices{display:grid;grid-template-columns:repeat(8,minmax(44px,1fr));overflow:auto;gap:4px;margin:0 0 12px}
+:is(#lobby,#solo-profile-slot) .profile-choices button{padding:0;min-width:0;min-height:44px;border-radius:10px;background:#f3ebd4;color:#2c5135;border:2px solid transparent;box-shadow:none;font-size:23px;display:grid;place-items:center}
+:is(#lobby,#solo-profile-slot) .color-choices button::before{content:'';width:23px;height:23px;border-radius:50%;background:var(--choice-color);box-shadow:inset -3px -4px 5px #0003,inset 2px 2px 3px #fff6;border:1px solid #0002}
+:is(#lobby,#solo-profile-slot) .profile-choices button[aria-pressed=true]{border-color:#4d7146;background:#e9efd6}
 #lobby .player{background:#fffbed;border-color:#e6dcc0;padding:8px 10px;border-radius:9px;min-height:46px}
 #lobby .dot{width:22px;height:22px;box-shadow:inset -3px -3px 5px #0003,inset 2px 2px 4px #fff5;border:1px solid #344e3926}
 #lobby .host-badge{padding:3px 6px;background:#e0eacb;border-radius:5px;font-size:.64rem}
@@ -428,7 +428,7 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
  #lobby .lobby-tabs{padding:4px 8px 8px}
  #lobby .lobby-tab-panel{padding:12px}
  #lobby .lobby-footer{padding:10px 12px}
- #lobby .profile-card summary{gap:8px}
+ :is(#lobby,#solo-profile-slot) .profile-card summary{gap:8px}
 }
 @media(max-height:550px) and (orientation:landscape){
  #connect .multiplayer-entry{width:38vw;min-height:360px}
@@ -443,7 +443,7 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
  #connect .entry-actions button{min-height:50px;padding:8px 14px}
 }
 
-@media(max-width:430px){#lobby .profile-choices{grid-template-columns:repeat(4,minmax(44px,1fr))}}
+@media(max-width:430px){:is(#lobby,#solo-profile-slot) .profile-choices{grid-template-columns:repeat(4,minmax(44px,1fr))}}
 /* Reveal the entry controls together without fading away the underlying art. */
 #connect.overlay{transition:none}
 #connect .welcome-wrap{animation:none}
@@ -464,7 +464,15 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #connect .entry-actions .entry-icon{width:30px;height:30px}
 /* Pet portraits reuse the unmodified menu atlas and the existing avatar IDs. */
 .pet-avatar{display:block;width:32px;height:32px;flex:none;overflow:hidden;border-radius:8px;background:#f2e6ce}
-#lobby .ball-preview .pet-avatar{width:34px;height:34px;border-radius:50%;background:transparent}
+:is(#lobby,#solo-profile-slot) .ball-preview .pet-avatar{width:34px;height:34px;border-radius:50%;background:transparent}
 #lobby .avatar-choices .pet-avatar{width:38px;height:38px;background:transparent}
 #lobby .player>span:nth-child(3){flex:1;min-width:0;overflow-wrap:anywhere}
-#lobby #profile-display-name{flex:1;min-width:0;overflow-wrap:anywhere}
+:is(#lobby,#solo-profile-slot) #profile-display-name{flex:1;min-width:0;overflow-wrap:anywhere}
+
+/* Campaign and lobby share a single personal profile editor. */
+#solo-profile-slot{flex:none;min-height:0;max-height:min(360px,42dvh);overflow:auto;color:#344e39;scroll-padding:12px}
+#solo-profile-slot .profile-card{margin:0}
+#solo-profile-slot .profile-card summary{min-height:48px}
+#solo-profile-slot .profile-card[open]{max-height:none}
+@media(max-height:550px){#solo-profile-slot{max-height:35dvh}}
+.level-selection-panel:has(#solo-profile-slot .profile-card[open]){overflow:auto}

@@ -52,3 +52,17 @@ Pituca, Pompom, Romeu, Luna, Frida, Juju and Cocota; ID 7 shows the pet group,
 preserving all eight saved/protocol values. Portraits display the unmodified
 menu atlas. Settings are available only on the main menu and inside matches,
 including solo play; entry, lobby and loading keep them closed and hidden.
+
+Campaign selection mounts that same profile editor above the map chooser. Save
+and Play apply the draft to the native solo player through the guarded
+`golf_ui_set_solo_profile` bridge; accepted preferences persist in `golf-profile`
+and are reused on reload and in multiplayer. Starting a solo course keeps the
+existing player identity, color and avatar while resetting only ball state.
+
+Bot fast-forward changes fixed-tick playback only: the match allowance and
+settling grace now remain in wall time (`timerSpeed: 1`). The shared planner
+starts the next eligible bot without an extra global 100 ms pause. On the
+Render free profile, the search allowance is 20 ms of CPU with a 4% CPU share;
+range estimates and varied headings precede tiny taps, and bounded searches
+return a safe progressive shot rather than ignoring their budget for recovery
+lookahead. A server-side cap also handles legacy free-host search settings without modifying the live worker environment. The live physics worker, collision rules and DNF scoring are unchanged.

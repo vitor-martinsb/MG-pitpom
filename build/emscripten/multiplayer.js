@@ -8,7 +8,7 @@
     const viewport=window.visualViewport;
     document.documentElement.style.setProperty('--overlay-height',`${viewport?.height??innerHeight}px`);
     document.documentElement.style.setProperty('--overlay-top',`${viewport?.offsetTop??0}px`);
-    const active=document.activeElement;if(active?.matches('input,select,textarea')&&active.closest('#lobby,#connect'))requestAnimationFrame(()=>active.scrollIntoView({block:'nearest',inline:'nearest'}));
+    const active=document.activeElement;if(active?.matches('input,select,textarea')&&active.closest('#lobby,#connect,#level-selection'))requestAnimationFrame(()=>active.scrollIntoView({block:'nearest',inline:'nearest'}));
   }
   window.addEventListener('resize',fitPanels);
   window.visualViewport?.addEventListener('resize',fitPanels);
@@ -23,7 +23,8 @@
   let socket, identity, room, phase='lobby', sequence=0, initialized=false, online=false, loading=true;
   let retryTimer, connected=false, deadline=0, lastBalls=new Map(), reconnectStart=0, toastTimer,epoch=0;
   let lastChatId=0, unreadChat=0, chatCooldown;
-  let celebrated=false,playbackSpeed=1;
+  let celebrated=false;
+  let soloProfile=false;
   // The existing numeric avatar IDs stay compatible with saved profiles and rooms.
   const avatars=[
     [535,483,435,335], [1043,455,453,340], [687,55,420,360],
@@ -95,8 +96,22 @@
     }
     $('profile-shortcuts').append(group);
   }
-  for(const id of ['nickname','color','avatar'])$(id).addEventListener('input',()=>{profileDirty=true;previewProfile();});
-  $('profile-form').onsubmit=e=>{e.preventDefault();if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar'])$(id).disabled=true;previewProfile();send({type:'profile',...submitted});};
+  for(const id of ['nickname','color','avatar'])$(id).addEventListener('input',()=>{$('nickname').setCustomValidity('');profileDirty=true;previewProfile();});
+  $('profile-form').onsubmit=e=>{e.preventDefault();if(soloProfile){saveSoloProfile();return;}if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar'])$(id).disabled=true;previewProfile();send({type:'profile',...submitted});};
+  function restoreProfile(){
+    let saved;try{saved=JSON.parse(localStorage.getItem('golf-profile'));}catch{}
+    $('nickname').value=typeof saved?.nickname==='string'&&saved.nickname.trim()?saved.nickname:'Player';$('nickname').setCustomValidity('');
+    $('color').value=/^#[0-9a-f]{6}$/i.test(saved?.color??'')?saved.color:'#ee6255';
+    $('avatar').value=String(Number.isInteger(saved?.avatar)&&saved.avatar>=0&&saved.avatar<8?saved.avatar:0);
+  }
+  function saveSoloProfile(){
+    if(!soloProfile)return false;
+    const p=profile();$('nickname').setCustomValidity(/^[\x20-\x7e]{1,24}$/.test(p.nickname)?'':t('error.INVALID_NICKNAME'));
+    if(!$('profile-form').checkValidity()){$('profile-editor').open=true;$('profile-form').reportValidity();return false;}
+    if(!Module.ccall('golf_ui_set_solo_profile','number',['string','string','number'],[p.nickname,p.color,p.avatar]))return false;
+    try{localStorage.setItem('golf-profile',JSON.stringify(p));}catch{}
+    $('profile-display-name').textContent=p.nickname;profileDirty=false;previewProfile();return true;
+  }
   function modeControls(){
     if(!room)return;const host=room.host===identity?.id&&phase==='lobby';
     for(const button of document.querySelectorAll('[data-mode]')){button.disabled=!host;button.setAttribute('aria-pressed',String(button.dataset.mode===(pendingConfig?.mode??room.mode)));}
@@ -149,7 +164,7 @@
     for(const input of $('map-options').querySelectorAll('input'))input.disabled=!host;
     mapDraftCount();
   }
-  function syncClock(m){playbackSpeed=m.simulationSpeed??1;if(Number.isFinite(m.remaining))deadline=performance.now()+m.remaining/playbackSpeed;}
+  function syncClock(m){if(Number.isFinite(m.remaining))deadline=performance.now()+m.remaining/(m.timerSpeed??1);}
   function botControls(){
     if(!room)return;const host=room.host===identity?.id&&phase==='lobby',bots=room.players.filter(p=>p.bot),max=50-room.players.filter(p=>!p.bot).length;
     $('bot-count').max=String(max);if(document.activeElement!==$('bot-count'))$('bot-count').value=String(bots.length);
@@ -228,6 +243,7 @@
       } else if(m.type==='room'){
         if(!$('connect').hidden)window.GolfHome?.show('game',false);
         const previous=phase,previousCode=room?.code;room=m;phase=m.phase;
+        if(phase==='lobby'){soloProfile=false;$('lobby-profile-slot').append($('profile-editor'));}
         if(phase==='lobby'&&(previousCode!==m.code||previous!=='lobby')){selectLobbyTab('players');profileDirty=profilePending=false;}window.GolfHome?.roomPhase(phase);syncClock(m);call(m);
         if(m.host!==identity?.id)pendingConfig=pendingPool=undefined;
         if(pendingConfig&&pendingConfig.holes===m.holes&&pendingConfig.mode===m.mode)pendingConfig=undefined;
@@ -318,7 +334,9 @@
     if(options.some(o=>o.value===old))$('spectate').value=old;else $('spectate').value=String(identity?.id);
   }
   window.GolfOnline={
-    entry(){entryView(false);},
+    entry(){restoreProfile();soloProfile=false;$('lobby-profile-slot').append($('profile-editor'));entryView(false);},
+    editSoloProfile(){restoreProfile();soloProfile=true;profilePending=false;profileDirty=false;$('solo-profile-slot').append($('profile-editor'));for(const id of ['nickname','color','avatar','save-profile'])$(id).disabled=false;$('profile-display-name').textContent=profile().nickname;previewProfile();saveSoloProfile();},
+    applySoloProfile(){return saveSoloProfile();},
     active(){return online;},
     initialized(){initialized=true;window.GolfCourse.initialized=true;GolfI18n.ready();GolfAdventure.busy(false);$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;window.GolfHome?.ready();
       if(window.GOLF_CAMPAIGN){$('holes').replaceChildren(...GOLF_CAMPAIGN.courses.map((_,i)=>{const option=new Option(String(i+1),String(i+1));option.selected=i===2;return option;}));}
@@ -384,7 +402,7 @@
   document.addEventListener('keydown',e=>{if(e.key==='Tab'&&online&&!['lobby','loading'].includes(phase)){e.preventDefault();showScores(phase==='results'||phase==='finished');}});
   document.addEventListener('keyup',e=>{if(e.key==='Tab'&&online&&!['results','finished'].includes(phase))$('scores').hidden=true;});
   let lastCountdown;
-  setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())*playbackSpeed/1000));$('timer').textContent=phase==='finished'?t('final'):seconds+'s';if(phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
-  try{const p=JSON.parse(localStorage.getItem('golf-profile'));if(p){$('nickname').value=p.nickname;$('color').value=p.color;$('avatar').value=String(p.avatar);}}catch{}
+  setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));$('timer').textContent=phase==='finished'?t('final'):seconds+'s';if(phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
+  restoreProfile();
   previewProfile();
 })();

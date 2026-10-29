@@ -103,7 +103,7 @@
       $('selected-course-name').textContent=GolfI18n.courseName(course);
       $('selected-course-info').textContent=locked(map)?t('levelLocked'):completed.has(map)?t('levelBest',{number:selection.levels[map]}):t('readyForAdventure');
       $('play-course').disabled=locked(map);$('play-course').onclick=()=>{
-        if(Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;window.GolfHome?.show('game',false);$('canvas').focus();}
+        if(window.GolfOnline?.applySoloProfile()!==false&&Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;window.GolfHome?.show('game',false);$('canvas').focus();}
       };
       for(const node of container.querySelectorAll('.trail-node')){
         node.classList.toggle('selected',Number(node.dataset.level)===map);
@@ -212,7 +212,7 @@
       if(selection){
         g.setAttribute('role','button');g.setAttribute('aria-label',`${GolfI18n.courseName(course)}, ${subtitle.textContent}`);g.setAttribute('aria-disabled',String(isLocked));
         g.append(svg('rect',{x:-160,y:-30,width:320,height:65,fill:'transparent'}));
-        if(!isLocked){g.setAttribute('tabindex','0');const choose=()=>{if(Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;$('canvas').focus();}};g.addEventListener('click',choose);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});}
+        if(!isLocked){g.setAttribute('tabindex','0');const choose=()=>{if(window.GolfOnline?.applySoloProfile()!==false&&Module.ccall('golf_ui_choose_level','number',['number'],[map])){$('level-selection').hidden=true;$('canvas').focus();}};g.addEventListener('click',choose);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});}
         if(selection.progression&&best===null)locked=true;
       }
       s.append(g);

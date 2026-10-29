@@ -75,7 +75,7 @@ export class Room {
   state() {
     return { type: 'room', code: this.code, phase: this.phase, host: this.host, hole: this.hole, holes: this.holes, penalty: this.options.penalty,
       level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,
-      sequence:this.selectedLevels, availableMaps:this.validLevels.length,mapPool:this.mapPool,mapPoolKind:this.mapPoolKind,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,
+      sequence:this.selectedLevels, availableMaps:this.validLevels.length,mapPool:this.mapPool,mapPoolKind:this.mapPoolKind,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,timerSpeed:1,
       players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,
         connected: !!m.socket || !!m.bot, bot:m.bot, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
   }
@@ -271,7 +271,6 @@ export class Room {
     const capacity=!this.cpuLimit||(this.cpuSamples>0&&this.cpuRate*5<=this.cpuLimit*(this.simulationSpeed===5?.7:.55));
     const speed=capacity&&humans.length>0&&humans.every(m=>m.ball?.hole||m.dnf[this.hole]===true)&&botsRemain?5:1;
     const elapsed=Math.max(0,now-this.lastStep);
-    if(this.phase==='playing'||this.phase==='settling')this.deadline-=elapsed*(speed-1);
     if(speed!==this.simulationSpeed){this.simulationSpeed=speed;this.publish();}
     if (this.phase==='playing' && now>=this.deadline) { this.phase='settling'; this.deadline+=this.options.grace; this.publish(); }
     this.busy=true;
@@ -303,9 +302,9 @@ export class Room {
           // One shared planner, with a fair turn for each eligible bot. Never
           // hold the physics/snapshot loop while searching possible shots.
           const bot=bots.find(b=>b.id>this.botCursor)??bots[0]!;this.botCursor=bot.id;
-          bot.nextDecision=clock+650+((this.physicsSeed^bot.id^(bot.ball?.strokes??0)*197)>>>0)%500;
+          bot.nextDecision=clock+250+((this.physicsSeed^bot.id^(bot.ball?.strokes??0)*197)>>>0)%250;
           const job=this.decideBot(bot,physics,generation).finally(()=>{
-            if(this.botPlanning===job){this.botPlanning=undefined;this.nextBotPlanAt=this.now()+100;}
+            if(this.botPlanning===job){this.botPlanning=undefined;this.nextBotPlanAt=this.now();}
           });
           this.botPlanning=job;
         }
@@ -349,7 +348,7 @@ export class Room {
       if (full || this.lastSent.get(m.id)!==text) players.push(m.ball);
       if (!target) this.lastSent.set(m.id,text);
     }
-    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,remaining:Math.max(0,this.deadline-this.now()),simulationSpeed:this.simulationSpeed,mascots:this.mascots,players,events:target?[]:this.events};
+    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,remaining:Math.max(0,this.deadline-this.now()),simulationSpeed:this.simulationSpeed,timerSpeed:1,mascots:this.mascots,players,events:target?[]:this.events};
     if (target) this.send(target,snapshot); else this.broadcast(snapshot);
     this.metrics.snapshots++;
   }

@@ -68,7 +68,7 @@ test('only finished or DNF humans permit fivefold fixed-tick simulation, and the
     room.phase='playing';room.deadline=120000;
     now=100;await room.tick();assert.equal(room.simulationSpeed,1);assert.equal(ticks.at(-1),12);
     host.ball!.hole=true;now=200;await room.tick();assert.equal(room.simulationSpeed,1);
-    guest.ball!.hole=true;now=300;await room.tick();assert.equal(room.simulationSpeed,5);assert.equal(ticks.at(-1),60);
+    guest.ball!.hole=true;now=300;await room.tick();assert.equal(room.simulationSpeed,5);assert.equal(ticks.at(-1),60);assert.equal(room.deadline,120000,'fast physics must not consume the real-time bot planning allowance');assert.equal(room.state().timerSpeed,1);
     assert.ok(second.messages.some(m=>m.type==='snapshot'&&m.simulationSpeed===5));
     guest.ball!.hole=false;room.disconnect(guest,second);now=400;await room.tick();assert.equal(room.simulationSpeed,1,'an unfinished disconnected human is still protected');
     guest.dnf[0]=true;guest.scores[0]=12;now=500;await room.tick();assert.equal(room.simulationSpeed,5);

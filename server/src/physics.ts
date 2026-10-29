@@ -1,4 +1,4 @@
-import {loadingBudget} from './resources.js';
+import {loadingBudget,plannerEnvironment} from './resources.js';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { existsSync } from 'node:fs';
@@ -27,7 +27,7 @@ export class Physics {
       path.join(root, 'out/server-native/Release/golf_physics_worker.exe'),
     ].find(existsSync);
     if (!executable) throw new Error('Compile a física primeiro: npm run build:native');
-    this.child = spawn(executable, [level,...(isPlanner?['--planner']:[])], { cwd: root, windowsHide: true, stdio: 'pipe' });
+    this.child = spawn(executable, [level,...(isPlanner?['--planner']:[])], { cwd: root, windowsHide: true, stdio: 'pipe',...(isPlanner?{env:plannerEnvironment()}:{}) });
     // The match must keep its CPU share while the optional planner searches.
     if(isPlanner)this.child.once('spawn',()=>{try{setPriority(this.child.pid!,constants.priority.PRIORITY_BELOW_NORMAL);}catch{/* Some hosts disallow changing process priority. */}});
     let resolveReady!: () => void, rejectReady!: (e: Error) => void;
