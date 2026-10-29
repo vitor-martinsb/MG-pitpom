@@ -3,15 +3,14 @@
   'use strict';
   const $=id=>document.getElementById(id),home=$('home');
   let route='splash',ready=false,nativeReady=false,assetsReady=false,bootComplete=false,lastNativeMenu=false,campaignRequested=false;
-  const connectSettings=document.createElement('span');connectSettings.id='connect-settings-slot';$('back-main').before(connectSettings);
   const lobbyChat=document.createElement('button');lobbyChat.id='lobby-open-chat';lobbyChat.className='secondary';lobbyChat.dataset.i18n='chat';lobbyChat.textContent=GolfI18n.t('chat');$('lobby-leave').before(lobbyChat);
   const trail=$('lobby-adventure'),journey=document.createElement('details'),journeyTitle=document.createElement('summary');
   journey.className='room-route';journeyTitle.dataset.i18n='adventure';journeyTitle.textContent=GolfI18n.t('adventure');trail.before(journey);journey.append(journeyTitle,trail);trail.hidden=false;
   function roomPhase(phase){
     document.body.dataset.roomPhase=phase;
-    const settings=$('music-controls'),slot=$('lobby-settings-slot');
-    const parent=phase==='lobby'&&slot?slot:route==='multiplayer'?connectSettings:document.body;
-    if(settings.parentElement!==parent)parent.append(settings);
+    const settings=$('music-controls');
+    settings.hidden=!(route==='menu'||route==='game'&&!['lobby','loading'].includes(phase));
+    if(settings.hidden)settings.open=false;
   }
   const scene=$('home-scenery');
   scene.innerHTML='<picture><source media="(orientation:portrait)" srcset="art/menu-garden-portrait.png"><img class="home-art" src="art/menu-garden.png" alt="Pituca, Pompom, Romeu, Luna, Frida, Juju, Cocota" width="1672" height="941" fetchpriority="high"></picture>';
@@ -38,7 +37,7 @@
     if(['splash','menu'].includes(next)&&!bootComplete)return;
     if(next!=='menu')campaignRequested=false;
     route=next;home.hidden=!['splash','menu','multiplayer'].includes(next);home.dataset.screen=next;
-    if(next!=='game')roomPhase('');
+    roomPhase(next==='game'?(document.body.dataset.roomPhase??''):'');
     document.body.dataset.home=next;
     $('main-menu').hidden=next!=='menu';$('continue-home').hidden=next!=='splash';
     $('connect').hidden=next!=='multiplayer';

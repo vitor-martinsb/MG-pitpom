@@ -462,3 +462,9 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #connect .entry-heading h2{display:flex;align-items:center;justify-content:center;gap:10px}
 #connect .entry-heading h2::before{content:'';flex:none;width:24px;height:24px;border-radius:50%;border:1px solid #b49362;background:radial-gradient(circle at 30% 25%,#fffbe8,#eedbb5 60%,#bba67b);box-shadow:0 2px 2px #6a4f3433}
 #connect .entry-actions .entry-icon{width:30px;height:30px}
+/* Pet portraits reuse the unmodified menu atlas and the existing avatar IDs. */
+.pet-avatar{display:block;width:32px;height:32px;flex:none;overflow:hidden;border-radius:8px;background:#f2e6ce}
+#lobby .ball-preview .pet-avatar{width:34px;height:34px;border-radius:50%;background:transparent}
+#lobby .avatar-choices .pet-avatar{width:38px;height:38px;background:transparent}
+#lobby .player>span:nth-child(3){flex:1;min-width:0;overflow-wrap:anywhere}
+#lobby #profile-display-name{flex:1;min-width:0;overflow-wrap:anywhere}

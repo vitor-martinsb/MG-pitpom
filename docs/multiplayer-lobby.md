@@ -46,3 +46,9 @@ create a second scene or re-encode the artwork. The in-room panels use a green
 header, segmented tabs and cream cards. Color/avatar shortcuts edit the same
 profile form fields and wait for the same server acknowledgement. The mode
 illustrations are static UI diagrams; the physics values remain unchanged.
+
+The personal card title is the accepted nickname. Avatar IDs 0–6 identify
+Pituca, Pompom, Romeu, Luna, Frida, Juju and Cocota; ID 7 shows the pet group,
+preserving all eight saved/protocol values. Portraits display the unmodified
+menu atlas. Settings are available only on the main menu and inside matches,
+including solo play; entry, lobby and loading keep them closed and hidden.

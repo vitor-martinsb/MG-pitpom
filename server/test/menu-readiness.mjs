@@ -46,8 +46,8 @@ try {
    assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=width&&r.y+r.height<=height);
   }
   await page.screenshot({path:`../out/menu-readiness/menu-${width}x${height}.png`});
-  await page.locator('#exit-game').click();
-  assert.equal(await page.locator('#continue-home').isVisible(),true);
+  assert.equal(await page.locator('#music-controls').isVisible(),true,'settings are available on the main menu');await page.locator('#exit-game').click();
+  assert.equal(await page.locator('#continue-home').isVisible(),true);assert.equal(await page.locator('#music-controls').isHidden(),true,'welcome screen has no settings');
   assert.equal(await page.locator('#main-menu').isHidden(),true);
   const button=await page.locator('#continue-home').boundingBox();
   assert.ok(button.x>=0&&button.y>=0&&button.x+button.width<=width&&button.y+button.height<=height);
@@ -61,7 +61,7 @@ try {
  assert.equal(await page.locator('.map-mill').first().evaluate(e=>getComputedStyle(e).animationName),'mill-turn');
  assert.equal(await page.locator('.map-current').first().evaluate(e=>getComputedStyle(e).animationName),'stream-flow');
  await page.locator('#close-level-selection').click();await page.locator('#open-multiplayer').click();
- assert.equal(await page.locator('#connect img,#connect .garden-header').count(),0);
+ assert.equal(await page.locator('#connect img,#connect .garden-header').count(),0);assert.equal(await page.locator('#music-controls').isHidden(),true,'multiplayer entry has no settings');
  await page.locator('#back-main').click();await page.locator('#exit-game').click();
  assert.equal(await page.locator('#continue-home').isVisible(),true);
  assert.deepEqual(await page.evaluate(()=>window.partialMenus),[]);assert.deepEqual(errors,[]);
