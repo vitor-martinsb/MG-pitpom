@@ -229,11 +229,12 @@
   function mount(container,home){
     let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
     const help=petHelp(home,()=>root);
-    const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)');
+    const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)'),tails=new Map();
+    const tailFrames=swing=>[{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'},{transform:`rotate(${swing}deg)`,offset:.5,easing:'ease-in-out'},{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'}];
     function image(file,w,h){return el('image',{href:`art/${file}`,width:w,height:h});}
     function build(){
       const layout=portrait.matches?'portrait':'landscape';if(current===layout)return;
-      current=layout;loaded=false;help.reset();painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];
+      current=layout;loaded=false;help.reset();painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];tails.clear();
       const d=layouts[layout],suffix=layout==='portrait'?'-portrait':'',original=`menu-garden${suffix}.png`;
       root=el('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'xMidYMid slice','aria-hidden':'true',class:'living-menu-art'});
       const defs=el('defs');root.append(defs);
@@ -255,7 +256,7 @@
         const img=source?el('image',{href:source.url,x:source.x,y:source.y,width:source.w,height:source.h}):image(original,d.w,d.h);
         const group=el('g',kind?{'data-motion':kind}:{});group.append(el('g',{'clip-path':`url(#${id})`},[img]));parent.append(group);if(painter&&parent.closest('[data-pet]'))painter.sprite(group,path,source);return group;
       }
-      function animate(group,frames,options){group.style.transformBox='view-box';const eased=frames.map(frame=>({easing:options.easing??'linear',...frame}));animations.push(group.animate(eased,{iterations:Infinity,...options,easing:'linear'}));}
+      function animate(group,frames,options){group.style.transformBox='view-box';const eased=frames.map(frame=>({easing:options.easing??'linear',...frame}));const animation=group.animate(eased,{iterations:Infinity,...options,easing:'linear'});animations.push(animation);return animation;}
       const clouds=layout==='landscape'?[[430,25,215,102],[1083,28,130,61],[1530,80,142,101],[236,142,110,58]]:[[181,402,187,110],[577,440,147,65],[800,295,141,83],[824,511,117,75]];
       for(const [i,bounds]of clouds.entries()){
         // Edge/occluded cloud crops become rectangles once moved into the sky.
@@ -312,7 +313,14 @@
         }
         const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?'menu-cast-reference.png':original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
         animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
-        if(source.tail){const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;animate(tail,[{transform:'rotate(-2deg)'},{transform:'rotate(2.4deg)',offset:.42},{transform:'rotate(-2deg)'}],{duration:6100+index*587,delay:-index*1700,easing:'ease-in-out'});}
+        if(source.tail){
+          const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;
+          // Short, anchored strokes stay visible at desktop scale. Give tails
+          // their own gentle setting instead of stretching a tiny wag to 30 s.
+          const swing=p.id==='maritaca'?2.5:['luna','romeu'].includes(p.id)?9:5;
+          const animation=animate(tail,tailFrames(swing),{duration:2200+index*137,delay:-index*419,easing:'ease-in-out'});
+          tails.set(animation,{swing,reduced:undefined});
+        }
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
         const head=cut(oval(p.head),animal,'head',without(source,p.ears.map(oval)));
         head.style.transformOrigin=`${p.head[0]}px ${p.head[1]+p.head[3]*.7}px`;
@@ -355,7 +363,12 @@
     function visibility(){
       const run=!home.hidden&&!document.hidden;
       if(run)painter?.start();else painter?.stop();
-      for(const a of animations){a.updatePlaybackRate(motion.matches?.3:1);if(run&&a.playState!=='running')a.play();else if(!run&&a.playState==='running')a.pause();}
+      for(const a of animations){
+        const tail=tails.get(a);
+        if(tail&&tail.reduced!==motion.matches){tail.reduced=motion.matches;a.effect.setKeyframes(tailFrames(tail.swing*(motion.matches?.32:1)));}
+        a.updatePlaybackRate(tail?(motion.matches?.65:1):(motion.matches?.3:1));
+        if(run&&a.playState!=='running')a.play();else if(!run&&a.playState==='running')a.pause();
+      }
       home.dataset.motion=motion.matches?'gentle':'full';
       clearInterval(tick);tick=undefined;
       if(!home.hidden&&!document.hidden){clock=new Date();updateLight();tick=setInterval(()=>{clock=new Date();updateLight();},1000);}

@@ -77,3 +77,11 @@ cancelling it if the player chooses another route. Authority physics is untouche
 Images are written to `out/menu-motion`. These rendered images must be visually
 inspected in addition to the test assertions. `living-menu.mjs` retains the four
 Brasilia periods, palette continuity, contrast and pause/resume tests.
+
+Tail motion uses its own short clock: dogs swing around their original tail
+roots by 9 degrees, cats by 5 degrees and Cocota by 2.5 degrees, with staggered
+2.2–3 second cycles. Reduced motion decreases swing to 32% and playback to 65%
+instead of stretching tiny movements over roughly half a minute. The existing
+canvas painter, body cutouts, anchors and tailless Pituca stay unchanged.
+Browser regression checks every painted tail advancing automatically in 750 ms
+on desktop, reduced-motion desktop and mobile, independently from body motion.

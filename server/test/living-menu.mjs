@@ -36,7 +36,7 @@ try{
     assert.equal(await page.locator('#home').evaluate(e=>e.style.getPropertyValue('--menu-surface')),start);
     await page.evaluate(()=>{window.__menuTime+=360000;});await page.waitForTimeout(1200);assert.notEqual(await page.locator('#home').evaluate(e=>e.style.getPropertyValue('--menu-surface')),start);
     await page.locator('#open-multiplayer').click();await page.locator('#connect').waitFor({state:'visible'});await page.waitForTimeout(100);
-    assert.equal(await page.evaluate(()=>GolfHome.scene.running),0);
+    assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35,'illustrated multiplayer entry shares the living menu');
     await page.locator('#back-main').click();assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35);
     await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35);assert.equal(await page.locator('#home').getAttribute('data-motion'),'gentle');
     await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForTimeout(100);assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35);
