@@ -12,7 +12,7 @@ function worker(level:string,env:Record<string,string>={}){
 }
 test('31 resting balls and later real shots match the full physics reference, including movers and NPCs',async()=>{
   for(const level of ['data/levels/level-3.level','data/campaign/family-04-3.level']){
-    const fast=worker(level),full=worker(level,{GOLF_PHYSICS_FULL_REST:'1',GOLF_PHYSICS_FULL_PLAYERS:'1'});
+    const fast=worker(level),full=worker(level,{GOLF_PHYSICS_FULL_REST:'1',GOLF_PHYSICS_FULL_PLAYERS:'1',GOLF_BVH_FULL_FACES:'1'});
     try{
       for(const p of [fast,full]){await p.configure(false,12345);for(let i=0;i<31;i++)await p.add(i,i+1);}
       const a=await fast.step(1200),b=await full.step(1200);assert.deepEqual(a.players,b.players,level);
@@ -43,7 +43,7 @@ test('CPU-limited shared decisions are revalidated in real physics for 30 differ
       const current=await p.step(8);
       const plan=await p.plan(i,'expert');assert.equal(plan.ok,true);assert.equal(plan.safe,true);
       assert.equal((await p.step(0)).time,current.time);
-      if(plan.reused){reused++;assert.equal(plan.candidates,1);assert.equal(plan.lookahead,0);}
+      if(plan.reused){reused++;assert.ok(plan.candidates>=1&&plan.candidates<=3);assert.equal(plan.lookahead,0);}
       assert.ok(plan.cpuMs<1000,'one complete forecast may slightly exceed the search budget');
     }
     assert.ok(reused>=29,`expected shared safe forecasts, got ${reused}`);
@@ -83,9 +83,9 @@ test('Render CPU budget preserves 1x under load and allows 5x with headroom',asy
 
 test('interactive search budget still completes straight, curved and moving-obstacle courses with real shots',async()=>{
   for(const level of ['data/levels/level-3.level','data/campaign/family-04-3.level','data/levels/level-7.level']){
-    // Same 20 ms search allowance as Render; omit artificial CPU sleeps so
+    // Same 4 ms search allowance as Render; omit artificial CPU sleeps so
     // this checks shot quality independently of the CI machine's wall clock.
-    const p=worker(level,{GOLF_BOT_CPU_FRACTION:'1',GOLF_BOT_SEARCH_MS:'20'});
+    const p=worker(level,{GOLF_BOT_CPU_FRACTION:'1',GOLF_BOT_SEARCH_MS:'4'});
     try{
       await p.configure(false,12345);await p.add(0,2);await p.prepareBots();let frame=await p.step(120);
       for(let i=0;i<300&&!frame.players[0]!.hole&&frame.players[0]!.strokes<48;i++){
@@ -103,8 +103,8 @@ test('the free-host planner caps legacy search settings without changing the liv
   const saved={...process.env};
   try{
     process.env.GOLF_CPU_BUDGET='.1';process.env.GOLF_BOT_SEARCH_MS='150';process.env.GOLF_BOT_CPU_FRACTION='.02';
-    assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'20');assert.equal(plannerEnvironment().GOLF_BOT_CPU_FRACTION,'.02');assert.equal(process.env.GOLF_BOT_SEARCH_MS,'150');
-    process.env.GOLF_BOT_SEARCH_MS='5';assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'5');
+    assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'4');assert.equal(plannerEnvironment().GOLF_BOT_CPU_FRACTION,'.02');assert.equal(process.env.GOLF_BOT_SEARCH_MS,'150');
+    process.env.GOLF_BOT_SEARCH_MS='2';assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'2');
     delete process.env.GOLF_CPU_BUDGET;process.env.GOLF_BOT_SEARCH_MS='150';assert.equal(plannerEnvironment().GOLF_BOT_SEARCH_MS,'150');
   }finally{for(const key of ['GOLF_CPU_BUDGET','GOLF_BOT_SEARCH_MS','GOLF_BOT_CPU_FRACTION'])if(saved[key]===undefined)delete process.env[key];else process.env[key]=saved[key];}
 });

@@ -18,11 +18,15 @@ The corrections address these sources of wasted work:
   within a tick. All player identities, scores, NPC effects and Impact collision
   resolution remain separate. Simultaneous identical collision sounds are mixed
   once. `GOLF_PHYSICS_FULL_PLAYERS=1` selects individual evaluations for comparison.
-- The Render profile targets 150 ms CPU, checked between complete
-  heading/power sweeps after finding safe progress. Recovery and ramp searches
-  may exceed this target to preserve decision quality. The planner voluntarily
-  sleeps to average 0.02 CPU, leaving most
-  of the service share for live frames and Node. Nearby bots can share a proposed
+- The Render profile targets 4 ms CPU for ordinary searches, checked between
+  complete forecasts after finding safe progress. Required jumps and stalled
+  attempts reserve 20 ms and bounded second-ply work to preserve completion.
+  These are soft CPU targets, rather than wall-clock deadlines. The planner
+  voluntarily sleeps to average 0.04 CPU during active human shots. With no
+  human ball moving, measured idle capacity can temporarily raise this to at
+  most 80% of the service quota, minus the measured physics load, reserving
+  20% for Node/network. This uses available capacity while retaining priority
+  for human play. Nearby bots can share a proposed
   shot, but it is simulated again at the current authoritative time with current
   obstacles, wind and animals before use. Each bot retains its own accuracy,
   effects and attempt history. The unrestricted local profile remains available.
@@ -50,7 +54,7 @@ before (about 76% less). This measures the shared tee state, not 31 distinct
 moving trajectories, browser FPS, or a production Render instance. Windows CPU
 accounting in this measurement has a 15.625 ms granularity.
 
-A separate 30-second real-clock local room check used 30 expert bots plus one
+An earlier 30-second real-clock local room check used the previous profile with 30 expert bots plus one
 human on that field with the Render profile. Simulation advanced 29.93 seconds,
 387 snapshots were sent, the 95th percentile snapshot gap was 80.94 ms, and a
 human shot was accepted in 1.11 ms while searches ran. Seven bot decisions

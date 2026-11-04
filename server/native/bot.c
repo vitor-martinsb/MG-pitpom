@@ -6,8 +6,13 @@
 #include <stdlib.h>
 
 static uint32_t hash(uint32_t x){x^=x>>16;x*=0x7feb352du;x^=x>>15;x*=0x846ca68bu;return x^(x>>16);}
+void golf_bot_cpu_share(double share){bot_cpu_share_override=isfinite(share)&&share>0&&share<=1?share:0;}
 static const int dx[]={-1,0,1,-1,1,-1,0,1},dz[]={-1,-1,-1,0,0,1,1,1};
 #define BOT_LINKS 16384
+enum {WARM_PLANS=128};
+static struct {const golf_level_t *level;vec3 pos,direction;float power;uint32_t owner,seed;int slow;} warm[WARM_PLANS];
+static unsigned warm_next;
+static void prime_route(golf_physics_world_t *,const golf_mechanics_t *,const golf_navigation_t *);
 typedef struct bot_link {short from,to;float cost,speed;bool portal;vec3 aim;} bot_link_t;
 /* Planner-only graph: animal patrols and respawns retain continuous-floor safety. */
 static struct {
@@ -203,7 +208,7 @@ static float route_cost(const golf_navigation_t *nav,vec3 p){
     int i=nearest(nav,p);if(i<0)return vec3_distance(p,nav->hole);
     return route.cost[i]<FLT_MAX/2?route.cost[i]+vec3_distance(p,nav->nodes[i].pos):10000+vec3_distance(p,nav->hole);
 }
-void golf_bot_prepare(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav){build_route(world,m,nav);}
+void golf_bot_prepare(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav){build_route(world,m,nav);prime_route(world,m,nav);}
 static vec3 target(const golf_navigation_t *nav,vec3 p,float reach,float *launch_speed){
     *launch_speed=0;int i=nearest(nav,p);if(i<0)return nav->hole;
     vec3 best=nav->nodes[i].pos;float cost=route.cost[i];
@@ -289,6 +294,10 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     float speed=0,unused;vec3 aim=target(nav,p->ball.pos,2.2f,&speed),far=target(nav,p->ball.pos,4.8f,&unused),delta=vec3_sub(aim,p->ball.pos);
     float heading=atan2f(delta.x,delta.z),far_heading=atan2f(far.x-p->ball.pos.x,far.z-p->ball.pos.z),hole_heading=atan2f(m->hole.x-p->ball.pos.x,m->hole.z-p->ball.pos.z);
     float base=power_for_speed(world,speed>0?speed:sqrtf(5.88f*horizontal(aim,p->ball.pos)+19.6f*fmaxf(0,aim.y-p->ball.pos.y)));
+    // Reserve a bounded recovery allowance for a required jump or an attempt
+    // that failed to make progress. Ordinary putts must not inherit that cost.
+    bool recovery=bot_budget.enabled&&(speed>0||(memory&&memory->stalled));
+    if(recovery&&bot_budget.limit>0&&bot_budget.limit<20)bot_budget.limit=20;
     float angles[]={heading,heading+.20f,heading-.20f,far_heading,heading+MF_PI/4,heading-MF_PI/4,hole_heading,heading+MF_PI/2,heading-MF_PI/2,heading+MF_PI,heading+.10f,heading-.10f};
     float powers[]={0,.045f,.09f,.16f,.24f,.36f,.52f,.72f,.90f,1,base,golf_clampf(base*1.15f+.015f,0,1)};
     const int counts[]={24,48,96,144},horizons[]={960,1200,1440,1440};
@@ -296,22 +305,35 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     golf_bot_plan_t plan={.direction=V3(sinf(heading),0,cosf(heading)),.power=base};float best=FLT_MAX,initial_cost=route_cost(nav,p->ball.pos);
     golf_bvh_t dynamic;golf_bvh_init(&dynamic);
     trial_t beams[4];golf_bot_plan_t first[4];int beam_count=0;
-    static struct {const golf_level_t *level;vec3 pos,direction;float power;uint32_t owner,seed;int slow;} warm[16];
-    static unsigned warm_next;
     bool reused=false;
-    if(bot_budget.enabled)for(int i=0;i<16;i++){
-        if(warm[i].level!=world->level||warm[i].owner==p->id||warm[i].seed!=m->seed||warm[i].slow!=p->ball.slow_shots||vec3_distance(warm[i].pos,p->ball.pos)>.08f)continue;
-        trial_t t=simulate(world,&dynamic,m,nav,p,warm[i].direction,warm[i].power,horizons[difficulty]);plan.candidates++;
-        if(t.safe&&t.cost<initial_cost-1.5f){
-            plan.direction=warm[i].direction;plan.power=warm[i].power;plan.landing=t.player.ball.pos;plan.safe=true;plan.peak=t.peak;plan.launch_speed=speed;best=t.cost;reused=true;
+    float shared_progress=speed>0?1.5f:fminf(1.5f,fmaxf(.25f,horizontal(aim,p->ball.pos)*.5f));
+    float decision_progress=recovery?1.5f:shared_progress;
+    // Try the three nearest proposals, including short but necessary turns.
+    // Every proposal still gets a full forecast with this ball's current state;
+    // history rejects a known failed attempt rather than sharing that failure.
+    int suggestions[3]={-1,-1,-1};float distances[3]={9,9,9};
+    if(bot_budget.enabled)for(unsigned n=0;n<WARM_PLANS;n++){
+        unsigned i=(warm_next-1-n)%WARM_PLANS;
+        if(warm[i].level!=world->level||warm[i].owner==p->id||warm[i].seed!=m->seed||warm[i].slow!=p->ball.slow_shots)continue;
+        vec3 delta=vec3_sub(warm[i].pos,p->ball.pos);float distance=vec3_dot(delta,delta);
+        for(int k=0;k<3;k++)if(distance<distances[k]){
+            for(int j=2;j>k;j--){distances[j]=distances[j-1];suggestions[j]=suggestions[j-1];}
+            distances[k]=distance;suggestions[k]=(int)i;break;
         }
-        break;
+    }
+    for(int k=0;k<3&&suggestions[k]>=0;k++){
+        int i=suggestions[k];
+        trial_t t=simulate(world,&dynamic,m,nav,p,warm[i].direction,warm[i].power,horizons[difficulty]);plan.candidates++;
+        if(t.safe&&t.cost+repeated(memory,p,warm[i].direction,warm[i].power)<initial_cost-shared_progress){
+            plan.direction=warm[i].direction;plan.power=warm[i].power;plan.landing=t.player.ball.pos;plan.safe=true;plan.peak=t.peak;plan.launch_speed=speed;best=t.cost;reused=true;
+            break;
+        }
     }
     int warm_trials=plan.candidates;
     for(int candidate=0;!reused&&candidate<counts[difficulty]-warm_trials;candidate++){
         // Return a safe result promptly on shared hosts instead of spending
         // the whole turn allowance on repeated recovery/lookahead searches.
-        if(candidate>=4&&bot_budget_expired()&&plan.safe&&(best<initial_cost-1.5f||candidate>=12))break;
+        if(candidate>=1&&bot_budget_expired()&&plan.safe&&best<initial_cost-decision_progress)break;
         // Under the shared-host budget, test useful range estimates before
         // tiny taps; full-resource searches retain their original sweep.
         static const int power_order[]={10,11,5,3,7,4,6,8,9,2,1,0};
@@ -332,12 +354,16 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
         if(difficulty==2&&candidate>=47&&speed==0&&(!memory||!memory->stalled)&&best<initial_cost-1.5f)break;
     }
     /* A bounded second ply resolves staged ramp approaches and obstructed exits. */
-    if(!reused&&(!bot_budget_expired())&&difficulty>=2&&best>-9999&&(speed>0||(memory&&memory->stalled)||difficulty==3)){
+    if(!reused&&(!bot_budget_expired()||recovery)&&difficulty>=2&&best>-9999&&(speed>0||(memory&&memory->stalled)||difficulty==3)){
         int width=difficulty==3?beam_count:(beam_count<2?beam_count:2);
-        for(int i=0;i<width&&(!bot_budget_expired());i++){
+        // A shared host still examines at most six second-ply trajectories.
+        // This reserved ramp/recovery work must not become a full expert sweep.
+        if(recovery&&width>2)width=2;
+        int depth=recovery?3:(difficulty==3?6:3);
+        for(int i=0;i<width&&(!bot_budget_expired()||recovery);i++){
             float launch;vec3 q=target(nav,beams[i].player.ball.pos,3.3f,&launch),d=vec3_sub(q,beams[i].player.ball.pos);float length=horizontal(q,beams[i].player.ball.pos);
             float power=power_for_speed(world,launch>0?launch:sqrtf(5.88f*length+19.6f*fmaxf(0,d.y)));
-            for(int k=0;k<(difficulty==3?6:3)&&(!bot_budget_expired());k++){
+            for(int k=0;k<depth&&(!bot_budget_expired()||recovery);k++){
                 float a=atan2f(d.x,d.z)+(k>=3?(k%2?.13f:-.13f):0),scale=k%3==0?.85f:k%3==1?1:1.2f;
                 golf_physics_world_t w=*world;w.time=beams[i].time;
                 trial_t t=simulate(&w,&dynamic,&beams[i].mechanics,nav,&beams[i].player,V3(sinf(a),0,cosf(a)),golf_clampf(power*scale,0,1),1440);plan.lookahead++;
@@ -360,8 +386,8 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
         }
     }
     vec_deinit(&dynamic.faces);vec_deinit(&dynamic.node_infos);vec_deinit(&dynamic.nodes);
-    if(bot_budget.enabled&&plan.safe&&plan.wait==0&&best<initial_cost-1.5f){
-        unsigned at=warm_next++%16;
+    if(!reused&&bot_budget.enabled&&plan.safe&&plan.wait==0&&best<initial_cost-shared_progress){
+        unsigned at=warm_next++%WARM_PLANS;
         warm[at].level=world->level;warm[at].pos=p->ball.pos;warm[at].direction=plan.direction;warm[at].power=plan.power;
         warm[at].owner=p->id;warm[at].seed=m->seed;warm[at].slow=p->ball.slow_shots;
     }
@@ -372,7 +398,37 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     float angle=atan2f(plan.direction.x,plan.direction.z)+((seed&65535)/32767.5f-1)*errors[difficulty]*adapt;
     plan.direction=V3(sinf(angle),0,cosf(angle));plan.power=golf_clampf(plan.power+((seed>>16)/32767.5f-1)*force_errors[difficulty]*adapt,0,1);
     plan.reused=reused;
+    plan.cpu_share=bot_budget.fraction;
     if(bot_budget.enabled){plan.cpu_ms=bot_cpu_ms()-bot_budget.cpu;plan.wall_ms=bot_wall_ms()-bot_budget.wall;}
     return plan;
 }
 golf_bot_plan_t golf_bot_plan(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav,const golf_player_t *p,int difficulty){return golf_bot_plan_adaptive(world,m,nav,p,difficulty,NULL);}
+
+static void prime_route(golf_physics_world_t *world,const golf_mechanics_t *m,const golf_navigation_t *nav){
+    double quota=getenv("GOLF_CPU_BUDGET")?strtod(getenv("GOLF_CPU_BUDGET"),NULL):0;
+    static const golf_level_t *prepared;static uint32_t seed;
+    if(!isfinite(quota)||quota<=0||quota>=.5||(prepared==world->level&&seed==m->seed))return;
+    prepared=world->level;seed=m->seed;
+    /* Only private forecasts advance here. Route proposals are prepared once
+     * during loading; every live bot must re-simulate them with current pets,
+     * wind, effects and time. This never restores a forecast into authority. */
+    golf_physics_world_t w=*world;golf_mechanics_t state=*m;golf_bot_memory_t memory={0};
+    state.cat_valid=state.dog_valid=false;
+    for(int i=0;i<GOLF_WILDLIFE_COUNT;i++)state.wildlife.animals[i].active=false;
+    golf_player_t p;golf_player_init(&p,UINT32_MAX,"Route forecast",V4(1,1,1,1),0);
+    golf_player_start_level(&p,vec3_add(m->start,V3(0,GOLF_BALL_RADIUS,0)));
+    golf_bvh_t dynamic;golf_bvh_init(&dynamic);
+    double previous=bot_cpu_share_override;bot_cpu_share_override=1;
+    for(int i=0;i<32&&!p.ball.is_in_hole;i++){
+        golf_bot_observe(&memory,&p,nav);if(memory.stalled>3)break;
+        golf_bot_plan_t plan=golf_bot_plan_adaptive(&w,&state,nav,&p,2,&memory);
+        if(!plan.safe)break;
+        w.time+=plan.wait;
+        trial_t trial=simulate(&w,&dynamic,&state,nav,&p,plan.direction,plan.power,1440);
+        if(!trial.safe)break;
+        p=trial.player;state=trial.mechanics;w.time=trial.time;
+        golf_bot_record(&memory,&p,plan.direction,plan.power);
+    }
+    bot_cpu_share_override=previous;
+    vec_deinit(&dynamic.faces);vec_deinit(&dynamic.node_infos);vec_deinit(&dynamic.nodes);
+}

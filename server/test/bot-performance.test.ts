@@ -10,6 +10,34 @@ function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,
 function deferred<T=any>(){let resolve!:(v:T)=>void,reject!:(e:Error)=>void;const promise=new Promise<T>((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};}
 const shot={ok:true,safe:true,wait:0,direction:[0,0,-1],power:.1};
 
+test('idle planning uses spare measured CPU while moving humans keep the base share',async()=>{
+  const old=process.env.GOLF_CPU_BUDGET;process.env.GOLF_CPU_BUDGET='.1';let now=0;
+  const room=new Room('IDLE',root,['data/levels/level-3.level'],defaults,()=>now),host=room.join(socket(),'Host','#ffffff',0),shares:(number|undefined)[]=[];
+  try{
+    room.botSettings(host,'count',null,{count:2});await room.start(host,1);room.ready(host,0);
+    (room as any).physics.plan=async(_slot:number,_difficulty:string,share?:number)=>{shares.push(share);return shot;};
+    now=100;await room.tick();await (room as any).botPlanning;
+    assert.ok(shares[0]!>.07&&shares[0]!<=.081);
+    await room.shot(host,{sequence:1,direction:[0,0,-1],power:.2});
+    now=170;await room.tick();await (room as any).botPlanning;
+    assert.equal(shares.length,2);assert.equal(shares[1],undefined,'an active human retains the configured conservative profile');
+  }finally{room.close();if(old===undefined)delete process.env.GOLF_CPU_BUDGET;else process.env.GOLF_CPU_BUDGET=old;}
+});
+
+test('only the isolated planner accepts an idle share within the configured CPU reserve',async()=>{
+  const saved={...process.env};Object.assign(process.env,{GOLF_CPU_BUDGET:'.1',GOLF_BOT_CPU_FRACTION:'.04',GOLF_BOT_SEARCH_MS:'4'});
+  const p=new Physics(root,'data/levels/level-3.level');
+  try{
+    await p.configure(false,12345);await p.add(0,2);const before=await p.step(0);await p.prepareBots();
+    const after=await p.step(0);assert.deepEqual(after.players,before.players);assert.deepEqual(after.mascots,before.mascots);assert.equal(after.time,before.time,'route priming cannot advance or replace authority');
+    const accelerated=await p.plan(0,'hard',.08);assert.equal(accelerated.cpuShare,.08);
+    assert.equal(accelerated.reused,true,'the live ball validates a prepared proposal instead of starting a cold search');
+    assert.equal((await p.plan(0,'hard',.5)).cpuShare,.04,'out-of-quota overrides fall back to the base share');
+    assert.equal((await p.plan(0,'hard')).cpuShare,.04,'a later request cannot inherit an idle override');
+    assert.equal((await p.command({cmd:'plan',slot:0,difficulty:'hard',cpuShare:.08})).cpuShare,.04,'the authoritative worker cannot opt into an idle override');
+  }finally{p.close();for(const k of ['GOLF_CPU_BUDGET','GOLF_BOT_CPU_FRACTION','GOLF_BOT_SEARCH_MS'])if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k];}
+});
+
 test('a pending bot never blocks human shots, snapshots, chat or subsequent physics ticks; stale positions are discarded',async()=>{
   let now=0;const room=new Room('SMOOTH',root,['data/levels/level-3.level'],defaults,()=>now),ws=socket();
   const host=room.join(ws,'Host','#ffffff',0);const pending=deferred();

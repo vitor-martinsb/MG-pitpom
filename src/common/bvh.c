@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <float.h>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "common/log.h"
@@ -134,6 +135,75 @@ static int _alloc_inner_node(golf_bvh_t *bvh, int left, int right) {
     return idx;
 }
 
+#ifdef GOLF_HEADLESS
+typedef struct face_reference {int index;vec3 center;} face_reference_t;
+static int _face_axis;
+static int _face_reference_cmp(const void *a,const void *b){
+    const face_reference_t *x=a,*y=b;
+    float u=_face_axis==0?x->center.x:_face_axis==1?x->center.y:x->center.z;
+    float v=_face_axis==0?y->center.x:_face_axis==1?y->center.y:y->center.z;
+    return u<v?-1:u>v?1:x->index-y->index;
+}
+static int _alloc_spatial_faces(golf_bvh_t *bvh,golf_bvh_node_info_t info,face_reference_t *faces,int count){
+    golf_bvh_aabb_t bounds={V3(FLT_MAX,FLT_MAX,FLT_MAX),V3(-FLT_MAX,-FLT_MAX,-FLT_MAX)};
+    for(int i=0;i<count;i++){
+        const golf_bvh_face_t *f=&bvh->faces.data[faces[i].index];
+        _update_aabb(&bounds,f->a);_update_aabb(&bounds,f->b);_update_aabb(&bounds,f->c);
+    }
+    bounds.min=vec3_sub(bounds.min,V3(.0001f,.0001f,.0001f));bounds.max=vec3_add(bounds.max,V3(.0001f,.0001f,.0001f));
+    if(count==1){info.face_start=faces[0].index;info.face_count=1;info.aabb=bounds;return _alloc_leaf_node(bvh,info);}
+    vec3 extent=vec3_sub(bounds.max,bounds.min);_face_axis=extent.x>=extent.y&&extent.x>=extent.z?0:extent.y>=extent.z?1:2;
+    qsort(faces,count,sizeof(*faces),_face_reference_cmp);
+    int left=_alloc_spatial_faces(bvh,info,faces,count/2),right=_alloc_spatial_faces(bvh,info,faces+count/2,count-count/2);
+    int result=_alloc_inner_node(bvh,left,right);bvh->nodes.data[result].ordered_faces=true;return result;
+}
+/* Keep entity traversal and triangle order identical to the original solver.
+ * Large authored meshes otherwise test every triangle for each forecast tick.
+ * Contiguous ranges only prune impossible contacts; they never reorder faces. */
+static int _alloc_face_range(golf_bvh_t *bvh, golf_bvh_node_info_t info) {
+    if(info.face_count<=4)return _alloc_leaf_node(bvh,info);
+    golf_bvh_node_info_t ranges[2]={info,info};
+    ranges[0].face_count=info.face_count/2;
+    ranges[1].face_start+=ranges[0].face_count;
+    ranges[1].face_count-=ranges[0].face_count;
+    int children[2];
+    for(int r=0;r<2;r++){
+        golf_bvh_node_info_t *range=&ranges[r];
+        range->aabb.min=V3(FLT_MAX,FLT_MAX,FLT_MAX);range->aabb.max=V3(-FLT_MAX,-FLT_MAX,-FLT_MAX);
+        for(int i=0;i<range->face_count;i++){
+            golf_bvh_face_t *f=&bvh->faces.data[range->face_start+i];
+            _update_aabb(&range->aabb,f->a);_update_aabb(&range->aabb,f->b);_update_aabb(&range->aabb,f->c);
+        }
+        /* Conservative padding absorbs rounding at shared edges. The exact
+         * original triangle query still decides every hit and its response. */
+        range->aabb.min=vec3_sub(range->aabb.min,V3(.0001f,.0001f,.0001f));
+        range->aabb.max=vec3_add(range->aabb.max,V3(.0001f,.0001f,.0001f));
+        children[r]=_alloc_face_range(bvh,*range);
+    }
+    int result=_alloc_inner_node(bvh,children[0],children[1]);
+    bvh->nodes.data[result].ordered_faces=true;return result;
+}
+#endif
+
+static int _alloc_entity_node(golf_bvh_t *bvh,golf_bvh_node_info_t info){
+#ifdef GOLF_HEADLESS
+    if(!getenv("GOLF_BVH_FULL_FACES")){
+        const golf_bvh_face_t *first=info.face_count?&bvh->faces.data[info.face_start]:NULL;
+        golf_movement_t *movement=first?golf_entity_get_movement(first->entity):NULL;
+        if(info.face_count>16&&(!movement||movement->type==GOLF_MOVEMENT_NONE)){
+            face_reference_t *faces=malloc(info.face_count*sizeof(*faces));
+            if(faces){
+                for(int i=0;i<info.face_count;i++){const golf_bvh_face_t *f=&bvh->faces.data[info.face_start+i];faces[i]=(face_reference_t){info.face_start+i,vec3_scale(vec3_add(vec3_add(f->a,f->b),f->c),1.f/3)};}
+                int root=_alloc_spatial_faces(bvh,info,faces,info.face_count);free(faces);
+                bvh->nodes.data[root].aabb=info.aabb;bvh->nodes.data[root].spatial_faces=true;bvh->nodes.data[root].leaf_node_info=info;return root;
+            }
+        }
+        int root=_alloc_face_range(bvh,info);bvh->nodes.data[root].aabb=info.aabb;return root;
+    }
+#endif
+    return _alloc_leaf_node(bvh,info);
+}
+
 golf_ball_contact_t golf_ball_contact(vec3 a, vec3 b, vec3 c, vec3 vel, vec3 bp, float br, vec3 cp, float dist, float restitution, float friction, float vel_scale, triangle_contact_type_t type, bool is_water, vec3 water_dir, bool is_out_of_bounds) {
     golf_ball_contact_t contact = {0};
     contact.distance = dist;
@@ -198,11 +268,11 @@ static int _golf_bvh_construct(golf_bvh_t *bvh, vec_golf_bvh_node_info_t node_in
         return -1;
     }
     else if (n == 1) {
-        return _alloc_leaf_node(bvh, node_infos.data[idx]);
+        return _alloc_entity_node(bvh, node_infos.data[idx]);
     }
     else if (n == 2) {
-        int left = _alloc_leaf_node(bvh, node_infos.data[idx]);
-        int right = _alloc_leaf_node(bvh, node_infos.data[idx + 1]);
+        int left = _alloc_entity_node(bvh, node_infos.data[idx]);
+        int right = _alloc_entity_node(bvh, node_infos.data[idx + 1]);
         return _alloc_inner_node(bvh, left, right);
     }
     else {
@@ -224,7 +294,7 @@ void golf_bvh_construct(golf_bvh_t *bvh, vec_golf_bvh_node_info_t node_infos) {
     bvh->parent = _golf_bvh_construct(bvh, node_infos, 0, node_infos.length);
 }
 
-static bool _golf_bvh_ray_test(golf_bvh_t *bvh, int node_idx, vec3 ro, vec3 rd, float *t, int *idx, golf_bvh_face_t *face) {
+static bool _golf_bvh_ray_test(golf_bvh_t *bvh, int node_idx, vec3 ro, vec3 rd, float *t, int *idx, golf_bvh_face_t *face, int *order) {
     if (node_idx < 0) {
         return false;
     }
@@ -256,6 +326,7 @@ static bool _golf_bvh_ray_test(golf_bvh_t *bvh, int node_idx, vec3 ro, vec3 rd, 
                     }
                     *t = t0;
                     *idx = info.idx;
+                    *order = face_idx;
                 }
             }
         }
@@ -266,22 +337,26 @@ static bool _golf_bvh_ray_test(golf_bvh_t *bvh, int node_idx, vec3 ro, vec3 rd, 
         float t_left;
         int idx_left;
         golf_bvh_face_t left_face;
-        bool left_test = _golf_bvh_ray_test(bvh, node->left, ro, rd, &t_left, &idx_left, &left_face);
+        int left_order;
+        bool left_test = _golf_bvh_ray_test(bvh, node->left, ro, rd, &t_left, &idx_left, &left_face, &left_order);
 
         float t_right;
         int idx_right;
         golf_bvh_face_t right_face;
-        bool right_test = _golf_bvh_ray_test(bvh, node->right, ro, rd, &t_right, &idx_right, &right_face);
+        int right_order;
+        bool right_test = _golf_bvh_ray_test(bvh, node->right, ro, rd, &t_right, &idx_right, &right_face, &right_order);
 
         if (left_test && right_test) {
-            if (t_left < t_right) {
+            if (t_left < t_right || (node->ordered_faces && t_left == t_right && left_order < right_order)) {
                 *t = t_left;
                 *idx = idx_left;
+                *order = left_order;
                 if (face) *face = left_face;
             }
             else {
                 *t = t_right;
                 *idx = idx_right;
+                *order = right_order;
                 if (face) *face = right_face;
             }
             return true;
@@ -289,12 +364,14 @@ static bool _golf_bvh_ray_test(golf_bvh_t *bvh, int node_idx, vec3 ro, vec3 rd, 
         else if (left_test && !right_test) {
             *t = t_left;
             *idx = idx_left;
+            *order = left_order;
             if (face) *face = left_face;
             return true;
         }
         else if (!left_test && right_test) {
             *t = t_right;
             *idx = idx_right;
+            *order = right_order;
             if (face) *face = right_face;
             return true;
         }
@@ -305,22 +382,11 @@ static bool _golf_bvh_ray_test(golf_bvh_t *bvh, int node_idx, vec3 ro, vec3 rd, 
 }
 
 bool golf_bvh_ray_test(golf_bvh_t *bvh, vec3 ro, vec3 rd, float *t, int *idx, golf_bvh_face_t *face) {
-    return _golf_bvh_ray_test(bvh, bvh->parent, ro, rd, t, idx, face);    
+    int order;
+    return _golf_bvh_ray_test(bvh, bvh->parent, ro, rd, t, idx, face, &order);
 }
 
-static bool _golf_bvh_ball_test(golf_bvh_t *bvh, int node_idx, vec3 bp, float br, vec3 bv, golf_ball_contact_t *contacts, int *num_ball_contacts, int max_ball_contacts) {
-    if (node_idx < 0) {
-        return false;
-    }
-
-    golf_bvh_node_t *node = _get_node(bvh, node_idx);
-    if (!sphere_intersect_aabb(bp, br, node->aabb.min, node->aabb.max)) {
-        return false;
-    }
-
-    if (node->is_leaf) {
-        golf_bvh_node_info_t info = node->leaf_node_info;
-
+static bool _face_ball_contacts(golf_bvh_t *bvh,golf_bvh_node_info_t info,vec3 bp,float br,vec3 bv,golf_ball_contact_t *contacts,int *num_ball_contacts,int max_ball_contacts){
         bool any_hit = false;
         for (int i = 0; i < info.face_count; i++) {
             int face_idx = info.face_start + i;
@@ -341,12 +407,57 @@ static bool _golf_bvh_ball_test(golf_bvh_t *bvh, int node_idx, vec3 bp, float br
                 }
 
                 any_hit = true;
+                if(*num_ball_contacts>=max_ball_contacts)return true;
             }
         }
         return any_hit;
+}
+
+typedef struct face_candidate {int node,order;} face_candidate_t;
+static int _face_candidate_cmp(const void *a,const void *b){return ((const face_candidate_t*)a)->order-((const face_candidate_t*)b)->order;}
+static bool _gather_ball_faces(golf_bvh_t *bvh,int index,vec3 p,float radius,face_candidate_t *hits,int *count){
+    const golf_bvh_node_t *node=&bvh->nodes.data[index];
+    if(!sphere_intersect_aabb(p,radius,node->aabb.min,node->aabb.max))return true;
+    if(node->is_leaf){
+        if(*count==256)return false;
+        hits[(*count)++]=(face_candidate_t){index,node->leaf_node_info.face_start};return true;
+    }
+    return _gather_ball_faces(bvh,node->left,p,radius,hits,count)&&_gather_ball_faces(bvh,node->right,p,radius,hits,count);
+}
+
+static bool _golf_bvh_ball_test(golf_bvh_t *bvh, int node_idx, vec3 bp, float br, vec3 bv, golf_ball_contact_t *contacts, int *num_ball_contacts, int max_ball_contacts) {
+    if (node_idx < 0) {
+        return false;
+    }
+
+    golf_bvh_node_t *node = _get_node(bvh, node_idx);
+    if (!sphere_intersect_aabb(bp, br, node->aabb.min, node->aabb.max)) {
+        return false;
+    }
+
+    if(node->spatial_faces){
+        face_candidate_t hits[256];int count=0;
+        if(!_gather_ball_faces(bvh,node_idx,bp,br,hits,&count))
+            return _face_ball_contacts(bvh,node->leaf_node_info,bp,br,bv,contacts,num_ball_contacts,max_ball_contacts);
+        /* Spatial traversal is only broad phase. The original face order is
+         * observable when contacts tie or fill a caller's limited buffer. */
+        qsort(hits,count,sizeof(*hits),_face_candidate_cmp);
+        bool any=false;
+        for(int i=0;i<count;i++){
+            bool hit=_face_ball_contacts(bvh,bvh->nodes.data[hits[i].node].leaf_node_info,bp,br,bv,contacts,num_ball_contacts,max_ball_contacts);
+            any=any||hit;if(hit&&*num_ball_contacts>=max_ball_contacts)return true;
+        }
+        return any;
+    }
+
+    if (node->is_leaf) {
+        golf_bvh_node_info_t info = node->leaf_node_info;
+
+        return _face_ball_contacts(bvh,info,bp,br,bv,contacts,num_ball_contacts,max_ball_contacts);
     }
     else {
         bool left_test = _golf_bvh_ball_test(bvh, node->left, bp, br, bv, contacts, num_ball_contacts, max_ball_contacts);
+        if(left_test&&*num_ball_contacts>=max_ball_contacts)return true;
         bool right_test = _golf_bvh_ball_test(bvh, node->right, bp, br, bv, contacts, num_ball_contacts, max_ball_contacts);
         return left_test || right_test;
     }

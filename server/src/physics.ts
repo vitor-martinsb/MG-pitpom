@@ -73,7 +73,7 @@ export class Physics {
   connected(slot: number, connected: boolean) { return this.command({ cmd: 'connected', slot, connected }); }
   async shot(slot: number, direction: number[], power: number): Promise<boolean> { return (await this.command({ cmd: 'shot', slot, direction, power })).ok; }
   async step(ticks: number): Promise<Frame> { return this.command({ cmd: 'step', ticks }); }
-  async plan(slot:number,difficulty:BotDifficulty){
+  async plan(slot:number,difficulty:BotDifficulty,cpuShare?:number){
     if(this.planning)throw new Error('Bot planner already busy');
     this.planning=true;
     try{
@@ -82,7 +82,7 @@ export class Physics {
       const snapshot=await this.command({cmd:'plannerState',slot});
       if(!snapshot.ok)return {ok:false};
       if(!(await planner.command({cmd:'restorePlanner',state:snapshot.state})).ok)throw new Error('Invalid planner snapshot');
-      return {...await planner.command({cmd:'plan',slot,difficulty}),sampledAt:snapshot.time};
+      return {...await planner.command({cmd:'plan',slot,difficulty,cpuShare}),sampledAt:snapshot.time};
     }catch(error){
       this.planner?.close();this.planner=undefined;this.prepared=undefined;
       throw error;

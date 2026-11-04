@@ -5,12 +5,12 @@ export function cpuBudget():number {
 }
 export function loadingBudget():number{return cpuBudget()>0&&cpuBudget()<.5?120000:0;}
 
-// Keep older Render environment values from restoring multi-second searches.
+// Apply the interactive base allowance even with legacy Render search values.
 export function plannerEnvironment():NodeJS.ProcessEnv{
   const env={...process.env},cpu=cpuBudget();
   if(cpu>0&&cpu<.5){
     const requested=Number(env.GOLF_BOT_SEARCH_MS);
-    env.GOLF_BOT_SEARCH_MS=String(Number.isFinite(requested)&&requested>0?Math.min(requested,20):20);
+    env.GOLF_BOT_SEARCH_MS=String(Number.isFinite(requested)&&requested>0?Math.min(requested,4):4);
     if(!env.GOLF_BOT_CPU_FRACTION)env.GOLF_BOT_CPU_FRACTION=String(Math.min(.04,cpu*.4));
   }
   return env;

@@ -17,9 +17,11 @@ static double bot_wall_ms(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,
 static void bot_pause(double ms){struct timespec t={0,(long)(ceil(ms)*1e6)};nanosleep(&t,NULL);}
 #endif
 static struct {bool enabled;double cpu,wall,fraction,limit;} bot_budget;
+static double bot_cpu_share_override;
 static void bot_budget_begin(void){
     const char *f=getenv("GOLF_BOT_CPU_FRACTION"),*l=getenv("GOLF_BOT_SEARCH_MS");
     double fraction=f?strtod(f,NULL):1,limit=l?strtod(l,NULL):0;
+    if(bot_cpu_share_override>0)fraction=bot_cpu_share_override;
     if(!isfinite(fraction)||fraction<=0||fraction>1)fraction=1;
     if(!isfinite(limit)||limit<0||limit>5000)limit=0;
     bot_budget.enabled=fraction<1||limit>0;bot_budget.fraction=fraction;bot_budget.limit=limit;

@@ -316,7 +316,12 @@ export class Room {
     const strokes=bot.ball?.strokes,pos=[...bot.ball!.pos],started=performance.now();
     const current=()=>generation===this.generation&&physics===this.physics&&!this.closed;
     try{
-      const plan=await physics.plan(bot.slot,bot.bot!);
+      // Reuse the measured physics load to lend idle CPU to the one existing
+      // planner. Reserve 20% for Node/network; moving humans keep the base share.
+      const humanMoving=[...this.members.values()].some(m=>!m.bot&&m.ball?.moving);
+      const cpuShare=this.cpuLimit>0&&this.cpuLimit<.5&&!humanMoving
+        ? Math.max(this.cpuLimit*.05,this.cpuLimit*.8-this.cpuRate*this.simulationSpeed) : undefined;
+      const plan=await physics.plan(bot.slot,bot.bot!,cpuShare);
       if(!current()||this.phase!=='playing'||this.now()>=this.deadline)return;
       const ball=bot.ball;
       if(!ball||ball.strokes!==strokes||ball.moving||ball.hole||ball.captureUntil||Math.hypot(...ball.pos.map((v,i)=>v-pos[i]!))>.025)return;

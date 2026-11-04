@@ -34,6 +34,8 @@ golf_bvh_node_info_t golf_bvh_node_info(golf_bvh_t *bvh, int idx, golf_level_t *
 typedef struct golf_bvh_node golf_bvh_node_t;
 typedef struct golf_bvh_node {
     bool is_leaf;
+    bool ordered_faces; /* Triangle subtree: original face index wins ray ties. */
+    bool spatial_faces; /* Root of a spatial mesh; ball candidates are reordered. */
     golf_bvh_node_info_t leaf_node_info;
 
     golf_bvh_aabb_t aabb;

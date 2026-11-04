@@ -159,8 +159,11 @@ int main(int argc, char **argv) {
         } else if(cmd&&!strcmp(cmd,"plan")&&slot>=0&&slot<GOLF_MAX_PLAYERS){
             const char *difficulty=json_object_get_string(o,"difficulty");int d=difficulty&&!strcmp(difficulty,"expert")?3:difficulty&&!strcmp(difficulty,"hard")?2:difficulty&&!strcmp(difficulty,"medium")?1:0;
             golf_player_t *p=&players[slot];bool available=p->id&&p->connected&&!p->ball.is_moving&&!p->ball.is_in_hole&&!p->ball.capture_until;
+            double quota=getenv("GOLF_CPU_BUDGET")?strtod(getenv("GOLF_CPU_BUDGET"),NULL):0,share=json_object_get_number(o,"cpuShare");
+            golf_bot_cpu_share(planner_only&&quota>0&&quota<.5&&share<=quota*.8?share:0);
             golf_bot_plan_t plan={0};if(available){golf_bot_observe(&bot_memory[slot],p,navigation);plan=golf_bot_plan_adaptive(&world,&mechanics,navigation,p,d,&bot_memory[slot]);}
-            printf("{\"request\":%d,\"ok\":%s,\"direction\":[%.9g,0,%.9g],\"power\":%.9g,\"candidates\":%d,\"lookahead\":%d,\"safe\":%s,\"landing\":[%.9g,%.9g,%.9g],\"peak\":%.9g,\"launchSpeed\":%.9g,\"wait\":%.9g,\"stalled\":%d,\"reused\":%s,\"cpuMs\":%.3f,\"wallMs\":%.3f}\n",request,available?"true":"false",plan.direction.x,plan.direction.z,plan.power,plan.candidates,plan.lookahead,plan.safe?"true":"false",plan.landing.x,plan.landing.y,plan.landing.z,plan.peak,plan.launch_speed,plan.wait,bot_memory[slot].stalled,plan.reused?"true":"false",plan.cpu_ms,plan.wall_ms);
+            golf_bot_cpu_share(0);
+            printf("{\"request\":%d,\"ok\":%s,\"direction\":[%.9g,0,%.9g],\"power\":%.9g,\"candidates\":%d,\"lookahead\":%d,\"safe\":%s,\"landing\":[%.9g,%.9g,%.9g],\"peak\":%.9g,\"launchSpeed\":%.9g,\"wait\":%.9g,\"stalled\":%d,\"reused\":%s,\"cpuMs\":%.3f,\"wallMs\":%.3f,\"cpuShare\":%.4f}\n",request,available?"true":"false",plan.direction.x,plan.direction.z,plan.power,plan.candidates,plan.lookahead,plan.safe?"true":"false",plan.landing.x,plan.landing.y,plan.landing.z,plan.peak,plan.launch_speed,plan.wait,bot_memory[slot].stalled,plan.reused?"true":"false",plan.cpu_ms,plan.wall_ms,plan.cpu_share);
             fflush(stdout);json_value_free(value);continue;
         } else if (cmd && !strcmp(cmd,"add") && slot>=0 && slot<GOLF_MAX_PLAYERS) {
             golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn);memset(&bot_memory[slot],0,sizeof(bot_memory[slot]));ok=true;
