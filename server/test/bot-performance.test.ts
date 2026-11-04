@@ -28,7 +28,7 @@ test('only the isolated planner accepts an idle share within the configured CPU 
   const saved={...process.env};Object.assign(process.env,{GOLF_CPU_BUDGET:'.1',GOLF_BOT_CPU_FRACTION:'.04',GOLF_BOT_SEARCH_MS:'4'});
   const p=new Physics(root,'data/levels/level-3.level');
   try{
-    await p.configure(false,12345);await p.add(0,2);const before=await p.step(0);await p.prepareBots();
+    await p.command({cmd:'configure',mascots:false,impact:false,seed:12345});await p.add(0,2);const before=await p.step(0);await p.prepareBots();
     const after=await p.step(0);assert.deepEqual(after.players,before.players);assert.deepEqual(after.mascots,before.mascots);assert.equal(after.time,before.time,'route priming cannot advance or replace authority');
     const accelerated=await p.plan(0,'hard',.08);assert.equal(accelerated.cpuShare,.08);
     assert.equal(accelerated.reused,true,'the live ball validates a prepared proposal instead of starting a cold search');
