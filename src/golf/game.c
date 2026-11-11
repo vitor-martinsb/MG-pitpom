@@ -169,7 +169,7 @@ void golf_game_init(void) {
 
     game.state = GOLF_GAME_STATE_MAIN_MENU;
     game.cam.auto_rotate = true;
-    game.cam.zoom = 1;
+    game.cam.zoom = 1;game.cam.spectator_zoom=1;
     game.cam.angle = 0;
     game.cam.angle_velocity = 0;
 
@@ -368,6 +368,16 @@ static golf_physics_world_t _physics_world(void) {
     return world;
 }
 
+static vec3 camera_clearance(vec3 target,vec3 wanted_pos){
+    vec3 ray=vec3_sub(wanted_pos,target);
+    float distance=vec3_length(ray),hit;int index;golf_bvh_face_t face;
+    if(distance>.01f){vec3 direction=vec3_scale(ray,1/distance);
+        golf_bvh_t *trees[]={&game.physics.static_bvh,&game.physics.dynamic_bvh};
+        for(int i=0;i<2;i++){hit=distance;if(golf_bvh_ray_test(trees[i],target,direction,&hit,&index,&face)&&hit>.05f&&hit<distance){distance=fmaxf(.65f,hit-.18f);wanted_pos=vec3_add(target,vec3_scale(direction,distance));}}
+    }
+    return wanted_pos;
+}
+
 void golf_game_update(float dt) {
     golf_player_t *player = golf_game_get_local_player();
 
@@ -495,13 +505,20 @@ void golf_game_update(float dt) {
         case GOLF_GAME_STATE_WATCHING_BALL: {
             if(golf_online_overview()) {
                 game.cam.overview=true;
-                vec3 target=vec3_scale(vec3_add(game.mechanics.bounds_min,game.mechanics.bounds_max),.5f);
+                vec3 target=player->ball.draw_pos;
+                target.y=fmaxf(target.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f)+.3f;
                 float aspect=graphics->viewport_size.x/fmaxf(1,graphics->viewport_size.y);
-                graphics->cam_pos=golf_overview_position(game.mechanics.bounds_min,game.mechanics.bounds_max,game.cam.skyline,aspect);
-                graphics->cam_dir=vec3_normalize(vec3_sub(target,graphics->cam_pos));
+                vec3 wanted=golf_spectator_position(game.mechanics.bounds_min,game.mechanics.bounds_max,game.cam.skyline,aspect,target,game.cam.spectator_zoom);
+                wanted=camera_clearance(target,wanted);
+                float blend=game.cam.follow_id==player->id?1-expf(-7*dt):1;
+                game.cam.focus=vec3_add(game.cam.focus,vec3_scale(vec3_sub(target,game.cam.focus),blend));
+                graphics->cam_pos=vec3_add(graphics->cam_pos,vec3_scale(vec3_sub(wanted,graphics->cam_pos),blend));
+                graphics->cam_dir=vec3_normalize(vec3_sub(game.cam.focus,graphics->cam_pos));
                 graphics->cam_far=golf_overview_far_plane(game.mechanics.bounds_min,game.mechanics.bounds_max,game.cam.skyline,graphics->cam_pos);
+                game.cam.follow_id=player->id;
                 break;
             }
+            game.cam.follow_id=0;
             if (game.cam.auto_rotate) {
                 float camera_zone_angle = _golf_game_get_camera_zone_angle(player->ball.draw_pos);
                 float delta_angle = camera_zone_angle - game.cam.angle;
@@ -516,12 +533,7 @@ void golf_game_update(float dt) {
             focus.y=fmaxf(focus.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f);
             vec3 wanted_pos = vec3_add(focus, cam_delta);
             // Clip the view ray against the same world geometry on every map.
-            vec3 target=vec3_add(focus,V3(0,.3f,0)),ray=vec3_sub(wanted_pos,target);
-            float distance=vec3_length(ray),hit;int index;golf_bvh_face_t face;
-            if(distance>.01f){vec3 direction=vec3_scale(ray,1/distance);
-                golf_bvh_t *trees[]={&game.physics.static_bvh,&game.physics.dynamic_bvh};
-                for(int i=0;i<2;i++){hit=distance;if(golf_bvh_ray_test(trees[i],target,direction,&hit,&index,&face)&&hit>.05f&&hit<distance){distance=fmaxf(.65f,hit-.18f);wanted_pos=vec3_add(target,vec3_scale(direction,distance));}}
-            }
+            wanted_pos=camera_clearance(vec3_add(focus,V3(0,.3f,0)),wanted_pos);
             vec3 diff = vec3_sub(wanted_pos, graphics->cam_pos);
             graphics->cam_pos = vec3_add(graphics->cam_pos, vec3_scale(diff, 1-expf(-7*dt)));
             graphics->cam_dir = vec3_normalize(vec3_sub(vec3_add(focus, V3(0, 0.3f, 0)), graphics->cam_pos));
@@ -535,7 +547,7 @@ void golf_game_update(float dt) {
 }
 
 void golf_game_start_main_menu(void) {
-    game.cam.overview=false;
+    game.cam.overview=false;game.cam.follow_id=0;
     game.begin_camera_animation.active=false;
     golf_game_set_debug_test_players(false);
     golf_player_t *player = golf_game_get_local_player();
@@ -574,7 +586,7 @@ void golf_game_start_main_menu(void) {
 }
 
 void golf_game_start_level(void) {
-    game.cam.overview=false;
+    game.cam.overview=false;game.cam.follow_id=0;
     golf_player_t *player = golf_game_get_local_player();
 
     game.state = GOLF_GAME_STATE_BEGIN_CAMERA_ANIMATION;

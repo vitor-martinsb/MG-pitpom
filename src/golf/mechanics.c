@@ -117,10 +117,10 @@ void golf_mechanics_animate(golf_mechanics_t *m,float time) {
         a->present=a->active&&i==m->third_kind;
         a->presence=a->present?1:0;
     }
-    /* Sine easing has a brief, gentle pause at each end of the crossing. */
+    /* Share Frida-like easing, a bounded speed and a planted turn with the renderer. */
     m->cat_phase=(key>>12)%628/100.f;
-    float phase=sinf(golf_cat_patrol_angle(time,m->cat_phase));
-    m->cat=vec3_add(m->cat_center,vec3_scale(m->across,m->cat_span*phase));
+    golf_cat_pose_t pose=golf_cat_patrol_pose(time,m->cat_phase,m->cat_span,m->across);
+    m->cat=vec3_add(m->cat_center,vec3_scale(m->across,pose.offset));
 }
 // Seeded relocation runs once at field setup, shared by solo and authority.
 // Every sampled path retains its clearance, height and separation. Constrained

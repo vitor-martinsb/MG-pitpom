@@ -19,6 +19,12 @@ static inline vec3 golf_overview_position(vec3 min,vec3 max,float skyline,float 
     }
     return vec3_add(center,vec3_scale(back,distance));
 }
+/* A closer follow shot for every waiting participant, with a personal zoom. */
+static inline vec3 golf_spectator_position(vec3 min,vec3 max,float skyline,float aspect,vec3 focus,float zoom){
+    vec3 center=vec3_scale(vec3_add(min,max),.5f);
+    float distance=golf_clampf(vec3_distance(golf_overview_position(min,max,skyline,aspect),center)*.55f,7,12)*golf_clampf(zoom,.65f,2.25f);
+    return vec3_add(focus,vec3_scale(vec3_normalize(V3(.65f,.9f,1)),distance));
+}
 static inline float golf_overview_far_plane(vec3 min,vec3 max,float skyline,vec3 position){
     vec3 center=vec3_scale(vec3_add(min,max),.5f);
     max.y=fmaxf(max.y,skyline);

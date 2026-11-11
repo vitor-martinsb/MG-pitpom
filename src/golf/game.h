@@ -52,7 +52,9 @@ typedef struct golf_game {
 
     struct {
         bool auto_rotate, overview;
-        float zoom, skyline;
+        float zoom, spectator_zoom, skyline;
+        vec3 focus;
+        uint32_t follow_id;
         float angle, start_angle, start_angle_velocity, angle_velocity;
     } cam;
 

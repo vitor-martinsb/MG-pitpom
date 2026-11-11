@@ -4,7 +4,7 @@ import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
 import {visitMultiplayer,createLobby,lobbyTab,finishPresentation} from './navigation-fixture.mjs';
 import {freezePhysics} from './room-fixture.mjs';
-const patrolRate=Number(fs.readFileSync('../src/golf/cat_pose.h','utf8').match(/#define GOLF_CAT_PATROL_RATE ([\d.]+)f/)[1]);
+const turnSeconds=Number(fs.readFileSync('../src/golf/cat_pose.h','utf8').match(/#define GOLF_CAT_TURN_SECONDS ([\d.]+)f/)[1]);
 process.env.GOLF_HOLE_SECONDS='600';
 const app=createServer();let browser;
 try{
@@ -20,14 +20,14 @@ try{
  const camera=await page.evaluate(()=>JSON.parse(Module.ccall('golf_course_frame','string',[],[])).camera),ball=source.players[0].pos;
  let facing=[camera[0]-ball[0],0,camera[2]-ball[2]],len=Math.hypot(facing[0],facing[2]);facing=facing.map(n=>n/len);const right=[facing[2],0,-facing[0]],center=source.mascots.cat;
  const offset=(base,axis,n)=>base.map((v,i)=>v+axis[i]*n);
- fs.mkdirSync('../out/pet-outfits',{recursive:true});let lastHeading;
+ fs.mkdirSync('../out/pet-outfits',{recursive:true});const period=await page.evaluate(()=>GolfCourse.inspect().frame.catPeriod),travel=period*.5-turnSeconds;
  for(const [width,height]of [[1200,900],[390,844]]){
   await page.setViewportSize({width,height});await page.evaluate(value=>Module.ccall('golf_course_zoom','number',['number'],[value]),width<600?1.3:.65);
   let index=0;
   for(const kind of [1,2])for(const pose of ['rest','walk','reaction']){
-   const s=structuredClone(source),time=(2+index)*Math.PI/patrolRate;index++;
+   const s=structuredClone(source),time=(2+index)*period*.5+(pose==='rest'?travel+turnSeconds*.5:travel*.5),crossing=2+index;index++;
    s.time=time;s.mascots.thirdKind=kind;s.mascots.catPhase=0;s.mascots.catActive=s.mascots.catVisible=true;s.mascots.catPresence=1;s.mascots.dogActive=s.mascots.dogVisible=false;
-   s.mascots.cat=offset(center,right,-.57);s.mascots.slapTime=pose==='reaction'?time-.17:-100;
+   s.mascots.cat=offset(center,right,-.57);s.mascots.catCenter=offset(s.mascots.cat,s.mascots.catAcross,pose==='rest'?-(crossing%2?-1:1)*s.mascots.catSpan:0);s.mascots.slapTime=pose==='reaction'?time-.17:-100;
    s.players[0].pos=offset(center,facing,.30);s.players[0].pos[1]+=.12;s.players[0].vel=[0,0,0];s.players[0].moving=false;
    for(const a of s.mascots.wildlife){a.active=a.visible=a.kind===kind;a.presence=a.active?1:0;a.pos=offset(center,right,.57);a.forward=facing;a.clock=time;a.gait=pose==='rest'?0:1;a.stride=index*.8;a.speed=0;a.walking=pose==='walk';a.actionTime=pose==='reaction'?time-.17:-100;}
    room.send(host,{...s,type:'snapshot',full:true,hole:0,playStyle:'simultaneous',turn:0,turnOrder:[],remaining:500000});
@@ -35,7 +35,7 @@ try{
    await page.waitForTimeout(350);
    const f=await page.evaluate(()=>JSON.parse(Module.ccall('golf_course_frame','string',[],[])));
    assert.ok(f.actorVertices>1000&&f.actorVertices<40960);assert.equal(f.season.theme,true);
-   if(lastHeading&&pose!=='rest')assert.ok(f.catForward.reduce((n,x,i)=>n+x*lastHeading[i],0)<-.99,'Pompom turns with successive half crossings');lastHeading=f.catForward;
+   if(pose!=='rest')assert.ok(f.catForward.reduce((n,x,i)=>n+x*s.mascots.catAcross[i]*(crossing%2?-1:1),0)>.99,'Pompom faces the actual walking direction');
    await page.screenshot({path:`../out/pet-outfits/${kind===1?'luna':'frida'}-${pose}-${width}x${height}.png`});
   }
  }

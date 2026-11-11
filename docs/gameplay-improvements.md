@@ -14,11 +14,11 @@ O servidor publica `playStyle`, `turn` e `turnOrder` nos estados e snapshots exi
 
 Uma desconexão libera a vez imediatamente: o worker não simula bolas de jogadores desconectados, portanto aguardar essa bola parar bloquearia a sala. Reconexão conserva a identidade e a sequência de tacadas; o jogador retorna à ordem disponível, sem tomar a vez atual. O próximo campo reinicia a ordem. O relógio global, a tolerância de conclusão, as regras de limite de tacadas e a penalidade existente não são substituídos por outro sistema.
 
-No modo por turnos, quem aguarda vê o campo inteiro de uma câmera aérea fixa em perspectiva, elevada e inclinada cerca de 37°, enquadrada pelos limites e pela altura máxima da geometria. A câmera não acompanha bolas nem aceita arrasto/zoom durante a espera; os controles e o zoom pessoal voltam na própria vez. O espectador manual do modo simultâneo permanece disponível como antes.
+No modo por turnos, todos os espectadores (anfitrião e convidados) acompanham a bola do jogador da vez numa perspectiva elevada, mais próxima do campo. A identidade é resolvida pelo ID autoritativo, mesmo com o jogador local no primeiro índice do cliente. O enquadramento acompanha o movimento suavemente, reutiliza a proteção da câmera contra a geometria e mantém um zoom pessoal de espectador com botões, roda e restauração. O zoom da própria vez é separado e preservado.
 
 A mira é enviada pelo cliente ativo a no máximo 10 Hz e incluída nos snapshots existentes. O servidor valida turno, partida, campo, sequência, direção e força, sem alterar posição, velocidade ou tacadas. Os observadores reutilizam o mesmo construtor de trajetória refletida e as mesmas cinco setas; a interface mostra o nickname e a força em porcentagem. Cancelamento, tacada, desconexão, troca de turno/campo e expiração removem a prévia. A sequência de mira é independente da sequência de tacadas e reinicia na reconexão.
 
-A Pompom usa agora o ritmo compartilhado de 1,20 rad/s (antes 0,95), cerca de 26% mais rápido. A pose, os passos e a posição autoritativa continuam usando o mesmo relógio, inclusive no multijogador.
+A Pompom usa desaceleração suave, giro de 1,2 s com as patas apoiadas e passos proporcionais à distância, como a Frida. O percurso validado é preservado, com velocidade limitada a 0,55 m/s. Centro, eixo e extensão são enviados pelo servidor; posição e pose usam o mesmo relógio e parâmetros, evitando passos rápidos para um trajeto diferente no cliente.
 
 ## Tutorial
 
@@ -36,5 +36,5 @@ O botão Tutorial fica abaixo de Multijogador. Um diálogo com seis etapas expli
 
 - `tests/overview_test.c`: enquadramento dos oito cantos do campo em cinco proporções de tela, incluindo campos grandes.
 - `server/test/turns.test.ts`: autorização da mira, validação de força/direção, limite de frequência, expiração, cancelamento, tacada e reconexão sem consumir tacadas.
-- `server/test/gameplay-improvements.mjs`: dois clientes reais, arrasto por mouse/toque, cinco setas remotas, porcentagem de força, mudança de direção, câmera imóvel e retorno à própria vez. `--turns-only` permite repetir somente essa regressão; o CI continua executando também tutorial e limites de zoom.
+- `server/test/gameplay-improvements.mjs`: dois clientes reais, arrasto por mouse/toque, cinco setas remotas, porcentagem de força, mudança de direção, acompanhamento da bola por anfitrião e dois convidados, zoom de espectador e retorno à própria vez. `--turns-only` permite repetir somente essa regressão; o CI continua executando também tutorial e limites de zoom.
 - `server/test/pet-outfits.mjs`: usa o ritmo compartilhado da Pompom para verificar orientação e roupas em repouso, caminhada e reação, no desktop e no celular.

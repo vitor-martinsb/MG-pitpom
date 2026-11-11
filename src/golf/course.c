@@ -1,3 +1,5 @@
+#include "golf/cat_pose.h"
+#include "golf/online.h"
 #include "golf/game.h"
 #include "golf/golf.h"
 #include "golf/garden.h"
@@ -40,7 +42,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         int n=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g],\"color\":[%.4g,%.4g,%.4g],\"visible\":%s,\"hole\":%s,\"captured\":%s,\"firstComplete\":%s,\"strokes\":%d,\"slowShots\":%d,\"slowUntil\":%.5g,\"mudShots\":%d,\"mudFadeUntil\":%.5g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.5g,\"effectSerial\":%u,\"seasonSkin\":%d,\"seasonTrail\":%d,\"seasonColor\":[%.4g,%.4g,%.4g]}",i?",":"",p->id,p->ball.draw_pos.x,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z,golf_game_player_visible(p)?"true":"false",p->ball.is_in_hole?"true":"false",p->ball.captured?"true":"false",p->ball.first_shot_complete?"true":"false",p->stroke_count,p->ball.slow_shots,p->ball.slow_until,p->ball.mud_shots,p->ball.mud_fade_until,p->ball.capture_kind,p->ball.effect_kind,p->ball.effect_time,p->ball.effect_serial,p->season_skin,p->season_trail,golf_season_ball_color(p).x,golf_season_ball_color(p).y,golf_season_ball_color(p).z);
         if(n<0||(size_t)n>=sizeof(text)-(size_t)used-8)break;used+=n;
     }
-    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"zoom\":%.5g,\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",g->cam.zoom,m->wildlife.world,m->wildlife.stage,m->wildlife.course);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"zoom\":%.5g,\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",(g->cam.overview?g->cam.spectator_zoom:g->cam.zoom),m->wildlife.world,m->wildlife.stage,m->wildlife.course);
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         golf_wild_animal_t *a=&m->wildlife.animals[i];
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,(a->active&&i==m->third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
@@ -61,6 +63,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     vec3 flag=golf_garden_flag_point(.8f,1,golf_garden_flag_time()),cat_forward=golf_garden_cat_forward();
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"catForward\":[%.5g,%.5g,%.5g]",cat_forward.x,cat_forward.y,cat_forward.z);
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"overview\":%s,\"remoteAimPower\":%.5g,\"remoteAimArrows\":%d",g->cam.overview?"true":"false",g->remote_aim_line.power,g->remote_aim_line.num_arrows);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"cameraPlayer\":%u,\"cameraFocus\":[%.5g,%.5g,%.5g],\"catSpan\":%.9g,\"catPeriod\":%.9g",golf_online_camera_player()->id,g->cam.focus.x,g->cam.focus.y,g->cam.focus.z,m->cat_span,golf_cat_patrol_period(m->cat_span));
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"surfaceGroups\":%u,\"landscapeGap\":%.5g",golf_draw_surface_groups(),golf_garden_landscape_gap());
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",m->cat_present?"true":"false",m->dog_present?"true":"false",m->third_kind,m->cat_presence,m->dog_presence,m->cat_phase,golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
     for(int i=0;i<g->physics.dynamic_bvh.node_infos.length&&i<32;i++) {
@@ -74,6 +77,7 @@ EMSCRIPTEN_KEEPALIVE void golf_course_skip(void) {golf_game_skip_presentation();
 /* Camera distance is local presentation only; never part of ball simulation. */
 EMSCRIPTEN_KEEPALIVE float golf_course_zoom(float distance) {
     golf_game_t *g=golf_game_get();
-    if(isfinite(distance)&&distance>0)g->cam.zoom=golf_clampf(distance,.65f,2.25f);
-    return g->cam.zoom;
+    float *zoom=golf_online_overview()?&g->cam.spectator_zoom:&g->cam.zoom;
+    if(isfinite(distance)&&distance>0)*zoom=golf_clampf(distance,.65f,2.25f);
+    return *zoom;
 }

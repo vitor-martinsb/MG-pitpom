@@ -75,7 +75,11 @@ bool golf_online_can_shoot(void) {
     return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
 }
 golf_player_t *golf_online_camera_player(void) {
-    if(online.turns&&online.playing)return golf_game_get_local_player();
+    if(online.turns&&online.playing){
+        golf_player_t *current=golf_game_get_player(online.turn_id);
+        if(current&&current->connected)return current;
+        return golf_game_get_local_player();
+    }
     golf_player_t *p=golf_game_get_player(online.camera_id);
     if (p && p->connected) return p;
     return golf_game_get_local_player();
@@ -154,6 +158,11 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             game->mechanics.cat_presence=json_object_has_value(mascots,"catPresence")?(float)json_object_get_number(mascots,"catPresence"):1;
             game->mechanics.dog_presence=json_object_has_value(mascots,"dogPresence")?(float)json_object_get_number(mascots,"dogPresence"):1;
             game->mechanics.cat_phase=(float)json_object_get_number(mascots,"catPhase");
+            if(json_object_has_value(mascots,"catSpan")){
+                game->mechanics.cat_span=(float)json_object_get_number(mascots,"catSpan");
+                game->mechanics.cat_center=golf_json_object_get_vec3(mascots,"catCenter");
+                game->mechanics.across=golf_json_object_get_vec3(mascots,"catAcross");
+            }
             game->mechanics.third_kind=(int)json_object_get_number(mascots,"thirdKind");
             JSON_Array *animals=json_object_get_array(mascots,"wildlife");
             for(int k=0;k<GOLF_WILDLIFE_COUNT;k++) {

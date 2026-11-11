@@ -377,7 +377,8 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
     vec4 white=paint(.96f,.91f,.79f,0),orange=paint(.83f,.46f,.20f,0),black=paint(.14f,.17f,.16f,0),pink=paint(.88f,.51f,.46f,0);
     vec4 coat=cat?orange:white;
     float awake=cat?1:golf_clampf(event_age/.22f,0,1)*(1-golf_clampf((event_age-1.0f)/.5f,0,1));
-    float breath=.012f*sinf(golf_garden_flag_time()*2.2f),height=cat?.34f:.22f+awake*.19f;
+    float bob=cat?.015f*fabsf(sinf(phase))*gait:0;
+    float breath=.012f*sinf(golf_garden_flag_time()*2.2f),height=cat?.34f+bob:.22f+awake*.19f;
     vec3 torso_size=cat?V3(.22f,.22f,.40f):V3(.30f,.22f,.49f);
     oval(mesh,V3(0,height+breath,0),torso_size,coat,4,9);
     if(!cat){oval(mesh,V3(-.19f,height+.07f,-.14f),V3(.13f,.14f,.22f),black,3,7);oval(mesh,V3(.16f,height+.09f,-.24f),V3(.15f,.14f,.19f),black,3,7);}
@@ -392,7 +393,7 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
         branch(mesh,V3(x,height-.07f,z),V3(x,paw_y+fabsf(step),z+step),cat?.06f:.085f,cat?.045f:.06f,white);
         oval(mesh,V3(x,paw_y+fabsf(step),z+step),V3(cat?.065f:.09f,.055f,.10f),white,2,6);
     }
-    float head_y=cat?.64f:.42f+awake*.29f;
+    float head_y=cat?.64f+bob:.42f+awake*.29f;
     oval(mesh,V3(0,head_y,.32f),V3(cat?.25f:.27f,cat?.22f:.245f,.24f),cat?orange:black,4,9);
     if(cat) {
         for(int side=-1;side<=1;side+=2){
@@ -770,7 +771,7 @@ void golf_garden_draw_feedback(float time) {
     if(golf_get()->state==GOLF_STATE_IN_GAME&&game->mechanics.enabled){
         golf_cat_pose_t pose=golf_cat_patrol_pose(time,game->mechanics.cat_phase,game->mechanics.cat_span,game->mechanics.across);
         garden.cat_forward=pose.forward;
-        if(game->mechanics.cat_valid&&game->mechanics.cat_present)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,pose.forward,pose.stride,pose.gait);
+        if(game->mechanics.cat_valid&&game->mechanics.cat_present)animal(&actor,vec3_add(game->mechanics.cat_center,vec3_scale(game->mechanics.across,pose.offset)),true,time,time-game->mechanics.cat_slap_time,pose.forward,pose.stride,pose.gait);
         if(game->mechanics.dog_valid&&game->mechanics.dog_present)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game),0,0);
         for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(game->mechanics.wildlife.animals[kind].active&&game->mechanics.wildlife.animals[kind].present){
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);

@@ -21,5 +21,12 @@ int main(void){
             assert(z>.1f&&z<far);assert(fabsf(y/z)<tanf(33*MF_PI/180));assert(fabsf(x/z)<aspects[a]*tanf(33*MF_PI/180));
         }
     }
+    vec3 min=V3(-3,0,-8),max=V3(3,2,8),ball=V3(1,.2f,-2),next=V3(-1,.5f,4);
+    vec3 close=golf_spectator_position(min,max,3,.46f,ball,1);
+    vec3 moved=golf_spectator_position(min,max,3,.46f,next,1);
+    assert(vec3_distance(vec3_sub(moved,close),vec3_sub(next,ball))<.00001f);
+    vec3 zoomed=golf_spectator_position(min,max,3,.46f,ball,.65f);
+    assert(vec3_distance(zoomed,ball)<vec3_distance(close,ball));
+    assert(vec3_distance(close,ball)<=12.001f);
     return 0;
 }

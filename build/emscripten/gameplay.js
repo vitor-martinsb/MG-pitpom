@@ -21,7 +21,7 @@
   window.addEventListener('courseframe',e=>{
     frame=e.detail;
     const showGame=!!(frame.active&&!frame.intro&&GolfHome.route==='game'&&['home','connect','lobby','loading','solo-loading','level-selection','scores','chat-panel','adventure-modal'].every(id=>$(id).hidden)&&!$('music-controls').open);
-    zoom.hidden=!showGame||!!frame.overview;
+    zoom.hidden=!showGame;
     if(!zoom.hidden){distance=frame.zoom||1;paintZoom();}
     const state=GolfOnline.turnState();turn.hidden=!showGame||state.style!=='turns'||state.phase!=='playing';
     const preview=state.aim;
