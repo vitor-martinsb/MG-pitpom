@@ -14,7 +14,7 @@ RUN cmake -S . -B out/web -G Ninja \
     && cmake --build out/web --target golf --parallel 2 \
     && mkdir -p /ci/out/web \
     && cp out/web/golf.html out/web/golf.js out/web/golf.wasm out/web/golf.wasm.gz \
-       out/web/multiplayer.js out/web/multiplayer.css out/web/course.js \
+       out/web/multiplayer.js out/web/multiplayer.css out/web/course.js out/web/gameplay.js \
        out/web/adventure.js out/web/home.js out/web/menu-clock.js out/web/menu-scene.js \
        out/web/music.js out/web/lofi.js out/web/seasonal.js out/web/seasonal.css \
        out/web/i18n.js out/web/i18n-data.js \

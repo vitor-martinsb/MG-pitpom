@@ -166,7 +166,8 @@ int main(int argc,char **argv) {
             assert(vec3_distance(resident.cat,resident.dog)>=1.3f);
             golf_wild_animal_t *pet=&resident.wildlife.animals[selected];
             for(int sample=0;sample<=20;sample++){
-                vec3 pos=vec3_add(pet->a,vec3_scale(vec3_sub(pet->b,pet->a),sample/20.f));
+                vec3 pos=golf_wildlife_position(pet,sample/20.f);
+                assert(golf_wildlife_safe(&resident.wildlife,pos,.44f));
                 assert(vec3_distance(resident.cat,pos)>=1.19f);
                 assert(vec3_distance(resident.dog,pos)>=1.24f);
             }

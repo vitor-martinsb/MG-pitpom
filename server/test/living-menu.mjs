@@ -28,7 +28,7 @@ try{
     const rotor=await page.locator('[data-motion=mill]').evaluate(e=>e.getAnimations()[0].currentTime);
     await page.locator('#continue-home').click();await page.locator('#main-menu').waitFor({state:'visible'});
     assert.ok(await page.locator('[data-motion=mill]').evaluate(e=>e.getAnimations()[0].currentTime)>rotor,'splash to menu does not restart the mill');
-    assert.equal(await page.locator('#main-menu button').count(),3);
+    assert.equal(await page.locator('#main-menu button').count(),4);
     // Exact palette handover without recreating the scene or animations.
     await page.evaluate(()=>{window.__menuTime=Date.parse('2026-10-23T18:59:59-03:00');});await page.waitForFunction(()=>document.getElementById('home').dataset.period==='sunset');
     const start=await page.locator('#home').evaluate(e=>e.style.getPropertyValue('--menu-surface'));

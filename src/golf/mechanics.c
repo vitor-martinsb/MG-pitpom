@@ -76,7 +76,7 @@ void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh
     if(vec3_length(local)>.1f)m->direction=vec3_normalize(local);
     m->across=vec3_cross(m->direction,V3(0,1,0));
     m->cat_span=0;
-    for(float span=.05f;span<=1.2f;span+=.05f) {
+    for(float span=.05f;span<=1.55f;span+=.05f) {
         vec3 a,b;
         if(!dynamic_clear(vec3_add(m->cat_center,vec3_scale(m->across,span)),.72f)||!dynamic_clear(vec3_sub(m->cat_center,vec3_scale(m->across,span)),.72f)||
             !golf_nav_segment(bvh,m->cat_center,vec3_add(m->cat_center,vec3_scale(m->across,span)),.72f)||
@@ -87,6 +87,22 @@ void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh
         m->cat_span=span;
     }
     golf_wildlife_init(&m->wildlife,level,bvh,&navigation,m->start,m->hole,m->cat,m->dog,moving_zones,moving_zone_count);
+    // The wider crossing must not overlap the stationary dog or a companion.
+    float wanted_span=m->cat_span;
+    for(float span=0;span<=wanted_span+.001f;span+=.04f){
+        bool clear=true;
+        for(int side=-1;side<=1;side+=2){
+            vec3 p=vec3_add(m->cat_center,vec3_scale(m->across,span*side));
+            if(vec3_distance(p,m->dog)<1.35f)clear=false;
+            for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++){
+                const golf_wild_animal_t *pet=&m->wildlife.animals[kind];
+                if(kind!=m->third_kind||!pet->active)continue;
+                int steps=(int)ceilf(vec3_distance(pet->a,pet->b)/.04f);if(steps<1)steps=1;
+                for(int n=0;n<=steps;n++)if(vec3_distance(p,golf_wildlife_position(pet,n/(float)steps))<1.25f)clear=false;
+            }
+        }
+        if(!clear){m->cat_span=fmaxf(0,span-.04f);break;}
+    }
     m->resident_base=(golf_resident_layout_t){.cat=m->cat_center,.dog=m->dog,.direction=m->direction,.across=m->across,.span=m->cat_span};
     memcpy(m->resident_base.animals,m->wildlife.animals,sizeof(m->resident_base.animals));
     golf_mechanics_animate(m,0);
@@ -102,7 +118,7 @@ void golf_mechanics_animate(golf_mechanics_t *m,float time) {
     }
     /* Sine easing has a brief, gentle pause at each end of the crossing. */
     m->cat_phase=(key>>12)%628/100.f;
-    float phase=sinf(time*.75f+m->cat_phase);
+    float phase=sinf(time*.95f+m->cat_phase);
     m->cat=vec3_add(m->cat_center,vec3_scale(m->across,m->cat_span*phase));
 }
 // Seeded relocation runs once at field setup, shared by solo and authority.
@@ -130,7 +146,7 @@ static void resident_shuffle(golf_mechanics_t *m,uint32_t key){
                 float t=sample/(float)samples;vec3 p;
                 if(actor==0)p=vec3_add(m->cat_center,vec3_scale(m->across,(t*2-1)*m->cat_span));
                 else if(actor==1)p=m->dog;
-                else {golf_wild_animal_t *a=&m->wildlife.animals[actor-2];p=vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),t));}
+                else {golf_wild_animal_t *a=&m->wildlife.animals[actor-2];p=golf_wildlife_position(a,t);}
                 p=vec3_add(p,delta);
                 if(!resident_clear(m,p,actor<2?.72f:.48f)||!golf_wildlife_safe(&m->wildlife,p,.44f))safe=false;
                 if(actor==0){vec3 hit;if(!golf_nav_floor(m->wildlife.floor,p,&hit,0)||fabsf(hit.y-p.y)>.12f)safe=false;}
@@ -138,7 +154,8 @@ static void resident_shuffle(golf_mechanics_t *m,uint32_t key){
                 if(actor!=1&&vec3_distance(p,m->dog)<1.45f)safe=false;
                 if(actor<2)for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
                     golf_wild_animal_t *a=&m->wildlife.animals[k];
-                    for(int n=0;n<=8;n++)if(k==m->third_kind&&a->active&&vec3_distance(p,vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),n/8.f)))<1.45f)safe=false;
+                    int steps=(int)ceilf(vec3_distance(a->a,a->b)/.04f);if(steps<1)steps=1;
+                    for(int n=0;n<=steps;n++)if(k==m->third_kind&&a->active&&vec3_distance(p,golf_wildlife_position(a,n/(float)steps))<1.45f)safe=false;
                 }
                 for(int portal=0;portal<m->wildlife.portal_count;portal++)if(vec3_distance(p,m->wildlife.portals[portal].pos)<1.6f)safe=false;
             }
@@ -168,7 +185,7 @@ void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
             vec3 q=vec3_add(m->cat_center,vec3_scale(m->across,candidate*side));
             if(vec3_distance(q,m->dog)<1.35f)clear=false;
             for(int sample=0;sample<=12;sample++){
-                vec3 p=vec3_add(pet->a,vec3_scale(vec3_sub(pet->b,pet->a),sample/12.f));
+                vec3 p=golf_wildlife_position(pet,sample/12.f);
                 if(vec3_distance(q,p)<1.25f)clear=false;
             }
         }
@@ -176,7 +193,7 @@ void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
     }
     for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
         m->wildlife.animals[k].clock=((key>>(k*5))%100)/10.f;
-        m->wildlife.animals[k].patrol_period=5.5f+((key>>(k*7))%70)/10.f;
+        m->wildlife.animals[k].patrol_period=4.8f+((key>>(k*7))%45)/10.f;
     }
     golf_wildlife_tick(&m->wildlife,NULL,0,0,m->seed,false);
     golf_mechanics_animate(m,0);

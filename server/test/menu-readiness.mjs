@@ -17,7 +17,7 @@ try {
   function sample(){
    const buttons=[...document.querySelectorAll('#main-menu button')];
    const visible=buttons.filter(b=>b.getClientRects().length);
-   if(visible.length&& (visible.length!==3||visible.some(b=>b.disabled)))window.partialMenus.push(visible.length);
+   if(visible.length&& (visible.length!==4||visible.some(b=>b.disabled)))window.partialMenus.push(visible.length);
    requestAnimationFrame(sample);
   }requestAnimationFrame(sample);
  });

@@ -17,6 +17,10 @@ bool golf_wildlife_safe(const golf_wildlife_t *w,vec3 p,float radius) {
     }
     return true;
 }
+vec3 golf_wildlife_position(const golf_wild_animal_t *a,float t){
+    if(vec3_distance(a->a,a->b)<.001f)return a->a;
+    return vec3_add(vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),t)),vec3_scale(a->bend,sinf(2*MF_PI*t)));
+}
 static bool separated(const golf_wildlife_t *w,vec3 p,int until,vec3 cat,vec3 dog) {
     float reserve=until<0?1.25f:1.6f;
     if(vec3_distance(p,w->spawn)<(until<0?1.25f:2)||vec3_distance(p,w->hole)<1.5f||vec3_distance(p,cat)<reserve||vec3_distance(p,dog)<reserve)return false;
@@ -78,23 +82,24 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
            from both permanent mascots and clearance from the tee and cup. */
         for(int pass=0;pass<2&&best<0;pass++)for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(p,wanted[kind]);
-            if(!nav->nodes[j].reachable||d>=score||!separated(w,p,pass?-1:kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||((w->course-1)%4&&!golf_wildlife_safe(w,p,.44f)))continue;
+            if(!nav->nodes[j].reachable||d>=score||!separated(w,p,pass?-1:kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||!golf_wildlife_safe(w,p,.44f))continue;
             score=d;best=j;shared=pass!=0;
         }
         if(best<0)continue;
         golf_wild_animal_t *a=&w->animals[kind];a->active=a->present=true;a->a=a->b=a->pos=nav->nodes[best].pos;
         a->forward=V3(0,0,-1);a->action_time=-100;a->clock=0;
         a->presence=1;a->patrol_period=8+kind*1.7f;
-        // A short, fully sampled corridor avoids walls, water and moving sweeps.
+        // Prefer a longer validated corridor; narrow fields retain their safe fallback.
+        float route_length=0;
         for(int j=0;j<nav->count;j++) {
             vec3 p=nav->nodes[j].pos;float d=vec3_distance(a->a,p);
-            if(!nav->nodes[j].reachable||d<.7f||d>1.8f||!separated(w,p,shared?-1:kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||!golf_nav_segment(floor,a->a,p,.48f))continue;
-            int samples=(w->course-1)%4?(int)ceilf(d/.04f):8;
+            if(!nav->nodes[j].reachable||d<.7f||d>3.2f||d<=route_length||!separated(w,p,shared?-1:kind,cat,dog)||!golf_wildlife_safe(w,p,.48f)||!golf_nav_segment(floor,a->a,p,.48f))continue;
+            int samples=(int)ceilf(d/.04f);
             bool safe=true;for(int k=0;k<=samples;k++){
                 vec3 q=vec3_add(a->a,vec3_scale(vec3_sub(p,a->a),k/(float)samples));
-                if(!golf_wildlife_safe(w,q,.48f)||((w->course-1)%4&&!golf_wildlife_safe(w,q,.44f))||(kind==GOLF_JUJU&&!separated(w,q,-1,cat,dog)))safe=false;
+                if(!golf_wildlife_safe(w,q,.48f)||!golf_wildlife_safe(w,q,.44f)||!separated(w,q,shared?-1:kind,cat,dog))safe=false;
             }
-            if(safe){a->b=p;break;}
+            if(safe){a->b=p;route_length=d;}
         }
         // Narrow fields can have no second nav node at least 70 cm away.
         // Find a shorter sampled corridor without relaxing any clearance.
@@ -116,6 +121,18 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
               }
             }
         }
+        // A small S-curve varies direction without adding motion to stationary
+        // companions. Every sample and its clearance is validated at setup.
+        vec3 axis=vec3_sub(a->b,a->a);axis.y=0;float length=vec3_length(axis);
+        if(length>.7f)for(float amplitude=fminf(.28f,length*.10f);amplitude>.05f;amplitude*=.5f){
+            a->bend=vec3_scale(V3(-axis.z,0,axis.x),amplitude/length);
+            bool safe=true;int samples=(int)ceilf(length/.035f);
+            for(int k=0;k<=samples;k++){
+                vec3 p=golf_wildlife_position(a,k/(float)samples);
+                if(!golf_wildlife_safe(w,p,.48f)||!golf_wildlife_safe(w,p,.44f)||!separated(w,p,shared?-1:kind,cat,dog)){safe=false;break;}
+            }
+            if(safe)break;a->bend=V3(0,0,0);
+        }
     }
 }
 // One shared effect path for the cat and her trail; duration is personal shots.
@@ -136,23 +153,30 @@ static void animate(golf_wildlife_t *w,float time) {
         golf_wild_animal_t *a=&w->animals[kind];if(!a->active)continue;
         float age=time-a->action_time;
         if(age>=0&&age<1.1f){a->walking=false;a->speed=0;a->gait*=expf(-dt*12);continue;}
-        a->clock+=dt;float period=a->patrol_period>0?a->patrol_period:8+kind*1.7f,p=fmodf(a->clock,period)/period;
-        float t=p<.4f?p/.4f:p<.5f?1:p<.9f?1-(p-.5f)/.4f:0;
+        float old_clock=a->clock;a->clock+=dt;float period=a->patrol_period>0?a->patrol_period:8+kind*1.7f,p=fmodf(a->clock,period)/period;
+        float t=p<.46f?p/.46f:p<.5f?1:p<.96f?1-(p-.5f)/.46f:0;
         t=t*t*(3-2*t);vec3 old=a->pos;
-        a->pos=vec3_add(a->a,vec3_scale(vec3_sub(a->b,a->a),t));
+        a->pos=golf_wildlife_position(a,t);
         vec3 hit;if(golf_nav_floor(w->floor,a->pos,&hit,0))a->pos.y=hit.y;
+        // Keep actual poses safe at terrain seams as well as setup samples.
+        // If a bend grazes a ledge, use the already validated straight route.
+        if(!golf_wildlife_safe(w,a->pos,.44f)){
+            a->bend=V3(0,0,0);a->pos=golf_wildlife_position(a,t);
+            if(golf_nav_floor(w->floor,a->pos,&hit,0))a->pos.y=hit.y;
+            if(!golf_wildlife_safe(w,a->pos,.44f)){a->pos=old;a->clock=dt>0?old_clock:0;}
+        }
         vec3 velocity=vec3_sub(a->pos,old);velocity.y=0;a->walking=dt>0&&vec3_length(velocity)>.00001f;
         float travelled=dt>0?vec3_length(velocity):0;a->speed=dt>0?travelled/dt:0;
         a->stride+=travelled*(2*MF_PI/.42f);a->gait+=(golf_clampf(a->speed/.18f,0,1)-a->gait)*(1-expf(-dt*14));
         vec3 heading=a->walking?vec3_normalize(velocity):a->forward;
         if(a->walking){
-            if(kind==GOLF_JUJU){
+            {
                 // Ease turns at the ends of the patrol instead of snapping the
                 // body and curled tail through 180 degrees in a single tick.
                 float yaw=atan2f(a->forward.x,a->forward.z),target=atan2f(heading.x,heading.z);
                 float delta=atan2f(sinf(target-yaw),cosf(target-yaw));
                 yaw+=golf_clampf(delta,-4*dt,4*dt);a->forward=V3(sinf(yaw),0,cosf(yaw));
-            }else a->forward=heading;
+            }
         }
         // Distance-based steps follow the same safe corridor and gait on every client.
         if(kind==GOLF_JUJU&&a->present&&a->walking){

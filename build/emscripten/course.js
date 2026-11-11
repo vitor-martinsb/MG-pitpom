@@ -73,6 +73,7 @@
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;
     frame=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));
+    window.dispatchEvent(new CustomEvent('courseframe',{detail:frame}));
     if(frame.active&&frame.world>0&&$('connect').hidden&&$('lobby').hidden)window.GolfMusic?.world(frame.world);
     if(effectLevel!==frame.level){effectLevel=frame.level;heard.clear();}
     GolfAdventure.select(JSON.parse(Module.ccall('golf_ui_level_selection','string',[],[])));

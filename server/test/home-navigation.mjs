@@ -24,7 +24,7 @@ try{
     await page.screenshot({path:`../out/home-navigation/welcome-${name}.png`});
     if(touch)await page.locator('#continue-home').tap();else await page.keyboard.press('Enter');
     await page.locator('#main-menu').waitFor({state:'visible'});
-    assert.equal(await page.locator('#main-menu button').count(),3);assert.equal(await page.locator('#home .adventure-map').count(),0);
+    assert.equal(await page.locator('#main-menu button').count(),4);assert.equal(await page.locator('#home .adventure-map').count(),0);
     await page.waitForFunction(()=>!document.getElementById('offline').disabled);
     await page.waitForTimeout(400);await page.screenshot({path:`../out/home-navigation/menu-${name}.png`});
     await page.locator('#exit-game').click();assert.equal(await page.locator('#continue-home').isVisible(),true);

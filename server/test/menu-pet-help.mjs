@@ -15,7 +15,7 @@ try{
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto(url);await page.locator('#continue-home').click({timeout:90000});await page.locator('#main-menu').waitFor({state:'visible'});
     assert.equal(await page.locator('[data-pet-help]').count(),7);
-    assert.equal(await page.locator('#main-menu button').count(),3);
+    assert.equal(await page.locator('#main-menu button').count(),4);
     const tooltip=page.locator('#menu-pet-tooltip');assert.equal(await tooltip.isHidden(),true);
     for(const language of ['en','pt-BR','es']){
       await page.evaluate(language=>GolfI18n.setLanguage(language),language);

@@ -45,6 +45,7 @@ typedef struct golf_game {
 
     struct {
         bool auto_rotate;
+        float zoom;
         float angle, start_angle, start_angle_velocity, angle_velocity;
     } cam;
 

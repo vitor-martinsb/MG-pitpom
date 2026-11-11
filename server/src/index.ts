@@ -69,8 +69,8 @@ export function createServer() {
               room=rooms.get(String(message.code).toUpperCase()); if (!room) throw Error('Sala não encontrada.');
               member=message.type==='reconnect' ? await room.reconnect(socket,message.token) : room.join(socket,message.nickname,message.color,message.avatar,message);
             } else throw Error('Crie ou entre em uma sala.');
-          } else if (message.type==='start') await room!.start(member,message.holes,message.mode ?? 'classic');
-          else if(message.type==='configure')room!.configure(member,message.holes,message.mode);
+          } else if (message.type==='start') await room!.start(member,message.holes,message.mode ?? 'classic',message.playStyle);
+          else if(message.type==='configure')room!.configure(member,message.holes,message.mode,message.playStyle);
           else if(message.type==='season')room!.configureSeason(member,message.settings);
           else if(message.type==='profile')room!.updateProfile(member,message);
           else if(message.type==='map-pool')room!.configurePool(member,message.kind,message.ids);

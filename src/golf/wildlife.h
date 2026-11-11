@@ -14,7 +14,7 @@
 #define GOLF_MUD_PRINT_CLEARANCE .20f
 typedef struct golf_wild_animal {
     bool active, walking, present;
-    vec3 a,b,pos,forward;
+    vec3 a,b,pos,forward,bend;
     float clock,action_time,stride,speed,gait,presence,patrol_period;
     int action;
 } golf_wild_animal_t;
@@ -39,6 +39,7 @@ typedef struct golf_wildlife {
 } golf_wildlife_t;
 void golf_wildlife_init(golf_wildlife_t *,golf_level_t *,golf_bvh_t *,const golf_navigation_t *,vec3,vec3,vec3,vec3,const golf_bvh_aabb_t *,int);
 void golf_wildlife_tick(golf_wildlife_t *,golf_player_t *,int,float,uint32_t,bool);
+vec3 golf_wildlife_position(const golf_wild_animal_t *,float);
 bool golf_wildlife_safe(const golf_wildlife_t *,vec3,float);
 vec3 golf_wildlife_wind(const golf_wildlife_t *,vec3,float);
 float golf_wind_gust(const golf_wind_zone_t *,float);

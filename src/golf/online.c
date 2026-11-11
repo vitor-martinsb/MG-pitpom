@@ -26,9 +26,9 @@ static void online_preview(void) {}
 #endif
 
 static struct {
-    bool active, playing, shot_pending, loading, has_snapshot, awaiting_ready, impact, returning_to_menu;
+    bool active, playing, turns, shot_pending, loading, has_snapshot, awaiting_ready, impact, returning_to_menu;
     int requested_level, hole;
-    uint32_t local_id, camera_id;
+    uint32_t local_id, camera_id, turn_id;
     float age, interval, time;
     vec3 from[GOLF_MAX_PLAYERS], target[GOLF_MAX_PLAYERS];
 } online;
@@ -39,7 +39,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_online_diagnostics(void) {
     golf_game_t *game=golf_game_get();
     golf_player_t *local=golf_game_get_local_player();
     vec2 screen=golf_graphics_world_to_screen(local->ball.draw_pos);
-    int used=snprintf(buffer,sizeof(buffer),"{\"active\":%s,\"state\":%d,\"local\":%u,\"touch\":%s,\"cameraAngle\":%.9g,\"aimPower\":%.9g,\"aimArrows\":%d,\"screen\":[%.9g,%.9g],\"players\":[",online.active?"true":"false",game->state,game->local_player_id,golf_inputs_get()->is_touch?"true":"false",game->cam.angle,game->aim_line.power,game->aim_line.num_arrows,screen.x,screen.y);
+    int used=snprintf(buffer,sizeof(buffer),"{\"active\":%s,\"state\":%d,\"local\":%u,\"touch\":%s,\"cameraAngle\":%.9g,\"aimPower\":%.9g,\"aimArrows\":%d,\"canShoot\":%s,\"screen\":[%.9g,%.9g],\"players\":[",online.active?"true":"false",game->state,game->local_player_id,golf_inputs_get()->is_touch?"true":"false",game->cam.angle,game->aim_line.power,game->aim_line.num_arrows,golf_online_can_shoot()?"true":"false",screen.x,screen.y);
     for(int i=0;i<game->player_count;i++) {
         golf_player_t *p=&game->players[i];
         int n=snprintf(buffer+used,sizeof(buffer)-(size_t)used,"%s[%u,%d,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g]",i?",":"",p->id,p->connected,p->ball.pos.x,p->ball.pos.y,p->ball.pos.z,p->ball.draw_pos.x,p->ball.draw_pos.y,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z);
@@ -54,7 +54,7 @@ bool golf_online_active(void) { return online.active; }
 bool golf_online_input_blocked(void) { return online_blocked()!=0; }
 bool golf_online_can_shoot(void) {
     golf_player_t *p=golf_game_get_local_player();
-    return online.active && online.playing && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
+    return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
 }
 golf_player_t *golf_online_camera_player(void) {
     golf_player_t *p=golf_game_get_player(online.camera_id);
@@ -75,6 +75,9 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
     const char *type=json_object_get_string(o,"type");
     golf_game_t *game=golf_game_get();
     if (!type) {json_value_free(value);return;}
+    if(!strcmp(type,"room")||!strcmp(type,"snapshot")){
+        const char *style=json_object_get_string(o,"playStyle");online.turns=style&&!strcmp(style,"turns");online.turn_id=(uint32_t)json_object_get_number(o,"turn");
+    }
     if (!strcmp(type,"welcome")) {
         online.returning_to_menu=false;
         online.active=true; online.local_id=(uint32_t)json_object_get_number(o,"id");

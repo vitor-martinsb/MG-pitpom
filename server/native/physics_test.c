@@ -107,8 +107,38 @@ static void resting_cache(void){
     golf_physics_tick_player(&w,&p,1.f/120);assert(!p.ball.resting_static);
     vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);vec_deinit(&moving.faces);vec_deinit(&moving.nodes);
 }
+/* A rolling ball must accelerate from rest down real triangle contacts.
+   Mirror the ramp and duplicate its face to cover direction and mesh seams. */
+static float ramp_roll(float degrees,int faces,bool shot){
+    float angle=degrees*MF_PI/180.f,slope=tanf(angle);
+    golf_level_t level={0};golf_entity_t floor={0};floor.type=GEO_ENTITY;floor.parent_idx=-1;
+    golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);
+    for(int i=0;i<faces;i++){
+        golf_bvh_face_t f={0};f.level=&level;f.entity=&floor;
+        f.a=V3(-30,30*slope,-30);f.b=V3(0,0,30);f.c=V3(30,-30*slope,-30);
+        f.friction=.3f;f.vel_scale=1;vec_push(&fixed.faces,f);
+    }
+    golf_bvh_node_t leaf={0};leaf.is_leaf=true;leaf.aabb=(golf_bvh_aabb_t){V3(-30,-40,-30),V3(30,40,30)};leaf.leaf_node_info.face_count=faces;vec_push(&fixed.nodes,leaf);fixed.parent=0;
+    golf_config_t config={0};golf_physics_world_t w={0};w.level=&level;w.config=&config;w.static_bvh=&fixed;w.dynamic_bvh=&moving;w.multiplayer=true;
+    golf_player_t p;golf_player_init(&p,1,"Ramp",V4(1,1,1,1),0);golf_player_start_level(&p,V3(sinf(angle)*GOLF_BALL_RADIUS*.99f,cosf(angle)*GOLF_BALL_RADIUS*.99f,0));
+    if(shot){p.ball.is_moving=true;p.ball.vel=V3(cosf(angle)*.05f,-sinf(angle)*.05f,0);}
+    for(int tick=0;tick<240;tick++){w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);}
+    float speed=vec3_length(p.ball.vel);
+    if(fabsf(degrees)>1){assert(p.ball.is_moving&&!p.ball.resting_static);assert(p.ball.pos.x*degrees>0);assert(p.ball.pos.y<cosf(angle)*GOLF_BALL_RADIUS*.99f-.03f);assert(speed>.3f&&speed<11);}
+    else assert(!p.ball.is_moving&&fabsf(p.ball.pos.x-sinf(angle)*GOLF_BALL_RADIUS*.99f)<.001f);
+    vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);return speed;
+}
+static void slopes(void){
+    ramp_roll(0,1,false);ramp_roll(1,1,false);ramp_roll(-1,1,false);
+    for(int direction=-1;direction<=1;direction+=2)for(int angle=5;angle<=35;angle+=10){
+        float normal=ramp_roll(angle*direction,1,false),duplicate=ramp_roll(angle*direction,2,false),slow=ramp_roll(angle*direction,1,true);
+        assert(fabsf(normal-duplicate)<.03f);assert(slow>.3f);
+    }
+    puts("Ramps: 5/15/25/35 degree mirrored descents accelerate from rest and tiny shots; flat rest and duplicate-face invariance passed.");
+}
 int main(int argc,char **argv) {
     headless_config_load();
+    slopes();
     resting_cache();
     currents();
     floating_current();

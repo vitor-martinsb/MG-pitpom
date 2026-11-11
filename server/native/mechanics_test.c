@@ -20,7 +20,7 @@ int main(int argc,char **argv) {
     golf_physics_build_world(&world,false);
     golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);m.enabled=true;
     assert(m.cat_valid&&m.dog_valid);
-    assert(m.cat_span>=.1f&&m.cat_span<=1.25f);
+    assert(m.cat_span>=.1f&&m.cat_span<=1.6f);
     assert(vec3_distance(m.start,m.cat_center)>1.4f&&vec3_distance(m.hole,m.dog)>1.4f);
     for(int animal=0;animal<2;animal++) {
         vec3 p=animal?m.dog:m.cat_center;
@@ -33,7 +33,7 @@ int main(int argc,char **argv) {
         vec3 p=vec3_add(m.cat_center,vec3_scale(m.across,m.cat_span*i/10.f)),floor;
         assert(golf_nav_floor(&fixed,p,&floor,.72f));assert(fabsf(floor.y-p.y)<.12f);
     }
-    golf_mechanics_animate(&m,2);vec3 a=m.cat;golf_mechanics_animate(&m,6);assert(vec3_distance(a,m.cat)>.05f);
+    golf_mechanics_animate(&m,0);vec3 a=m.cat;float travelled=0;for(int step=1;step<=80;step++){golf_mechanics_animate(&m,step*.1f);travelled+=vec3_distance(a,m.cat);a=m.cat;}assert(travelled>.1f);
     golf_player_t players[50];
     for(int direction=0;direction<2;direction++) {
         m.forward_probability=direction;

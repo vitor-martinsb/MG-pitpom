@@ -168,6 +168,7 @@ void golf_game_init(void) {
 
     game.state = GOLF_GAME_STATE_MAIN_MENU;
     game.cam.auto_rotate = true;
+    game.cam.zoom = 1;
     game.cam.angle = 0;
     game.cam.angle_velocity = 0;
 
@@ -488,12 +489,19 @@ void golf_game_update(float dt) {
                 game.cam.angle += delta_angle * CFG_NUM(game_cfg, "cam_auto_rotate_speed");
             }
 
-            vec3 cam_delta = vec3_rotate_y(V3(2.6f, 1.5f, 0), game.cam.angle);
+            vec3 cam_delta = vec3_rotate_y(vec3_scale(V3(2.6f, 1.5f, 0), game.cam.zoom), game.cam.angle);
             // Keep the camera above the course while a ball falls; no sky flash
             // or plunge below the landscape before the maritaca arrives.
             vec3 focus=player->ball.draw_pos;
             focus.y=fmaxf(focus.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f);
             vec3 wanted_pos = vec3_add(focus, cam_delta);
+            // Clip the view ray against the same world geometry on every map.
+            vec3 target=vec3_add(focus,V3(0,.3f,0)),ray=vec3_sub(wanted_pos,target);
+            float distance=vec3_length(ray),hit;int index;golf_bvh_face_t face;
+            if(distance>.01f){vec3 direction=vec3_scale(ray,1/distance);
+                golf_bvh_t *trees[]={&game.physics.static_bvh,&game.physics.dynamic_bvh};
+                for(int i=0;i<2;i++){hit=distance;if(golf_bvh_ray_test(trees[i],target,direction,&hit,&index,&face)&&hit>.05f&&hit<distance){distance=fmaxf(.65f,hit-.18f);wanted_pos=vec3_add(target,vec3_scale(direction,distance));}}
+            }
             vec3 diff = vec3_sub(wanted_pos, graphics->cam_pos);
             graphics->cam_pos = vec3_add(graphics->cam_pos, vec3_scale(diff, 1-expf(-7*dt)));
             graphics->cam_dir = vec3_normalize(vec3_sub(vec3_add(focus, V3(0, 0.3f, 0)), graphics->cam_pos));
@@ -637,7 +645,7 @@ void golf_game_start_level(void) {
         height+overview_height,(game.mechanics.bounds_min.z+game.mechanics.bounds_max.z)*.5f+2);
     game.begin_camera_animation.cam_dir0 = vec3_normalize(vec3_sub(hole_pos, game.begin_camera_animation.cam_pos0));
 
-    vec3 cam_delta = vec3_rotate_y(V3(2.6f, 1.5f, 0), game.cam.angle);
+    vec3 cam_delta = vec3_rotate_y(vec3_scale(V3(2.6f, 1.5f, 0), game.cam.zoom), game.cam.angle);
     game.begin_camera_animation.cam_pos1 = vec3_add(player->ball.draw_pos, cam_delta);
     game.begin_camera_animation.cam_dir1 = vec3_normalize(vec3_sub(vec3_add(player->ball.draw_pos, V3(0, 0.3f, 0)), game.begin_camera_animation.cam_pos1));
 

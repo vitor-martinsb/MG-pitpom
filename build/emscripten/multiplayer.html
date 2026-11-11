@@ -10,6 +10,7 @@
 <nav id="main-menu" class="main-menu" data-i18n-label="mainMenu" aria-label="Main menu" hidden>
 <button id="offline" disabled><span class="menu-icon" aria-hidden="true">⚑</span><span data-i18n="campaign">Campaign</span><span aria-hidden="true">↗</span></button>
 <button id="open-multiplayer"><span class="menu-icon" aria-hidden="true">♧</span><span data-i18n="multiplayer">Multiplayer</span><span aria-hidden="true">↗</span></button>
+<button id="open-tutorial"><span class="menu-icon" aria-hidden="true">?</span><span data-i18n="tutorial.title">Tutorial</span><span aria-hidden="true">↗</span></button>
 <button id="exit-game" class="menu-exit"><span class="menu-icon" aria-hidden="true">↶</span><span data-i18n="exitGame">Exit</span></button>
 </nav></section>
 <div id="connect" class="overlay" hidden><div class="welcome-wrap"><main class="panel multiplayer-entry">
@@ -42,6 +43,7 @@
 </section>
 <section id="panel-mode" role="tabpanel" aria-labelledby="tab-mode" class="lobby-tab-panel" hidden><h3 data-i18n="gameMode"></h3>
 <div class="mode-cards" role="group" data-i18n-label="gameMode"><button type="button" class="mode-card" data-mode="classic" aria-pressed="true"><span class="mode-icon" aria-hidden="true"></span><span class="mode-illustration classic-diagram" aria-hidden="true"><i class="diagram-trail"></i><i class="diagram-ball"></i></span><strong data-i18n="lobby.classic"></strong><span data-i18n="lobby.classicDescription"></span></button><button type="button" class="mode-card" data-mode="impact" aria-pressed="false"><span class="mode-icon" aria-hidden="true"></span><span class="mode-illustration collision-diagram" aria-hidden="true"><i class="diagram-ball"></i><i class="diagram-impact">✦</i><i class="diagram-ball"></i></span><strong data-i18n="lobby.collision"></strong><span data-i18n="lobby.collisionDescription"></span></button></div>
+<label for="play-style" data-i18n="turns.label"></label><select id="play-style"><option value="simultaneous" data-i18n="turns.simultaneous"></option><option value="turns" data-i18n="turns.turns"></option></select><p class="muted" data-i18n="turns.description"></p>
 <select id="game-mode" class="sr-only" tabindex="-1" aria-hidden="true"><option value="classic" data-i18n="mode.classic"></option><option value="impact" data-i18n="mode.impact"></option></select><p class="muted" data-i18n="impactRule"></p>
 </section></div>
 <footer class="lobby-footer"><p id="host-note" class="muted" role="status"></p><button id="start" type="button" data-i18n="start"></button></footer>
@@ -69,6 +71,7 @@
 <script src="home.js"></script>
 <script src="multiplayer.js"></script>
 <script src="course.js"></script>
+<script src="gameplay.js"></script>
 <script src="lofi.js"></script>
 <script src="music.js"></script>
 {{{ SCRIPT }}}

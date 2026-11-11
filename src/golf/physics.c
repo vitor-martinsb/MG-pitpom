@@ -321,6 +321,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         }
     }
 
+    bool rolling_slope=false;
     for (int i = 0; i < num_contacts; i++) {
         golf_ball_contact_t *contact = &contacts[i];
         if (contact->is_ignored) {
@@ -331,6 +332,10 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         }
 
         vec3 n = contact->normal;
+        bool slope=contact->type==TRIANGLE_CONTACT_FACE&&n.y>.35f&&n.y<.99985f;
+        float rolling_resistance=fminf(contact->friction,.035f);
+        if(ball->season_ice_until>world->time)rolling_resistance*=.45f;
+        rolling_slope|=slope&&sqrtf(fmaxf(0,1-n.y*n.y))>rolling_resistance*n.y+.001f;
         vec3 vr = vec3_sub(bv, contact->velocity);
         contact->cull_dot = vec3_dot(n, vec3_normalize(vr));
         if (contact->cull_dot > EPS) {
@@ -359,6 +364,11 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
             float jt = -vec3_dot(vr, t);
             if (fabsf(jt) > EPS) {
                 float friction = contact->friction;
+                // Face friction was treating a rolling sphere like a sliding
+                // block: each normal impulse cancelled its downhill velocity.
+                // Preserve authored flat-ground/wall damping; on inclines use
+                // bounded rolling resistance, including at very low speed.
+                if(slope)friction=fminf(friction,.035f);
                 if(ball->season_ice_until>world->time)friction*=.45f;
                 if (jt > imp * friction) {
                     jt = imp * friction;
@@ -442,14 +452,14 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         world->contacts(bp0, contacts, num_contacts);
     }
 
-    if (vec3_length(bv) < 0.1f) {
+    if (!rolling_slope && vec3_length(bv) < 0.1f) {
         player->ball.time_going_slow += dt;
     }
     else {
         player->ball.time_going_slow = 0.0f;
     }
 
-    if (!player->ball.is_moving && vec3_length(bv) > 0.1f) {
+    if (!player->ball.is_moving && (rolling_slope || vec3_length(bv) > 0.1f)) {
         player->ball.is_moving = true;
     }
     if (player->ball.is_moving) {
@@ -534,7 +544,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         golf_bvh_ball_test(world->static_bvh,ball->pos,ball->radius+.002f,ball->vel,contacts,&support_count,MAX_NUM_CONTACTS);
         for(int i=0;i<support_count;i++){
             golf_ball_contact_t *c=&contacts[i];
-            if(!c->is_ignored&&!c->is_water&&!c->is_out_of_bounds&&c->type==TRIANGLE_CONTACT_FACE&&c->normal.y>.5f){
+            if(!c->is_ignored&&!c->is_water&&!c->is_out_of_bounds&&c->type==TRIANGLE_CONTACT_FACE&&c->normal.y>=.99985f){
                 ball->resting_static=true;ball->resting_pos=ball->pos;ball->resting_vel=ball->vel;ball->resting_dt=dt;break;
             }
         }
