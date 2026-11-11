@@ -378,10 +378,11 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
     vec4 coat=cat?orange:white;
     float awake=cat?1:golf_clampf(event_age/.22f,0,1)*(1-golf_clampf((event_age-1.0f)/.5f,0,1));
     float breath=.012f*sinf(golf_garden_flag_time()*2.2f),height=cat?.34f:.22f+awake*.19f;
-    oval(mesh,V3(0,height+breath,0),cat?V3(.22f,.22f,.40f):V3(.30f,.22f,.49f),coat,4,9);
+    vec3 torso_size=cat?V3(.22f,.22f,.40f):V3(.30f,.22f,.49f);
+    oval(mesh,V3(0,height+breath,0),torso_size,coat,4,9);
     if(!cat){oval(mesh,V3(-.19f,height+.07f,-.14f),V3(.13f,.14f,.22f),black,3,7);oval(mesh,V3(.16f,height+.09f,-.24f),V3(.15f,.14f,.19f),black,3,7);}
     if(!cat||!season_theme)oval(mesh,V3(0,height,.27f),V3(cat?.17f:.22f,.20f,.14f),white,3,8);
-    if(cat)season_pet_coat(mesh,1,V3(0,height+breath,0),V3(.22f,.22f,.40f));
+    if(cat)season_pet_coat(mesh,1,V3(0,height+breath,0),torso_size);
     for(int i=0;i<4;i++) {
         float x=(i&1?1:-1)*(cat?.13f:.21f),z=i<2?.25f:-.27f;
         if(cat){float lift=i==0&&event_age>=0&&event_age<.4f?.16f*sinf(event_age/.4f*MF_PI):0;quadruped_leg(mesh,i,x,z,height-.07f,phase,gait,white,false,lift);continue;}
@@ -574,13 +575,14 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
     float height=kind==1?.37f:kind==2?.36f:.32f,body=kind==1?.41f:.34f;
     vec4 coat=kind==2?cream:black;
     float torso_y=height+fabsf(step)*.015f;
-    oval(mesh,V3(0,torso_y,-.04f),V3(.23f,.21f,body),coat,4,9);
+    vec3 torso_size=V3(.23f,.21f,body);
+    oval(mesh,V3(0,torso_y,-.04f),torso_size,coat,4,9);
     if(kind==1) {
         // Luna's compact black silhouette follows the supplied low-poly art.
         oval(mesh,V3(0,height-.035f,.25f),V3(.09f,.13f,.045f),black,3,7);
         oval(mesh,V3(0,height+.13f,.22f),V3(.19f,.055f,.16f),black,2,8);
     }
-    season_pet_coat(mesh,kind==1?3:4,V3(0,torso_y,-.04f),V3(.23f,.21f,body));
+    season_pet_coat(mesh,kind==1?3:4,V3(0,torso_y,-.04f),torso_size);
     for(int leg=0;leg<4;leg++) {
         float x=(leg%2?1:-1)*.16f,z=leg<2?.23f:-body*.75f;
         float lift=acting&&kind==2&&leg<2?.06f*sinf(golf_clampf(age/.7f,0,1)*MF_PI):0;
