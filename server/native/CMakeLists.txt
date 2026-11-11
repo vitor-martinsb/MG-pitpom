@@ -5,7 +5,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 add_executable(golf_physics_worker worker.c headless.c bot.c
-    ${ROOT}/src/golf/physics.c ${ROOT}/src/golf/player.c ${ROOT}/src/golf/mechanics.c ${ROOT}/src/golf/wildlife.c ${ROOT}/src/golf/navigation.c
+    ${ROOT}/src/golf/seasonal.c ${ROOT}/src/golf/physics.c ${ROOT}/src/golf/player.c ${ROOT}/src/golf/mechanics.c ${ROOT}/src/golf/wildlife.c ${ROOT}/src/golf/navigation.c
     ${ROOT}/src/common/bvh.c ${ROOT}/src/common/level.c ${ROOT}/src/common/maths.c
     ${ROOT}/src/common/vec.c ${ROOT}/src/common/map.c ${ROOT}/src/common/json.c ${ROOT}/src/common/base64.c
     ${ROOT}/src/3rd_party/parson/parson.c ${ROOT}/src/3rd_party/fast_obj/fast_obj.c)
@@ -116,4 +116,16 @@ if(BUILD_TESTING)
         set_tests_properties(budget_family_${FAMILY}_3 PROPERTIES WORKING_DIRECTORY ${ROOT} TIMEOUT 480
             ENVIRONMENT "GOLF_BOT_SEARCH_MS=4;GOLF_BOT_CPU_FRACTION=1")
     endforeach()
+endif()
+
+if(BUILD_TESTING)
+    add_executable(golf_seasonal_test seasonal_test.c ${PHYSICS_SOURCES})
+    foreach(PROPERTY INCLUDE_DIRECTORIES COMPILE_DEFINITIONS COMPILE_OPTIONS LINK_OPTIONS LINK_LIBRARIES)
+        get_target_property(VALUE golf_physics_worker ${PROPERTY})
+        if(VALUE)
+            set_target_properties(golf_seasonal_test PROPERTIES ${PROPERTY} "${VALUE}")
+        endif()
+    endforeach()
+    add_test(NAME christmas_mechanics COMMAND golf_seasonal_test)
+    set_tests_properties(christmas_mechanics PROPERTIES WORKING_DIRECTORY ${ROOT})
 endif()

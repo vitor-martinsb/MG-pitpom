@@ -83,7 +83,7 @@
     if(profilePending&&me.nickname===current.nickname&&me.color.toLowerCase()===current.color.toLowerCase()&&me.avatar===current.avatar){profilePending=false;profileDirty=false;}
     if(!profileDirty){$('nickname').value=me.nickname;$('color').value=me.color;$('avatar').value=String(me.avatar);}
     $('profile-display-name').textContent=me.nickname;$('save-profile').disabled=profilePending||phase!=='lobby'||!connected;
-    for(const id of ['nickname','color','avatar'])$(id).disabled=profilePending||phase!=='lobby';
+    for(const id of ['nickname','color','avatar','season-skin','season-trail'])$(id).disabled=profilePending||phase!=='lobby';
     try{localStorage.setItem('golf-profile',JSON.stringify({nickname:me.nickname,color:me.color,avatar:me.avatar}));}catch{}
     previewProfile();
   }
@@ -96,8 +96,8 @@
     }
     $('profile-shortcuts').append(group);
   }
-  for(const id of ['nickname','color','avatar'])$(id).addEventListener('input',()=>{$('nickname').setCustomValidity('');profileDirty=true;previewProfile();});
-  $('profile-form').onsubmit=e=>{e.preventDefault();if(soloProfile){saveSoloProfile();return;}if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar'])$(id).disabled=true;previewProfile();send({type:'profile',...submitted});};
+  for(const id of ['nickname','color','avatar','season-skin','season-trail'])$(id).addEventListener('input',()=>{$('nickname').setCustomValidity('');profileDirty=true;previewProfile();});
+  $('profile-form').onsubmit=e=>{e.preventDefault();if(soloProfile){saveSoloProfile();return;}if(!room||phase!=='lobby')return;const submitted=profile();profilePending=true;startState();$('save-profile').disabled=true;for(const id of ['nickname','color','avatar','season-skin','season-trail'])$(id).disabled=true;previewProfile();send({type:'profile',...submitted});};
   function restoreProfile(){
     let saved;try{saved=JSON.parse(localStorage.getItem('golf-profile'));}catch{}
     $('nickname').value=typeof saved?.nickname==='string'&&saved.nickname.trim()?saved.nickname:'Player';$('nickname').setCustomValidity('');
@@ -172,7 +172,7 @@
     $('bot-capacity').textContent=t('botCapacity',{max});
   }
   function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5000);}
-  function profile(){return {nickname:$('nickname').value.trim(),color:$('color').value,avatar:Number($('avatar').value)};}
+  function profile(){return {nickname:$('nickname').value.trim(),color:$('color').value,avatar:Number($('avatar').value),...window.GolfSeason?.cosmetics()};}
   function text(tag,value){const e=document.createElement(tag);e.textContent=value;return e;}
   function playerRow(p){const row=document.createElement('div');row.className='player';const dot=document.createElement('span');dot.className='dot';dot.style.background=p.color;row.append(dot,petAvatar(p.avatar),text('span',`${p.bot?'🤖 ':''}${p.nickname}${p.id===identity?.id?' · '+t('you'):''}${p.connected?'':' · '+t('disconnected')}`));if(p.bot){const badge=text('small',t('difficulty.'+p.bot));badge.className='bot-badge';row.append(badge);}if(room?.mode==='impact'&&!lastBalls.get(p.id)?.firstComplete){const shield=text('small','🛡');shield.title=t('protected');row.append(shield);}if(p.id===room?.host){const badge=text('small',t('lobby.host'));badge.className='host-badge';row.append(badge);}return row;}
   function lobbyRow(p){
@@ -242,7 +242,7 @@
         appendChat(m);
       } else if(m.type==='room'){
         if(!$('connect').hidden)window.GolfHome?.show('game',false);
-        const previous=phase,previousCode=room?.code;room=m;phase=m.phase;
+        const previous=phase,previousCode=room?.code;room=m;phase=m.phase;window.GolfSeason?.room(m,identity?.id);
         if(phase==='lobby'){soloProfile=false;$('lobby-profile-slot').append($('profile-editor'));}
         if(phase==='lobby'&&(previousCode!==m.code||previous!=='lobby')){selectLobbyTab('players');profileDirty=profilePending=false;}window.GolfHome?.roomPhase(phase);syncClock(m);call(m);
         if(m.host!==identity?.id)pendingConfig=pendingPool=undefined;
@@ -305,7 +305,7 @@
     GolfAdventure.busy(true);celebrated=false;$('winner-banner').hidden=true;GolfAudio?.phase('menu');
     connect({type:create?'create':'join',code:$('join-code').value.trim().toUpperCase(),...p});
   }
-  function leave(){++epoch;connected=false;online=false;identity=undefined;room=undefined;phase='lobby';lastBalls.clear();clearTimeout(retryTimer);sessionStorage.removeItem('golf-session');socket?.close();call({type:'leave'});
+  function leave(){++epoch;connected=false;online=false;identity=undefined;room=undefined;window.GolfSeason?.leave();phase='lobby';lastBalls.clear();clearTimeout(retryTimer);sessionStorage.removeItem('golf-session');socket?.close();call({type:'leave'});
     entryView(false);profileDirty=profilePending=false;pendingConfig=pendingPool=undefined;$('profile-editor').open=false;$('bot-roster').open=true;$('bot-members').replaceChildren();closeChat();clearTimeout(chatCooldown);$('send-chat').disabled=false;$('chat-input').value='';$('chat-messages').replaceChildren();lastChatId=0;unreadChat=0;$('open-chat').textContent=t('chat');
     for(const id of ['lobby','hud','actions','help','scores','loading','adventure-modal','celebration'])$(id).hidden=true;window.GolfHome?.show('menu');$('create').disabled=false;$('join').disabled=false;GolfAdventure.reset();GolfAdventure.busy(false);GolfAudio?.phase('menu');}
   function sorted(){return room?[...room.players].sort((a,b)=>a.total-b.total||a.id-b.id):[];}
@@ -334,8 +334,9 @@
     if(options.some(o=>o.value===old))$('spectate').value=old;else $('spectate').value=String(identity?.id);
   }
   window.GolfOnline={
+    configureSeason(settings){if(room&&phase==='lobby'&&room.host===identity?.id)send({type:'season',settings});},
     entry(){restoreProfile();soloProfile=false;$('lobby-profile-slot').append($('profile-editor'));entryView(false);},
-    editSoloProfile(){restoreProfile();soloProfile=true;profilePending=false;profileDirty=false;$('solo-profile-slot').append($('profile-editor'));for(const id of ['nickname','color','avatar','save-profile'])$(id).disabled=false;$('profile-display-name').textContent=profile().nickname;previewProfile();saveSoloProfile();},
+    editSoloProfile(){restoreProfile();soloProfile=true;profilePending=false;profileDirty=false;$('solo-profile-slot').append($('profile-editor'));for(const id of ['nickname','color','avatar','season-skin','season-trail','save-profile'])$(id).disabled=false;$('profile-display-name').textContent=profile().nickname;previewProfile();saveSoloProfile();},
     applySoloProfile(){return saveSoloProfile();},
     active(){return online;},
     initialized(){initialized=true;window.GolfCourse.initialized=true;GolfI18n.ready();GolfAdventure.busy(false);$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;window.GolfHome?.ready();

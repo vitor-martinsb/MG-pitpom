@@ -149,7 +149,8 @@ int main(int argc, char **argv) {
             mechanics.impact=json_object_get_boolean(o,"impact")==1;
             golf_mechanics_seed(&mechanics,(uint32_t)json_object_get_number(o,"seed"),json_object_has_value(o,"previousPet")?(int)json_object_get_number(o,"previousPet"):-1);golf_mechanics_animate(&mechanics,world.time);
             float probability=(float)json_object_get_number(o,"forwardProbability");
-            mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;ok=true;
+            mechanics.forward_probability=isfinite(probability)?golf_clampf(probability,0,1):.5f;
+            golf_season_prepare(&mechanics.season,navigation,mechanics.seed,json_object_get_boolean(o,"seasonal")==1,mechanics.start,&mechanics.wildlife);ok=true;
         } else if(cmd&&!strcmp(cmd,"plannerState")&&!planner_only&&slot>=0&&slot<GOLF_MAX_PLAYERS){
             planner_snapshot_json(request,slot);fflush(stdout);json_value_free(value);continue;
         } else if(cmd&&!strcmp(cmd,"restorePlanner")&&planner_only){
@@ -196,7 +197,8 @@ int main(int argc, char **argv) {
                 for(int i=0;i<GOLF_MAX_PLAYERS;i++)if(players[i].id){
                     if(players[i].ball.effect_serial!=effects[i]){
                         const char *kinds[]={"","romeu","luna","frida","portal","capture","juju"};
-                        event(kinds[players[i].ball.effect_kind],&players[i],1);
+                        int effect=players[i].ball.effect_kind;
+                        event(effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
                     }
                     else if(players[i].ball.cat_hits!=hits[i])event("slap",&players[i],1);
                     else if(!captures[i]&&players[i].ball.capture_until)event("capture",&players[i],1);
@@ -205,7 +207,10 @@ int main(int argc, char **argv) {
                 for(int i=0;i<GOLF_MAX_PLAYERS;i++)players[i].ball.draw_pos=players[i].ball.pos;
             }
             printf("{\"request\":%d,\"ok\":true,\"time\":%.9g,\"cpuMs\":%.3f,\"rssBytes\":%zu,\"memoryBytes\":%zu,\"mascots\":{\"enabled\":%s,\"cat\":[%.9g,%.9g,%.9g],\"dog\":[%.9g,%.9g,%.9g],\"slapTime\":%.9g,\"wakeTime\":%.9g,\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g",request,world.time,cpu_ms(),rss_bytes(),headless_allocated_bytes(),mechanics.enabled?"true":"false",mechanics.cat.x,mechanics.cat.y,mechanics.cat.z,mechanics.dog.x,mechanics.dog.y,mechanics.dog.z,mechanics.cat_slap_time,mechanics.dog_wake_time,mechanics.cat_valid?"true":"false",mechanics.dog_valid?"true":"false",mechanics.cat_present?"true":"false",mechanics.dog_present?"true":"false",mechanics.third_kind,mechanics.cat_presence,mechanics.dog_presence,mechanics.cat_phase);
-            wildlife_json(&mechanics.wildlife);printf("},\"players\":[");
+            wildlife_json(&mechanics.wildlife);
+            printf(",\"season\":{\"enabled\":%s,\"items\":[",mechanics.season.enabled?"true":"false");
+            for(int k=0;k<mechanics.season.count;k++){golf_season_item_t *q=&mechanics.season.items[k];printf("%s{\"kind\":%d,\"pos\":[%.7g,%.7g,%.7g],\"phase\":%.7g,\"actionTime\":%.7g}",k?",":"",q->kind,q->pos.x,q->pos.y,q->pos.z,q->phase,q->action_time);}
+            printf("]}");printf("},\"players\":[");
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {
                 golf_player_t *p=&players[i]; golf_ball_t *b=&p->ball;

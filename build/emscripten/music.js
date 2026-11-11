@@ -64,6 +64,14 @@
       source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};
     }
   }
+  function giftRustle(){
+    if(!context||context.state!=='running'||voices>=24)return;voices++;
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain(),time=context.currentTime;
+    source.buffer=noise;filter.type='bandpass';filter.frequency.value=950;filter.Q.value=.7;
+    gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(.18,time+.012);gain.gain.exponentialRampToValueAtTime(.0001,time+.18);
+    source.connect(filter);filter.connect(gain);gain.connect(effectsBus);source.start(time,time%Math.max(.01,noise.duration-.2));source.stop(time+.2);
+    source.onended=()=>{voices--;source.disconnect();filter.disconnect();gain.disconnect();};
+  }
   function play(kind,strength=.5){
     if(!context||context.state!=='running'||prefs.muted)return;
     const time=context.currentTime,previous=cooldowns.get(kind)??-100;if(time-previous<(kind==='water'?.5:.09))return;cooldowns.set(kind,time);
@@ -77,13 +85,15 @@
     else if(kind==='romeu'){effectTone(340,.18,.12,0,effectsBus,170);effectTone(410,.13,.07,.12,effectsBus,230);}
     else if(kind==='luna'){effectTone(230,.11,.12,0,effectsBus,380);effectTone(180,.15,.10,.14,effectsBus,290);}
     else if(kind==='frida'){effectTone(520,.20,.10,0,effectsBus,850);effectTone(850,.24,.09,.17,effectsBus,390);}
+    else if(kind==='present'){giftRustle();effectTone(160,.11,.13,0,effectsBus,80);effectTone(950,.08,.045,.07,effectsBus,300);effectTone(1175,.30,.08,.14);}
+    else if(kind==='christmas'){[79,83,86,91].forEach((m,i)=>effectTone(hz(m),.45,.10,i*.15));}
     else if(kind==='portal'){effectTone(390,.28,.08,0,effectsBus,1250);}
     else if(kind==='ui')effectTone(720,.055,.08,0,uiBus,580);
     else if(kind==='countdown')effectTone(660,.16,.1);
     else if(kind==='water')effectTone(150,.18,.06,0,effectsBus,80);
     else if(kind==='error'){effectTone(280,.13,.1);effectTone(220,.18,.1,.13);}
     else if(['hole','courseDone','start','victory'].includes(kind)){
-      const melody=kind==='victory'?[72,76,79,84,79,84]:kind==='hole'?[72,76,79]:[62,69,74];
+      const melody=window.GolfSeason?.theme==='christmas'?[76,79,83,88,86,88]:kind==='victory'?[72,76,79,84,79,84]:kind==='hole'?[72,76,79]:[62,69,74];
       melody.forEach((m,i)=>effectTone(hz(m),kind==='victory'?.55:.28,.12,i*(kind==='victory'?.22:.12)));
     }
   }
@@ -97,6 +107,7 @@
   for(const [id,key]of [['master-volume','master'],['effects-volume','effects'],['ui-volume','ui']])document.getElementById(id).oninput=e=>{prefs[key]=Number(e.target.value)/100;localStorage.setItem('pitpom-audio',JSON.stringify(prefs));update();resume();};
   document.getElementById('mute-all').onclick=()=>{prefs.muted=!prefs.muted;localStorage.setItem('pitpom-audio',JSON.stringify(prefs));update();resume();};
   document.addEventListener('click',event=>{if(event.target.closest('button,summary'))play('ui');},{passive:true});
+  window.addEventListener('seasonchange',()=>{score?.setWorld(requestedWorld);update();});
   window.addEventListener('languagechange',update);
   update();
 })();

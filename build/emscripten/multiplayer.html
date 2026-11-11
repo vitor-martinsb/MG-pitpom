@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PitPom Minigolfe · Multiplayer</title><link rel="stylesheet" href="multiplayer.css"></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PitPom Minigolfe · Multiplayer</title><link rel="stylesheet" href="multiplayer.css"><link rel="stylesheet" href="seasonal.css"></head><body>
 <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
 <section id="home-loading" class="overlay"><div class="panel"><div class="real-loading"><span data-i18n="engineLoading">Loading the game…</span></div></div></section>
 <section id="home" hidden class="home-screen" data-screen="splash" aria-label="PitPom Minigolfe">
@@ -61,6 +61,7 @@
 <script src="i18n-data.js"></script>
 <script src="i18n.js"></script>
 <script>var Module={canvas:document.getElementById('canvas'),print:console.log,printErr:console.error,setStatus:function(text){if(window.GolfCourse?.initialized)return;document.getElementById('engine-status').textContent=window.GolfI18n.t('enginePreparing');const p=document.getElementById('engine-progress'),m=text.match(/\((\d+(?:\.\d+)?)\/(\d+)\)/);if(m&&Number(m[2])>Number(m[1]))p.value=Number(m[1])/Number(m[2]);else p.removeAttribute('value');}};</script>
+<script src="seasonal.js"></script>
 <script src="campaign-data.js"></script>
 <script src="adventure.js"></script>
 <script src="menu-clock.js"></script>

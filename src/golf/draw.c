@@ -53,7 +53,7 @@ static void _draw_player_balls(const char *pipeline_name) {
                 UNIFORM_MAT4("proj_view_mat", mat4_transpose(graphics->proj_view_mat)),
                 UNIFORM_MAT4("model_mat", mat4_transpose(model_mat)));
         sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range){ vs->data, vs->size });
-        vec4 color=player->color;
+        vec4 color=golf_season_ball_color(player);
         float mud=player->ball.mud_shots>0?player->ball.mud_shots/3.f:golf_clampf((player->ball.mud_fade_until-game->t)/.65f,0,1)/3;
         if(mud>0){float stain=.22f*mud;color=V4(color.x*(1-stain)+.42f*stain,color.y*(1-stain)+.26f*stain,color.z*(1-stain)+.13f*stain,color.w);}
         if(player->ball.slow_until>game->t)color=V4(color.x*.67f+.33f,color.y*.67f+.27f,color.z*.67f+.04f,color.w);

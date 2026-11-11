@@ -2,6 +2,7 @@
 #include "golf/online.h"
 #include "golf/physics.h"
 #include "golf/game.h"
+#include "golf/garden.h"
 
 #include <assert.h>
 #include <float.h>
@@ -581,6 +582,7 @@ void golf_game_start_level(void) {
         golf_mechanics_seed(&game.mechanics,(uint32_t)rand()^((uint32_t)rand()<<16),previous_solo_pet);
         previous_solo_pet=game.mechanics.third_kind;
     }
+    if(!golf_online_active())golf_season_prepare(&game.mechanics.season,golf_mechanics_navigation(),game.mechanics.seed,golf_season_solo_obstacles(),game.mechanics.start,&game.mechanics.wildlife);
     game.mechanics.enabled=true;
 
     game.t = 0;

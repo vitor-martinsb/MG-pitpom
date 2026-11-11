@@ -98,6 +98,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             if(color) sscanf(color,"#%x",&rgb);
             if(!p->id) golf_player_init(p,id,name?name:"Player",V4(1,1,1,1),(uint32_t)json_object_get_number(m,"avatar"));
             snprintf(p->name,sizeof(p->name),"%s",name?name:"Player"); p->color=V4(((rgb>>16)&255)/255.f,((rgb>>8)&255)/255.f,(rgb&255)/255.f,1);p->avatar_id=(int)json_object_get_number(m,"avatar");
+            p->season_skin=(int)json_object_get_number(m,"seasonSkin");p->season_trail=(int)json_object_get_number(m,"seasonTrail");
             p->connected=json_object_get_boolean(m,"connected")==1;
         }
     } else if (!strcmp(type,"load") && online.active) {
@@ -114,7 +115,11 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         }
         JSON_Array *balls=json_object_get_array(o,"players");
         JSON_Object *mascots=json_object_get_object(o,"mascots");
-        if(mascots){game->mechanics.enabled=json_object_get_boolean(mascots,"enabled")==1;
+        if(mascots){
+            JSON_Object *season=json_object_get_object(mascots,"season");JSON_Array *items=json_object_get_array(season,"items");
+            game->mechanics.season.enabled=json_object_get_boolean(season,"enabled")==1;game->mechanics.season.count=0;
+            for(size_t k=0;k<json_array_get_count(items)&&k<GOLF_SEASON_ITEMS;k++){JSON_Object *q=json_array_get_object(items,k);golf_season_item_t *item=&game->mechanics.season.items[game->mechanics.season.count++];item->kind=(int)json_object_get_number(q,"kind");item->pos=golf_json_object_get_vec3(q,"pos");item->phase=(float)json_object_get_number(q,"phase");item->action_time=(float)json_object_get_number(q,"actionTime");}
+            game->mechanics.enabled=json_object_get_boolean(mascots,"enabled")==1;
             game->mechanics.cat_valid=json_object_has_value(mascots,"catActive")?json_object_get_boolean(mascots,"catActive")==1:true;
             game->mechanics.dog_valid=json_object_has_value(mascots,"dogActive")?json_object_get_boolean(mascots,"dogActive")==1:true;
             game->mechanics.cat=golf_json_object_get_vec3(mascots,"cat");game->mechanics.dog=golf_json_object_get_vec3(mascots,"dog");

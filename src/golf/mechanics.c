@@ -235,6 +235,7 @@ void golf_mechanics_tick(golf_mechanics_t *m,golf_player_t *players,int count,fl
     }
     golf_wildlife_tick(&m->wildlife,players,count,time,m->seed,m->enabled);
     if(m->impact)golf_mechanics_impacts(players,count);
+    golf_season_tick(&m->season,players,count,time);
 }
 static bool eligible(golf_player_t *p) {
     return p->id&&p->connected&&p->ball.first_shot_complete&&!p->ball.is_in_hole&&

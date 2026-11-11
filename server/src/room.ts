@@ -11,6 +11,7 @@ export type Member = {
   socket?: WebSocket; ready: boolean; lastSequence: number; scores: number[]; dnf: boolean[];
   disconnectedAt?: number; ball?: Ball;
   lastChatAt?: number;
+  seasonSkin?:number;seasonTrail?:number;
   bot?: BotDifficulty; nextDecision?: number; planRetries?:number; windWaitStroke?:number;
 };
 export type ChatMessage = { type: 'chat'; id: number; playerId: number; nickname: string; color: string; text: string; sentAt: number };
@@ -27,6 +28,7 @@ export class Room {
   deadline = 0;
   worldTime = 0;
   simulationSpeed=1;
+  seasonal={theme:'original' as 'original'|'christmas',tournament:false,obstacles:false};
   mode: 'classic' | 'impact' = 'classic';
   selectedLevels: number[] = [];
   mapPool:number[]=[];
@@ -74,21 +76,23 @@ export class Room {
   broadcast(message: unknown) { for (const member of this.members.values()) this.send(member, message); }
   state() {
     return { type: 'room', code: this.code, phase: this.phase, host: this.host, hole: this.hole, holes: this.holes, penalty: this.options.penalty,
-      level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,
+      level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,seasonal:this.seasonal,
       sequence:this.selectedLevels, availableMaps:this.validLevels.length,mapPool:this.mapPool,mapPoolKind:this.mapPoolKind,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,timerSpeed:1,
-      players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,
+      players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,seasonSkin:m.seasonSkin??0,seasonTrail:m.seasonTrail??0,
         connected: !!m.socket || !!m.bot, bot:m.bot, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
   }
   publish() { this.broadcast(this.state()); }
-  join(socket: WebSocket, nickname: unknown, color: unknown, avatar: unknown): Member {
+  join(socket: WebSocket, nickname: unknown, color: unknown, avatar: unknown,cosmetics?:{seasonSkin?:unknown;seasonTrail?:unknown}): Member {
     if (this.phase !== 'lobby') throw new Error('Partida já começou. Aguarde uma nova sala.');
     if (this.members.size >= 50) throw new Error('Sala cheia (50 jogadores).');
     if (typeof nickname !== 'string' || !/^[\x20-\x7e]{1,24}$/.test(nickname.trim())) throw new Error('Use um nickname ASCII de 1 a 24 caracteres.');
     if (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)) throw new Error('Cor inválida.');
     if (!Number.isInteger(avatar) || (avatar as number)<0 || (avatar as number)>7) throw new Error('Avatar inválido.');
+    const seasonSkin=cosmetics?.seasonSkin??0,seasonTrail=cosmetics?.seasonTrail??0;
+    if(!Number.isInteger(seasonSkin)||Number(seasonSkin)<0||Number(seasonSkin)>4||!Number.isInteger(seasonTrail)||Number(seasonTrail)<0||Number(seasonTrail)>4)throw Error('Personalização natalina inválida.');
     const occupied = new Set([...this.members.values()].map(m=>m.slot)); let slot=0; while (occupied.has(slot)) slot++;
     const id=this.nextId++;
-    const m: Member={ id,slot,nickname:nickname.trim(),color,avatar:avatar as number,token:randomBytes(24).toString('hex'),socket,ready:false,lastSequence:0,scores:[],dnf:[] };
+    const m: Member={ id,slot,nickname:nickname.trim(),color,avatar:avatar as number,seasonSkin:seasonSkin as number,seasonTrail:seasonTrail as number,token:randomBytes(24).toString('hex'),socket,ready:false,lastSequence:0,scores:[],dnf:[] };
     this.members.set(id,m); if (!this.host) this.host=id;
     for(const bot of this.members.values())if(bot.bot&&bot.nickname.toLowerCase()===m.nickname.toLowerCase())bot.nickname=this.nextBotName();
     this.send(m,{ type:'welcome',id,token:m.token,code:this.code });
@@ -101,7 +105,9 @@ export class Room {
     if(typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw Error('Cor inválida.');
     if(!Number.isInteger(avatar)||avatar<0||avatar>7)throw Error('Avatar inválido.');
     if([...this.members.values()].some(p=>p.bot&&p.nickname.toLowerCase()===nickname.trim().toLowerCase()))throw Error('Nome de bot já utilizado.');
-    m.nickname=nickname.trim();m.color=color;m.avatar=avatar;this.publish();
+    const skin=settings.seasonSkin??m.seasonSkin??0,trail=settings.seasonTrail??m.seasonTrail??0;
+    if(!Number.isInteger(skin)||skin<0||skin>4||!Number.isInteger(trail)||trail<0||trail>4)throw Error('Personalização natalina inválida.');
+    m.nickname=nickname.trim();m.color=color;m.avatar=avatar;m.seasonSkin=skin;m.seasonTrail=trail;this.publish();
   }
   async reconnect(socket: WebSocket, token: unknown): Promise<Member> {
     const m=[...this.members.values()].find(m=> typeof token==='string' && m.token===token);
@@ -143,6 +149,11 @@ export class Room {
     if(!Number.isInteger(holes)||(holes as number)<1||(holes as number)>this.mapPool.length)throw Error('Quantidade de mapas inválida.');
     if(mode!=='classic'&&mode!=='impact')throw Error('Modo de jogo inválido.');
     this.holes=holes as number;this.mode=mode;this.publish();
+  }
+  configureSeason(m:Member,settings:any){
+    this.hostOnly(m);
+    if(!settings||!['original','christmas'].includes(settings.theme)||typeof settings.tournament!=='boolean'||typeof settings.obstacles!=='boolean')throw Error('Evento inválido.');
+    this.seasonal={theme:settings.theme,tournament:settings.theme==='christmas'&&settings.tournament,obstacles:settings.theme==='christmas'&&settings.obstacles};this.publish();
   }
   configurePool(m:Member,kind:unknown,ids:unknown){
     this.hostOnly(m);
@@ -210,7 +221,7 @@ export class Room {
     const current=()=>!this.closed&&generation===this.generation&&physics===this.physics;
     try {
       await physics.ready;if(!current())return;
-      const configured=await physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability,this.previousPet);if(!current())return;
+      const configured=await physics.configure(this.mode==='impact',(this.physicsSeed ^ this.hole) >>> 0,this.options.catForwardProbability,this.previousPet,this.seasonal.obstacles);if(!current())return;
       this.previousPet=configured.thirdKind;
       for (const m of this.members.values()) { await physics.add(m.slot,m.id);if(!current())return; if (!m.socket&&!m.bot) await physics.connected(m.slot,false);if(!current())return; }
       // Build the shared route graph inside the loading barrier, once for all

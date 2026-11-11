@@ -359,6 +359,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
             float jt = -vec3_dot(vr, t);
             if (fabsf(jt) > EPS) {
                 float friction = contact->friction;
+                if(ball->season_ice_until>world->time)friction*=.45f;
                 if (jt > imp * friction) {
                     jt = imp * friction;
                 }

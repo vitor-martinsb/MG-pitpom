@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {chromium,webkit} from '@playwright/test';
+import {createServer} from '../dist/index.js';
+import {visitMultiplayer,createLobby,joinLobby,lobbyTab} from './navigation-fixture.mjs';
+const app=createServer();let browser;
+try{
+ await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${app.server.address().port}`;
+ browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true}):chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),headless:true,args:['--enable-unsafe-swiftshader']}));
+ const errors=[],context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await page.locator('#continue-home').click();
+ assert.equal(await page.evaluate(()=>GolfSeason.theme),'original');await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('christmas');await page.locator('#season-obstacles').check();
+ await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===1);
+ assert.equal(await page.evaluate(()=>GolfSeason.theme),'christmas');const music=await page.evaluate(async()=>{const a=await GolfMusic.renderPreview(1,4),data=a.getChannelData(0);let sum=0,peak=0;for(const n of data){sum+=n*n;peak=Math.max(peak,Math.abs(n));}return {rms:Math.sqrt(sum/data.length),peak};});assert.ok(music.rms>.0001&&music.peak<.5);await page.locator('#music-controls summary').click();
+ fs.mkdirSync('../out/christmas',{recursive:true});await page.waitForTimeout(700);await page.screenshot({path:'../out/christmas/menu-desktop.png'});
+ await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('original');await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===0);await page.locator('#season-theme').selectOption('christmas');await page.locator('#music-controls summary').click();
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(700);await page.screenshot({path:'../out/christmas/menu-mobile.png'});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.locator('#open-multiplayer').click();await createLobby(page);
+ const room=[...app.rooms.values()][0];await lobbyTab(page,'mode');await page.locator('#room-season-theme').selectOption('christmas');await page.locator('#season-tournament').check();await page.locator('#room-season-obstacles').check();
+ await page.waitForFunction(()=>GolfSeason.tournament&&GolfSeason.diagnostics().obstacles);
+ const guest=await browser.newPage({viewport:{width:390,height:844}});guest.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Elf'});await lobbyTab(guest,'mode');
+ assert.equal(await guest.locator('#room-season-theme').isDisabled(),true);assert.equal(await guest.locator('#season-tournament').isChecked(),true);assert.equal(await guest.evaluate(()=>GolfSeason.theme),'christmas');
+ await lobbyTab(page,'players');await page.locator('#profile-editor summary').click();await page.locator('#season-skin').selectOption('4');await page.locator('#season-trail').selectOption('3');await page.locator('#save-profile').click();
+ await page.waitForFunction(()=>!document.getElementById('save-profile').disabled);assert.equal(room.members.get(1).seasonSkin,4);assert.equal(room.members.get(1).seasonTrail,3);assert.equal(room.members.get(2).seasonSkin,0);
+ await page.locator('#profile-editor summary').click();await lobbyTab(page,'mode');await page.screenshot({path:'../out/christmas/lobby-mobile.png'});
+ await page.locator('#start').click();await page.waitForFunction(()=>GolfCourse.inspect().frame?.active,{},{timeout:90000});await page.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]));
+ await page.waitForFunction(()=>{const f=GolfCourse.inspect().frame;return f?.active&&!f.intro&&f.season.enabled&&f.season.vertices>0;},{},{timeout:30000});
+ await guest.waitForFunction(()=>GolfCourse.inspect().frame?.active,{},{timeout:90000});await guest.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]));
+ await page.waitForFunction(()=>document.getElementById('loading').hidden&&document.getElementById('status').textContent===GolfI18n.t('phase.playing'),{},{timeout:90000});
+ const frame=await page.evaluate(()=>GolfCourse.inspect().frame);assert.ok(frame.season.vertices<36000);assert.equal(frame.season.theme,true);const own=frame.players.find(p=>p.id===frame.local);assert.equal(own.seasonSkin,4);assert.equal(own.seasonTrail,3);assert.ok(own.seasonColor[0]>.9&&own.seasonColor[1]>.7);await page.screenshot({path:'../out/christmas/course-mobile.png'});
+ await guest.waitForFunction(()=>GolfCourse.inspect().frame?.season.enabled,{},{timeout:30000});
+ assert.deepEqual(errors,[]);console.log('Christmas: live toggle, original restoration, desktop/mobile artwork, 2-client lobby sync, host permissions, saved cosmetics and bounded WebGL decoration passed.');
+}finally{await browser?.close();app.close();}

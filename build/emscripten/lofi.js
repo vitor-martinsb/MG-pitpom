@@ -27,9 +27,11 @@
     Object.assign(track,{fadeFrom:from,fadeTo:to,fadeStart:time,fadeEnd:time+duration});
   }
   function track(context,destination,world,time,buffer){
-    const profile=scores[world],input=context.createGain(),filter=context.createBiquadFilter(),gain=context.createGain();
+    const original=scores[world],winter=window.GolfSeason?.theme==='christmas';
+    const melody=[72,76,79,83,81,79,76,74,71,74,78,81,79,76,74,72];
+    const profile=winter?{...original,bpm:Math.min(76,original.bpm),instrument:'bells',air:'wind',melody:melody.map(n=>n+(world%4)*2-2),beat:'sparse'}:original,input=context.createGain(),filter=context.createBiquadFilter(),gain=context.createGain();
     filter.type='lowpass';filter.frequency.value=world===7?1400:world===8?3000:2300;input.connect(filter);filter.connect(gain);gain.connect(destination);gain.gain.value=0;
-    const result={context,world,profile,input,filter,gain,noise:buffer,sources:new Set(),nodes:[input,filter,gain],beat:0,next:time+.04,notes:0,voices:0,offline:typeof context.startRendering==='function',fadeFrom:0,fadeTo:0,fadeStart:time,fadeEnd:time,retire:Infinity};
+    const result={context,world,winter,profile,input,filter,gain,noise:buffer,sources:new Set(),nodes:[input,filter,gain],beat:0,next:time+.04,notes:0,voices:0,offline:typeof context.startRendering==='function',fadeFrom:0,fadeTo:0,fadeStart:time,fadeEnd:time,retire:Infinity};
     if(profile.echo){
       const delay=context.createDelay(1),feedback=context.createGain(),wet=context.createGain();delay.delayTime.value=profile.echo;feedback.gain.value=.22;wet.gain.value=.18;
       filter.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(gain);result.nodes.push(delay,feedback,wet);
@@ -49,7 +51,7 @@
     voice.gain.exponentialRampToValueAtTime(level*(pad?.65:.35),time+Math.min(duration*.65,Math.max(attack+.02,.4)));
     voice.gain.exponentialRampToValueAtTime(.0001,time+duration);voice.connect(t.input);
     fundamental.type=instrument==='electro'?'triangle':'sine';fundamental.frequency.value=hz(midi);
-    overtone.type=pad&&t.profile.pad==='warm'?'sawtooth':'triangle';overtone.frequency.value=hz(midi)*(pad?1:instrument==='stars'?3:2);overtone.detune.value=pad?6:2;
+    overtone.type=pad&&t.profile.pad==='warm'?'sawtooth':'triangle';overtone.frequency.value=hz(midi)*(pad?1:instrument==='stars'||instrument==='bells'?3:2);overtone.detune.value=pad?6:2;
     soft.gain.value=pad?.022:instrument==='acoustic'?.18:flute?.035:.1;
     fundamental.connect(voice);overtone.connect(soft);soft.connect(voice);fundamental.start(time);overtone.start(time);fundamental.stop(time+duration+.02);overtone.stop(time+duration+.02);t.sources.add(fundamental);t.sources.add(overtone);
     fundamental.onended=()=>{t.voices--;t.sources.delete(fundamental);t.sources.delete(overtone);fundamental.disconnect();overtone.disconnect();soft.disconnect();voice.disconnect();};
@@ -68,19 +70,20 @@
     if(b%4===0){for(let i=0;i<chord.length;i++)tone(t,chord[i],at+i*.025,beat*4.3,.025,'pad');tone(t,p.bass[bar%p.bass.length],at,beat*1.8,p.beat==='deep'?.095:.055,'warm');}
     const note=p.melody[b%p.melody.length];
     if(p.beat!=='sparse'||b%2===0)tone(t,note,at+(b%2?.025:0),beat*(p.instrument==='flute'?2.4:1.8),p.instrument==='cinema'?.068:.052);
+    if(t.winter&&b%4===2)tone(t,chord[1]+12,at+beat*.5,beat*2,.027,'piano');
     if(p.instrument==='cinema'&&b%4===2)tone(t,chord[2]+12,at+beat*.5,beat*2,.028);
     if(p.beat==='circle'||b%4===0)kick(t,at,p.beat==='deep'?.13:p.beat==='sync'?.085:.055);
     if(b%2===1)brush(t,at+.035,p.beat==='brush'?.026:.018,1000);
     if(p.beat==='sync'){brush(t,at+beat*.5,.014,2200);if(b%8===3||b%8===6)kick(t,at+beat*.5,.045);}
     if(p.air==='birds'&&b%8===4){tone(t,87,at,.35,.018,'flute');tone(t,91,at+.18,.28,.014,'flute');}
     if(p.air==='water'&&b%5===2)tone(t,88+(b%3)*2,at+.1,.55,.015,'water');
-    if(p.air==='stars'&&b%4===1)tone(t,note+12,at,beat*3,.017,'stars');
+    if((p.air==='stars'||t.winter)&&b%4===1)tone(t,note+12,at,beat*3,.017,'stars');
     t.beat++;t.next+=beat;
   }
   class Engine{
     constructor(context,destination,world=0){this.context=context;this.destination=destination;this.noise=noise(context,197);this.layers=[];this.completedNotes=0;this.switches=0;this.setWorld(world);}
     setWorld(world){
-      world=Number.isInteger(world)&&world>=0&&world<=10?world:0;if(this.active?.world===world)return false;
+      world=Number.isInteger(world)&&world>=0&&world<=10?world:0;if(this.active?.world===world&&this.active?.winter===(window.GolfSeason?.theme==='christmas'))return false;
       const now=this.context.currentTime,changing=!!this.active;if(changing)this.switches++;
       for(const layer of this.layers)if(layer.retire===Infinity){ramp(layer,0,now,1.8);layer.retire=now+1.8;}
       this.active=track(this.context,this.destination,world,now,this.noise);if(changing)ramp(this.active,1,now,1.8);this.layers.push(this.active);return true;

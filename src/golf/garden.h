@@ -3,6 +3,10 @@
 #include "common/level.h"
 #include "golf/player.h"
 
+int golf_season_settings(int theme,int skin,int trail,int obstacles);
+bool golf_season_solo_obstacles(void);
+int golf_season_vertex_count(void);
+vec4 golf_season_ball_color(const golf_player_t *);
 /* Render-only scenery. No entities, collision meshes or simulation state change. */
 void golf_garden_prepare(golf_level_t *level, int level_number);
 bool golf_garden_replaces_tree(const golf_entity_t *entity);

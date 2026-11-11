@@ -22,6 +22,7 @@ typedef struct golf_ball {
     uint32_t cat_hits;
     int dog_stroke;
     /* Temporary effects are per ball; cosmetics remain in golf_player.color. */
+    float season_ice_until;
     float slow_until,wildlife_protection,wildlife_cooldown[4],portal_cooldown;
     int slow_shots,slow_born_stroke;
     int mud_shots,mud_born_stroke;
@@ -49,6 +50,8 @@ typedef struct golf_player {
     char name[GOLF_PLAYER_NAME_SIZE];
     vec4 color;
     int avatar_id;
+    /* Presentation only; the network owns each participant's selections. */
+    int season_skin,season_trail;
     int stroke_count;
     bool connected;
     golf_ball_t ball;

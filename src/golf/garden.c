@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "common/graphics.h"
 #include "golf/game.h"
+#include "golf/online.h"
 #include "golf/golf.h"
 #ifdef GOLF_PLATFORM_EMSCRIPTEN
 #include <emscripten/emscripten.h>
@@ -34,6 +35,9 @@ static struct {
 } garden;
 static garden_vertex_t effects[FX_LIMIT], shadows[FX_LIMIT];
 static garden_vertex_t actors[ACTOR_LIMIT];
+static int season_theme,season_skin,season_trail,season_obstacles;
+static void season_costume(garden_mesh_t *,int,float,float);
+static void season_draw(float);
 
 static vec4 paint(float r, float g, float b, float sway) { return V4(r,g,b,sway); }
 static void emit(garden_mesh_t *mesh, vec3 p, vec3 n, vec4 color) {
@@ -355,6 +359,7 @@ static void render(sg_buffer buffer, int count, float time, bool transparent, ve
 }
 void golf_garden_draw_world(float time){render(garden.world,(int)garden.vertex_count,time,false,V4(1,1,1,0));}
 vec4 golf_garden_sky_color(void) {
+    if(season_theme)return V4(.10f+garden.biome_color.x*.10f,.17f+garden.biome_color.y*.10f,.28f+garden.biome_color.z*.10f,1);
     if(golf_get()->state!=GOLF_STATE_IN_GAME||!garden.biome)return V4(.659f,.847f,.910f,1);
     if(garden.biome==8)return V4(.15f,.19f,.32f,1);
     if(garden.biome==7)return V4(.84f,.61f,.49f,1);
@@ -408,6 +413,7 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
     }
     oval(mesh,V3(0,head_y-.04f,.654f),V3(cat?.035f:.057f,.028f,.026f),cat?pink:black,2,6);
     if(!cat&&awake>.15f){oval(mesh,V3(0,head_y-.12f,.60f),V3(.08f,.04f+awake*.05f,.025f),black,2,7);oval(mesh,V3(.02f,head_y-.15f,.633f),V3(.036f,.043f,.014f),pink,2,6);}
+    season_costume(mesh,cat?1:0,head_y,time);
     garden.transform=mat4_identity();
 }
 static void frida_head(garden_mesh_t *mesh,float y,vec4 white,vec4 tabby) {
@@ -553,8 +559,8 @@ static void muddy_ball(garden_mesh_t *mesh,const golf_player_t *p,float time){
 
 static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind,float time,golf_game_t *game) {
     garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
-    if(kind==GOLF_JUJU){juju(mesh,a,time);garden.transform=mat4_identity();return;}
-    if(kind==0){poodle(mesh,a,time);garden.transform=mat4_identity();return;}
+    if(kind==GOLF_JUJU){juju(mesh,a,time);season_costume(mesh,6,.61f,time);garden.transform=mat4_identity();return;}
+    if(kind==0){poodle(mesh,a,time);season_costume(mesh,2,.90f,time);garden.transform=mat4_identity();return;}
     vec4 black=paint(.10f,.11f,.13f,0),cream=paint(.97f,.95f,.89f,0),pink=paint(.86f,.52f,.51f,0);
     vec4 tabby=paint(.31f,.29f,.26f,0),gray=paint(.52f,.50f,.48f,0);
     float age=time-a->action_time;bool acting=age>=0&&age<1.15f;
@@ -614,6 +620,7 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
         for(int i=0;i<game->player_count;i++)if(game->players[i].ball.capture_kind==kind+1){color=game->players[i].color;carrying=true;break;}
         if(carrying)oval(mesh,V3(0,head_y-.12f,.60f),V3(.10f,.10f,.10f),color,3,8);
     }
+    season_costume(mesh,kind==1?3:4,head_y,time);
     garden.transform=mat4_identity();
 }
 static void campaign_obstacles(garden_mesh_t *mesh,const golf_wildlife_t *w,float time) {
@@ -744,6 +751,7 @@ static void maritaca(garden_mesh_t *mesh,const golf_player_t *p,float time,bool 
         }
         triangle(mesh,V3(side*.06f,-.04f,-.20f),V3(side*.07f,-.14f,-.62f),V3(0,-.08f,-.23f),dark);
     }
+    if(season_theme){branch(mesh,V3(0,.36f,.16f),V3(0,.63f,.16f),.15f,.001f,paint(.13f,.42f,.25f,0));for(int bulb=0;bulb<3;bulb++)oval(mesh,V3((bulb-1)*.07f,.39f,.22f),V3(.025f,.025f,.02f),paint(.97f,.75f,.24f,0),2,4);}
     garden.transform=mat4_identity();
 }
 void golf_garden_draw_feedback(float time) {
@@ -799,6 +807,7 @@ void golf_garden_draw_feedback(float time) {
     }
     for(int i=0;i<game->player_count;i++)if(golf_game_player_visible(&game->players[i])&&!game->players[i].ball.is_in_hole)muddy_ball(&actor,&game->players[i],time);
     garden.actor_count=(unsigned)actor.count;
+    if(season_theme||game->mechanics.season.enabled)season_draw(time);
     if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}
     for(int i=0;i<game->player_count;i++) {
         golf_player_t *player=&game->players[i];if(!golf_game_player_visible(player)||player->ball.is_in_hole)continue;
@@ -852,3 +861,5 @@ EMSCRIPTEN_KEEPALIVE
 unsigned golf_garden_vertex_count(void){return garden.vertex_count;}
 unsigned golf_garden_actor_vertex_count(void){return garden.actor_count;}
 float golf_garden_landscape_gap(void){return garden.landscape_gap;}
+
+#include "seasonal-render.inc"

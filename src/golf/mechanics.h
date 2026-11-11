@@ -4,6 +4,7 @@
 #include "golf/player.h"
 #include "golf/navigation.h"
 #include "golf/wildlife.h"
+#include "golf/seasonal.h"
 
 typedef struct golf_resident_layout {
     vec3 cat,dog,direction,across;float span;
@@ -11,6 +12,7 @@ typedef struct golf_resident_layout {
 } golf_resident_layout_t;
 /* Shared, allocation-free state: native authority and the offline game. */
 typedef struct golf_mechanics {
+    golf_season_t season;
     bool enabled, impact, cat_valid, dog_valid;
     bool cat_present, dog_present;
     int third_kind;

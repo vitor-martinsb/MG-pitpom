@@ -68,7 +68,7 @@
     worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.courseName(window.GOLF_CAMPAIGN?.courses[frame.level])}`:'';
     const local=frame.players.find(p=>p.id===frame.local);
     const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
-    effectLabel.textContent=[effect?GolfI18n.t('effect.'+effectNames[effect]):'',local?.mudShots>0?GolfI18n.t('juju.muddy.'+(local.mudShots===1?'one':'other'),{count:local.mudShots}):''].filter(Boolean).join(' · ');
+    effectLabel.textContent=[effect?GolfI18n.t(effect>=7?'season.obstacles':'effect.'+effectNames[effect]):'',local?.mudShots>0?GolfI18n.t('juju.muddy.'+(local.mudShots===1?'one':'other'),{count:local.mudShots}):''].filter(Boolean).join(' · ');
   }
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;
@@ -80,7 +80,7 @@
       if(frame.active&&!frame.intro&&soloStarted!==frame.level){soloStarted=frame.level;GolfAudio.phase('game');}
       if(frame.slapTime>lastSlap&&frame.slapTime>=0)GolfAudio.play('slap');
       if(frame.wakeTime>lastWake&&frame.wakeTime>=0)GolfAudio.play('capture');
-      for(const p of frame.players){const previous=heard.get(p.id)??0;if(p.effectSerial>previous&&p.effectKind)GolfAudio.play(effectNames[p.effectKind]);heard.set(p.id,p.effectSerial);}
+      for(const p of frame.players){const previous=heard.get(p.id)??0;if(p.effectSerial>previous&&p.effectKind)GolfAudio.play(p.effectKind===7?'present':p.effectKind>=7?'christmas':effectNames[p.effectKind]);heard.set(p.id,p.effectSerial);}
     }
     lastSlap=frame.slapTime;lastWake=frame.wakeTime;
     status.hidden=!frame.active;$('minimap').hidden=!frame.active;$('presentation').hidden=!frame.active||!frame.intro;

@@ -9,6 +9,10 @@ The garden redesign adds painted grass and cedar, organic trees, flowers,
 mushrooms, soft warm light and a storybook interface while retaining the original
 physics and multiplayer. See [visual changes, validation and performance](docs/visual-redesign.md).
 
+The optional **Enchanted Christmas** event is available in Settings → Seasonal events.
+It decorates every course automatically and adds a host-configured Christmas Star
+Tournament with optional interactive obstacles. See [activation, architecture and validation](docs/christmas-event.md).
+
 ## Publish multiplayer
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vitor-martinsb/MG-pitpom/tree/staging)

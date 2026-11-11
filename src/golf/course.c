@@ -36,7 +36,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     int used=snprintf(text,sizeof(text),"{\"active\":%s,\"level\":%d,\"intro\":%s,\"progress\":%.5g,\"time\":%.5g,\"mode\":\"%s\",\"local\":%u,\"camera\":[%.5g,%.5g,%.5g],\"cat\":[%.5g,%.5g],\"dog\":[%.5g,%.5g],\"slapTime\":%.5g,\"wakeTime\":%.5g,\"players\":[",active?"true":"false",golf->level_num,g->begin_camera_animation.active?"true":"false",g->begin_camera_animation.t/7.5f,g->t,m->impact?"impact":"classic",g->local_player_id,graphics->cam_pos.x,graphics->cam_pos.y,graphics->cam_pos.z,m->cat.x,m->cat.z,m->dog.x,m->dog.z,m->cat_slap_time,m->dog_wake_time);
     for(int i=0;i<g->player_count;i++) {
         golf_player_t *p=&g->players[i];
-        int n=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g],\"color\":[%.4g,%.4g,%.4g],\"visible\":%s,\"captured\":%s,\"firstComplete\":%s,\"strokes\":%d,\"slowShots\":%d,\"slowUntil\":%.5g,\"mudShots\":%d,\"mudFadeUntil\":%.5g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.5g,\"effectSerial\":%u}",i?",":"",p->id,p->ball.draw_pos.x,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z,golf_game_player_visible(p)?"true":"false",p->ball.captured?"true":"false",p->ball.first_shot_complete?"true":"false",p->stroke_count,p->ball.slow_shots,p->ball.slow_until,p->ball.mud_shots,p->ball.mud_fade_until,p->ball.capture_kind,p->ball.effect_kind,p->ball.effect_time,p->ball.effect_serial);
+        int n=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g],\"color\":[%.4g,%.4g,%.4g],\"visible\":%s,\"hole\":%s,\"captured\":%s,\"firstComplete\":%s,\"strokes\":%d,\"slowShots\":%d,\"slowUntil\":%.5g,\"mudShots\":%d,\"mudFadeUntil\":%.5g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.5g,\"effectSerial\":%u,\"seasonSkin\":%d,\"seasonTrail\":%d,\"seasonColor\":[%.4g,%.4g,%.4g]}",i?",":"",p->id,p->ball.draw_pos.x,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z,golf_game_player_visible(p)?"true":"false",p->ball.is_in_hole?"true":"false",p->ball.captured?"true":"false",p->ball.first_shot_complete?"true":"false",p->stroke_count,p->ball.slow_shots,p->ball.slow_until,p->ball.mud_shots,p->ball.mud_fade_until,p->ball.capture_kind,p->ball.effect_kind,p->ball.effect_time,p->ball.effect_serial,p->season_skin,p->season_trail,golf_season_ball_color(p).x,golf_season_ball_color(p).y,golf_season_ball_color(p).z);
         if(n<0||(size_t)n>=sizeof(text)-(size_t)used-8)break;used+=n;
     }
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",m->wildlife.world,m->wildlife.stage,m->wildlife.course);
@@ -64,6 +64,6 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);
     }
-    snprintf(text+used,sizeof(text)-(size_t)used,"]}");return text;
+    snprintf(text+used,sizeof(text)-(size_t)used,"],\"season\":{\"theme\":%s,\"enabled\":%s,\"items\":%d,\"vertices\":%d}}",golf_season_settings(-1,0,0,0)?"true":"false",m->season.enabled?"true":"false",m->season.count,golf_season_vertex_count());return text;
 }
 EMSCRIPTEN_KEEPALIVE void golf_course_skip(void) {golf_game_skip_presentation();}
