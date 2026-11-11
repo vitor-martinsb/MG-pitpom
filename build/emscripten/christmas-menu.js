@@ -21,16 +21,19 @@
     const host=home.getBoundingClientRect(),w=host.width,h=host.height,key=h>=w?'portrait':'landscape',spec=compositions[key],image=images[key];
     if(!w||!h||!image)return;
     let scale=Math.max(w/image.naturalWidth,h/image.naturalHeight);
-    // Extra-tall phones extend only the empty grass, keeping all seven pets.
-    if(key==='portrait')scale=Math.min(scale,(w-24)/(spec.group[1]-spec.group[0]));
+    // Fit the whole portrait width, including the flag and tree. Only empty
+    // sky and grass bands extend on taller phones; pets keep their proportions.
+    if(key==='portrait')scale=w/image.naturalWidth;
     const iw=image.naturalWidth*scale,ih=image.naturalHeight*scale,extra=Math.max(0,h-ih);
-    let x=(w-iw)/2,y=extra?0:(h-ih)/2;
+    let x=(w-iw)/2,y=extra?0:(h-ih)/2,skyExtra=key==='portrait'?extra*.7:0,grassExtra=extra-skyExtra;
     x=Math.max(12-spec.group[0]*scale,Math.min(x,w-12-spec.group[1]*scale));
     if(key==='portrait'){
       const menu=document.getElementById('main-menu'),limit=!menu.hidden?menu.getBoundingClientRect().top-host.top-16:h*.80;
       if(!extra)y=Math.max(h-ih,Math.min(y,limit-spec.feet*scale));
+      const lift=Math.min(Math.max(0,spec.feet*scale+y+skyExtra-limit),skyExtra+65*scale*.75);
+      skyExtra-=lift;grassExtra+=lift;
     }else y=Math.max(h-ih,Math.min(y,h-20-spec.feet*scale));
-    layout={key,spec,image,w,h,x,y,scale,extra,host};return layout;
+    layout={key,spec,image,w,h,x,y,scale,extra,skyExtra,grassExtra,host};return layout;
   }
   function tailImage(l,index,phase){
     const key=`${l.key}:${index}:${phase}`;if(cache.has(key))return cache.get(key);
@@ -49,14 +52,18 @@
     if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
     ctx.setTransform(d*l.scale,0,0,d*l.scale,d*l.x,d*l.y);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
     const image=l.image,iw=image.naturalWidth,ih=image.naturalHeight;
-    if(l.extra){
-      const top=1260,bottom=1500,stretch=l.extra/l.scale;
-      ctx.drawImage(image,0,0,iw,top,0,0,iw,top);
-      ctx.drawImage(image,0,top,iw,bottom-top,0,top,iw,bottom-top+stretch);
-      ctx.drawImage(image,0,bottom,iw,ih-bottom,0,bottom+stretch,iw,ih-bottom);
+    if(l.key==='portrait'&&(l.skyExtra||l.grassExtra)){
+      const sky=l.skyExtra/l.scale,grass=l.grassExtra/l.scale;
+      ctx.drawImage(image,0,0,iw,90,0,0,iw,90);
+      ctx.drawImage(image,0,90,iw,65,0,90,iw,65+sky);
+      ctx.drawImage(image,0,155,iw,1105,0,155+sky,iw,1105);
+      ctx.drawImage(image,0,1260,iw,220,0,1260+sky,iw,220+grass);
+      ctx.drawImage(image,0,1480,iw,ih-1480,0,1480+sky+grass,iw,ih-1480);
     }else ctx.drawImage(image,0,0);
     if(!motion.matches){
+      ctx.save();ctx.translate(0,l.skyExtra/l.scale);
       l.spec.tails.forEach(([x,y,w,h],i)=>{const phase=Math.round(Math.sin(now/(440+i*43)+i)*4);ctx.drawImage(tailImage(l,i,phase),x,y,w,h);});
+      ctx.restore();
       // Gentle light variation stays on the actual painted bulbs, never off.
       l.spec.bulbs.forEach(([x,y],i)=>{const alpha=.06+.06*(.5+.5*Math.sin(now/1250+i));ctx.fillStyle=`rgba(255,242,188,${alpha})`;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();});
     }
@@ -74,8 +81,8 @@
   }).catch(()=>{home.dataset.christmasArt='fallback';return false;});return preparation;}
   window.GolfChristmasMenu=Object.freeze({get ready(){return prepare();},mount(){scene.append(canvas);update();},get active(){return active();},petBounds(id){
     if(!active())return;const l=placement(),b=l?.spec.pets[id];if(!b)return;
-    return {x:l.x+b[0]*l.scale,y:l.y+b[1]*l.scale,width:b[2]*l.scale,height:b[3]*l.scale};
-  },diagnostics:()=>({ready:decoded,active:active(),composition:layout?.key,frames,cache:cache.size,scale:layout?.scale,extraGrass:layout?.extra??0})});
+    return {x:l.x+b[0]*l.scale,y:l.y+b[1]*l.scale+l.skyExtra,width:b[2]*l.scale,height:b[3]*l.scale};
+  },diagnostics:()=>({ready:decoded,active:active(),composition:layout?.key,frames,cache:cache.size,scale:layout?.scale,extraGrass:layout?.grassExtra??0,extraSky:layout?.skyExtra??0})});
   new ResizeObserver(update).observe(home);new MutationObserver(update).observe(home,{attributes:true,attributeFilter:['hidden','data-screen']});
   window.addEventListener('seasonchange',update);document.addEventListener('visibilitychange',update);motion.addEventListener('change',update);
 })();
