@@ -28,3 +28,10 @@ execute_process(COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/../bu
 add_executable(golf_i18n_tests i18n_test.c ../src/golf/i18n.c)
 target_include_directories(golf_i18n_tests PRIVATE ../src "${CMAKE_BINARY_DIR}/generated")
 add_test(NAME language_and_utf8 COMMAND golf_i18n_tests)
+
+add_executable(golf_cat_outfit_pose_tests cat_outfit_pose_test.c ../src/common/maths.c)
+target_include_directories(golf_cat_outfit_pose_tests PRIVATE ../src)
+if(NOT WIN32)
+    target_link_libraries(golf_cat_outfit_pose_tests PRIVATE m)
+endif()
+add_test(NAME cat_forward_and_fitted_outfits COMMAND golf_cat_outfit_pose_tests)

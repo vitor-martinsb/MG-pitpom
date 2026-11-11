@@ -18,6 +18,7 @@ vec3 golf_garden_ball_position(const golf_player_t *player,float time);
 golf_texture_t *golf_garden_material(const golf_material_t *material, float *kind);
 unsigned golf_garden_vertex_count(void);
 unsigned golf_garden_actor_vertex_count(void);
+vec3 golf_garden_cat_forward(void);
 float golf_garden_landscape_gap(void);
 vec3 golf_garden_flag_point(float u,float side,float time);
 float golf_garden_flag_time(void);

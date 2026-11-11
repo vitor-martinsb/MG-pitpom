@@ -1,5 +1,7 @@
 #include "golf/garden.h"
 #include "golf/juju_pose.h"
+#include "golf/cat_pose.h"
+#include "golf/seasonal_pose.h"
 #include <float.h>
 #include <math.h>
 #include <stddef.h>
@@ -26,6 +28,7 @@ static struct {
     sg_buffer world, effects, shadows, actors;
     unsigned vertex_count;
     unsigned actor_count;
+    vec3 cat_forward;
     bool replaced[1024];
     mat4 transform;
     vec3 center;
@@ -37,6 +40,7 @@ static garden_vertex_t effects[FX_LIMIT], shadows[FX_LIMIT];
 static garden_vertex_t actors[ACTOR_LIMIT];
 static int season_theme,season_skin,season_trail,season_obstacles;
 static void season_costume(garden_mesh_t *,int,float,float);
+static void season_pet_coat(garden_mesh_t *,int,vec3,vec3);
 static void season_draw(float);
 
 static vec4 paint(float r, float g, float b, float sway) { return V4(r,g,b,sway); }
@@ -376,7 +380,8 @@ static void animal(garden_mesh_t *mesh,vec3 position,bool cat,float time,float e
     float breath=.012f*sinf(golf_garden_flag_time()*2.2f),height=cat?.34f:.22f+awake*.19f;
     oval(mesh,V3(0,height+breath,0),cat?V3(.22f,.22f,.40f):V3(.30f,.22f,.49f),coat,4,9);
     if(!cat){oval(mesh,V3(-.19f,height+.07f,-.14f),V3(.13f,.14f,.22f),black,3,7);oval(mesh,V3(.16f,height+.09f,-.24f),V3(.15f,.14f,.19f),black,3,7);}
-    oval(mesh,V3(0,height,.27f),V3(cat?.17f:.22f,.20f,.14f),white,3,8);
+    if(!cat||!season_theme)oval(mesh,V3(0,height,.27f),V3(cat?.17f:.22f,.20f,.14f),white,3,8);
+    if(cat)season_pet_coat(mesh,1,V3(0,height+breath,0),V3(.22f,.22f,.40f));
     for(int i=0;i<4;i++) {
         float x=(i&1?1:-1)*(cat?.13f:.21f),z=i<2?.25f:-.27f;
         if(cat){float lift=i==0&&event_age>=0&&event_age<.4f?.16f*sinf(event_age/.4f*MF_PI):0;quadruped_leg(mesh,i,x,z,height-.07f,phase,gait,white,false,lift);continue;}
@@ -575,6 +580,7 @@ static void wild_animal(garden_mesh_t *mesh,const golf_wild_animal_t *a,int kind
         oval(mesh,V3(0,height-.035f,.25f),V3(.09f,.13f,.045f),black,3,7);
         oval(mesh,V3(0,height+.13f,.22f),V3(.19f,.055f,.16f),black,2,8);
     }
+    season_pet_coat(mesh,kind==1?3:4,V3(0,torso_y,-.04f),V3(.23f,.21f,body));
     for(int leg=0;leg<4;leg++) {
         float x=(leg%2?1:-1)*.16f,z=leg<2?.23f:-body*.75f;
         float lift=acting&&kind==2&&leg<2?.06f*sinf(golf_clampf(age/.7f,0,1)*MF_PI):0;
@@ -760,11 +766,9 @@ void golf_garden_draw_feedback(float time) {
     garden_mesh_t actor={actors,0,ACTOR_LIMIT};
     for(int i=0;i<garden.level->entities.length;i++)if(golf_garden_replaces_flag(&garden.level->entities.data[i]))wind_flag(&actor,&garden.level->entities.data[i],golf_garden_flag_time());
     if(golf_get()->state==GOLF_STATE_IN_GAME&&game->mechanics.enabled){
-        float angle=fmaxf(time,0)*.75f+game->mechanics.cat_phase,segment=fmodf(angle,MF_PI);
-        vec3 forward=game->mechanics.across;if(cosf(angle)<0)forward=vec3_scale(forward,-1);
-        float travelled=game->mechanics.cat_span*(floorf(angle/MF_PI)*2+(segment<=MF_PI*.5f?sinf(segment):2-sinf(segment)));
-        float gait=golf_clampf(fabsf(cosf(angle))*game->mechanics.cat_span*.75f/.18f,0,1);
-        if(game->mechanics.cat_valid&&game->mechanics.cat_present)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,forward,travelled*(2*MF_PI/.42f),gait);
+        golf_cat_pose_t pose=golf_cat_patrol_pose(time,game->mechanics.cat_phase,game->mechanics.cat_span,game->mechanics.across);
+        garden.cat_forward=pose.forward;
+        if(game->mechanics.cat_valid&&game->mechanics.cat_present)animal(&actor,game->mechanics.cat,true,time,time-game->mechanics.cat_slap_time,pose.forward,pose.stride,pose.gait);
         if(game->mechanics.dog_valid&&game->mechanics.dog_present)animal(&actor,game->mechanics.dog,false,time,time-game->mechanics.dog_wake_time,dog_facing(game),0,0);
         for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(game->mechanics.wildlife.animals[kind].active&&game->mechanics.wildlife.animals[kind].present){
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
@@ -863,3 +867,5 @@ unsigned golf_garden_actor_vertex_count(void){return garden.actor_count;}
 float golf_garden_landscape_gap(void){return garden.landscape_gap;}
 
 #include "seasonal-render.inc"
+
+vec3 golf_garden_cat_forward(void){return garden.cat_forward;}

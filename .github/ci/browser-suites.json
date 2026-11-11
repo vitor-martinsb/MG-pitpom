@@ -9,7 +9,7 @@
   "campaign-2": [["campaign-browser.mjs", "--shard", "2/4"]],
   "campaign-3": [["campaign-browser.mjs", "--shard", "3/4"]],
   "campaign-4": [["campaign-browser.mjs", "--shard", "4/4"]],
-  "wildlife": [["juju-browser.mjs"], ["wildlife-render.mjs"], ["rescue-browser.mjs"]],
+  "wildlife": [["juju-browser.mjs"], ["wildlife-render.mjs"], ["rescue-browser.mjs"], ["pet-outfits.mjs"]],
   "social": [["loading-audio.mjs"], ["bot-updates-browser.mjs"]],
   "lobby": [["lobby-tabs.mjs"], ["solo-profile.mjs"], ["seasonal.mjs"], ["gameplay-improvements.mjs"]],
   "lobby-webkit": [["lobby-webkit.mjs"], ["seasonal-webkit.mjs"], ["gameplay-webkit.mjs"]]

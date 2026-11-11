@@ -1,4 +1,5 @@
 #include "golf/mechanics.h"
+#include "golf/cat_pose.h"
 #include "golf/navigation.h"
 #include <float.h>
 #include <math.h>
@@ -118,7 +119,7 @@ void golf_mechanics_animate(golf_mechanics_t *m,float time) {
     }
     /* Sine easing has a brief, gentle pause at each end of the crossing. */
     m->cat_phase=(key>>12)%628/100.f;
-    float phase=sinf(time*.95f+m->cat_phase);
+    float phase=sinf(golf_cat_patrol_angle(time,m->cat_phase));
     m->cat=vec3_add(m->cat_center,vec3_scale(m->across,m->cat_span*phase));
 }
 // Seeded relocation runs once at field setup, shared by solo and authority.

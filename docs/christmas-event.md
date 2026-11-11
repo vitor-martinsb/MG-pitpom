@@ -40,3 +40,9 @@ O Especial de Natal reutiliza integralmente a arte padrão do menu, suas composi
 Somente o ambiente recebe decoração: pisca-pisca no alto, enfeites nas árvores e uma pequena árvore natalina com presentes em uma área livre do cenário. A sobreposição usa o canvas já existente de `seasonal.js`, sem imagens extras, recortes, filtros sobre os animais ou um renderizador alternativo. O menu não recebe neve sobre os personagens nem alterações extras no céu. Ao desativar o tema, toda a decoração desaparece imediatamente.
 
 A validação cobre Chromium e WebKit, seis resoluções, animações originais ativas, imagem e posições dos bichinhos preservadas, ausência de downloads da arte natalina descartada, retorno ao tema original e sincronização do lobby. A alteração é restrita à apresentação do menu; não muda campos, física ou regras da partida.
+
+## Encaixe dos trajes nos campos
+
+As roupas da Pompom (gata laranja), da Luna e da Frida usam o centro e as dimensões do tronco que está sendo desenhado naquele quadro. Uma camada de 9 mm acompanha respiração, passo e reações. As aberturas deixam patas e cauda livres; bainhas, cinto, glacê e botões pertencem à superfície da roupa. Os gorros seguem a altura atual e a posição real da cabeça. O menu mantém os bichinhos originais sem acessórios.
+
+`cat_pose.h` centraliza o relógio da travessia da Pompom: a posição e a orientação do passo não podem mais divergir entre 0,95 e 0,75 radianos por segundo. Os testes verificam também a transformação real do focinho na direção do movimento, o encaixe dos três trajes e a renderização em repouso, caminhada e reação no desktop e celular. Física, interações, campos e avatares não são modificados por essa correção visual.

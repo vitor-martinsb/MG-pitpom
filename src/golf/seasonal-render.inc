@@ -40,11 +40,29 @@ static void season_gift(garden_mesh_t *m,vec3 p,float size,int color,float t){
     box(m,p,V3(size+.026f,size+.026f,size*.15f),ribbon);
     for(int side=-1;side<=1;side+=2)oval(m,vec3_add(p,V3(side*size*.3f,size+.035f+sinf(t)*.008f,0)),V3(size*.3f,.035f,.06f),ribbon,2,5);
 }
-/* Additive fitted accessories share each animal's current local transform. */
+/* Tailored torso surfaces use the same position, breathing and gait as the
+ * original bodies. Trim and buttons are face colors, never detached meshes. */
+static void season_pet_coat(garden_mesh_t *m,int kind,vec3 center,vec3 size){
+    if(!season_theme||!(kind==1||kind==3||kind==4))return;
+    vec4 cream=paint(.98f,.96f,.88f,0),red=festive(0),gold=festive(1),green=festive(2);
+    for(int ring=0;ring<8;ring++)for(int segment=0;segment<20;segment++){
+        vec3 n[4];for(int j=0;j<4;j++)n[j]=sphere_point(-MF_PI*.5f+MF_PI*(ring+(j>=2))/8.f,2*MF_PI*(segment+(j==1||j==2))/20.f);
+        vec3 mid=vec3_scale(vec3_add(n[0],n[2]),.5f);if(golf_season_coat_open(mid))continue;
+        vec4 color=kind==1?red:kind==3?green:paint(.68f,.36f,.16f,0);
+        if(mid.y<-.55f)color=kind==3?gold:cream;
+        if(kind==1&&mid.y<0&&mid.y>-.25f){color=paint(.13f,.15f,.14f,0);if(mid.z>.80f&&fabsf(mid.x)<.20f)color=gold;}
+        if(kind==3&&mid.y>.25f&&mid.z>.40f)color=red;
+        if(kind==4){
+            if(fabsf(mid.x)>.76f&&mid.z>.20f)color=cream;
+            if(mid.z>.80f&&fabsf(mid.x)<.22f)color=ring%2?red:green;
+        }
+        int indices[]={0,1,2,0,2,3};for(int k=0;k<6;k++){vec3 v=n[indices[k]];emit(m,golf_season_coat_point(center,size,v),v,color);}
+    }
+}
+/* Head accessories share the animal's local transform and current head pose. */
 static void season_costume(garden_mesh_t *m,int kind,float head,float t){
     if(!season_theme)return;
     vec4 white=paint(.98f,.96f,.88f,0),red=festive(0),gold=festive(1),green=festive(2);
-    if(kind==1||kind==3)oval(m,V3(0,.35f,-.07f),V3(.225f,.205f,.35f),kind==1?red:green,3,8);
     if(kind==2)oval(m,V3(0,.45f,-.045f),V3(.243f,.237f,.43f),white,3,8);
     if(kind==0){
         for(int side=-1;side<=1;side+=2){
@@ -54,19 +72,16 @@ static void season_costume(garden_mesh_t *m,int kind,float head,float t){
         }
         oval(m,V3(0,head-.04f,.68f),V3(.058f,.042f,.032f),red,3,7);
     }else if(kind==1||kind==3){
-        branch(m,V3(0,head+.20f,.29f),V3(.10f+.025f*sinf(t*2),head+.51f,.27f),.22f,.008f,kind==1?red:green);
-        oval(m,V3(0,head+.20f,.29f),V3(.23f,.045f,.22f),white,2,8);
-        oval(m,V3(.10f+.025f*sinf(t*2),head+.51f,.27f),V3(.055f,.055f,.055f),kind==1?white:gold,2,6);
-        oval(m,V3(0,head-.24f,.31f),V3(.23f,.045f,.21f),kind==1?red:green,2,8);
+        float z=kind==1?.32f:.29f,base=head+(kind==1?.22f:.23f)*.84f;
+        float width=kind==1?.25f:.245f,tip=.10f+.025f*sinf(t*2);
+        branch(m,V3(0,base+.012f,z),V3(tip,base+.31f,z-.02f),width*.88f,.008f,kind==1?red:green);
+        oval(m,V3(0,base,z),V3(width+.012f,.032f,.245f),white,3,12);
+        oval(m,V3(tip,base+.31f,z-.02f),V3(.055f,.055f,.055f),kind==1?white:gold,2,6);
     }else if(kind==2){
         branch(m,V3(0,head+.14f,.27f),V3(0,head+.35f,.27f),.12f,.12f,paint(.10f,.13f,.14f,0));
         oval(m,V3(0,head+.15f,.27f),V3(.21f,.026f,.21f),paint(.10f,.13f,.14f,0),2,8);
         oval(m,V3(0,.49f,.29f),V3(.24f,.05f,.23f),white,2,8);
         box(m,V3(.13f,.35f,.40f),V3(.05f,.16f,.02f),red);
-    }else if(kind==4){
-        oval(m,V3(0,head-.24f,.28f),V3(.22f,.04f,.22f),paint(.68f,.36f,.16f,0),2,8);
-        for(int i=0;i<5;i++)oval(m,V3((i-2)*.06f,head-.24f,.47f),V3(.025f,.026f,.012f),white,2,5);
-        for(int i=0;i<3;i++)oval(m,V3(0,.30f+i*.07f,.36f),V3(.022f,.022f,.017f),i%2?green:red,2,5);
     }else if(kind==6){
         // Ribbons follow the torso; paws, tail and face remain unobstructed.
         box(m,V3(0,.39f,-.04f),V3(.035f,.018f,.29f),red);
