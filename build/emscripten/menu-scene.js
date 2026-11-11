@@ -216,9 +216,12 @@
       tooltip.hidden=false;translate();
     }
     function layout(){
-      const matrix=getRoot()?.getScreenCTM();if(!matrix)return;
+      const matrix=getRoot()?.getScreenCTM();
       const host=home.getBoundingClientRect();
-      for(const {button,bounds}of items){
+      for(const {id,button,bounds}of items){
+        const festive=window.GolfChristmasMenu?.petBounds(id);
+        if(festive){Object.assign(button.style,{left:`${festive.x}px`,top:`${festive.y}px`,width:`${festive.width}px`,height:`${festive.height}px`});continue;}
+        if(!matrix)continue;
         const [x,y,w,h]=bounds;
         Object.assign(button.style,{left:`${matrix.e+x*matrix.a-host.x}px`,top:`${matrix.f+y*matrix.d-host.y}px`,width:`${w*matrix.a}px`,height:`${h*matrix.d}px`});
       }
@@ -384,7 +387,7 @@
       lastClock=performance.now();
     }
     function visibility(){
-      const run=!home.hidden&&!document.hidden;
+      const run=!home.hidden&&!document.hidden&&!window.GolfChristmasMenu?.active;
       if(run)painter?.start();else painter?.stop();
       for(const a of animations){
         const tail=tails.get(a);
@@ -394,9 +397,10 @@
       }
       home.dataset.motion=motion.matches?'gentle':'full';
       clearInterval(tick);tick=undefined;
-      if(!home.hidden&&!document.hidden){clock=new Date();updateLight();tick=setInterval(()=>{clock=new Date();updateLight();},1000);}
+      if(run){clock=new Date();updateLight();tick=setInterval(()=>{clock=new Date();updateLight();},1000);}
     }
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
+    window.addEventListener('seasonchange',()=>{visibility();help.layout();});window.addEventListener('seasonartready',()=>{if(window.GolfChristmasMenu?.active){visibility();help.layout();}});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
     const images=['menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];

@@ -32,3 +32,13 @@ A decoração usa um buffer fixo de até 36.000 vértices, 64 flocos no campo, a
 - As suítes anteriores de mapas, física, avatares, menu, áudio e lobby continuam habilitadas. Os hashes de todos os mapas e modelos originais permanecem inalterados; apenas os hashes dos cinco pontos de integração de gameplay revisados foram atualizados.
 
 O teste em navegador emulado cobre Chromium e WebKit; ele não substitui uma medição de desempenho num aparelho Android ou iPhone físico.
+
+## Arte do menu de Natal
+
+O menu natalino utiliza as composições `menu-christmas.png` e `menu-christmas-portrait.png`, preparadas a partir da referência enviada em `1000132077.png`. A arte mantém os sete bichinhos agrupados, roupas natalinas completas, árvore com laço, guirlandas, presentes, lago e moinho iluminado. Barras pretas e elementos do telefone não fazem parte dos arquivos. Logo, legendas e botões são HTML independente.
+
+`christmas-menu.js` desenha a composição adequada ao formato da tela em um único canvas opaco. Os rabos usam deformação local com bordas e pontos de ligação fixos; patas e corpos nunca são removidos da imagem. Luzes variam suavemente, sem apagar. O movimento respeita a preferência de movimento reduzido e para quando a página ou o menu ficam ocultos. O renderizador do menu original é pausado durante o Natal e retomado ao trocar de tema.
+
+As imagens são carregadas sob demanda, sem downloads extras no tema original. As duas composições são decodificadas antes de revelar o menu quando o Natal está selecionado. Em celulares muito altos, somente a faixa de gramado vazio é estendida; os personagens preservam proporções. Descrições acessíveis continuam disponíveis nos sete bichinhos, com áreas de interação ajustadas à nova arte.
+
+A validação visual cobre 320×900, 390×844, 768×1024, 844×390, 1280×800 e 1920×1080, verificando cobertura opaca, personagens inteiros, botões sem sobreposição, retorno do tema original e sincronização do lobby. A alteração é restrita à apresentação do menu; não muda campos, física ou regras da partida.

@@ -28,7 +28,7 @@
   function apply(){document.body.dataset.season=theme();themeSelect.value=prefs.theme;themeSelect.disabled=!!room;mechanicsInput.checked=prefs.obstacles;mechanicsInput.disabled=!!room;localCosmetics.hidden=!!room;
     ball.value=localBall.value=String(prefs.skin);trail.value=localTrail.value=String(prefs.trail);subtitle.hidden=theme()!=='christmas';tournamentTitle.hidden=!room?.seasonal?.tournament;trophy.hidden=room?.phase!=='finished'||!room?.seasonal?.tournament;
     native();if(appliedTheme!==theme()){appliedTheme=theme();window.dispatchEvent(new Event('seasonchange'));}animate();}
-  themeSelect.onchange=()=>{prefs.theme=themeSelect.value;persist();};mechanicsInput.onchange=()=>{prefs.obstacles=mechanicsInput.checked;if(prefs.obstacles)prefs.theme='christmas';persist();};
+  themeSelect.onchange=async()=>{const value=themeSelect.value;if(value==='christmas')await window.GolfChristmasMenu?.ready;prefs.theme=value;persist();};mechanicsInput.onchange=async()=>{const value=mechanicsInput.checked;if(value)await window.GolfChristmasMenu?.ready;prefs.obstacles=value;if(value)prefs.theme='christmas';persist();};
   for(const s of [ball,localBall,trail,localTrail])s.onchange=()=>{cosmeticsDirty=true;prefs[s===ball||s===localBall?'skin':'trail']=Number(s.value);persist();};
   function configure(){window.GolfOnline?.configureSeason({theme:roomTheme.value,tournament:tournamentInput.checked,obstacles:hazardsInput.checked});}
   for(const s of [roomTheme,tournamentInput,hazardsInput])s.onchange=()=>{if(s!==roomTheme&&s.checked)roomTheme.value='christmas';configure();};
@@ -48,14 +48,14 @@
     if(now-previous<33){animate();return;}previous=now;
     const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);if(canvas.width!==Math.round(w*d)||canvas.height!==Math.round(h*d)){canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);}ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
     const home=!$('home').hidden,entry=!$('connect').hidden,reduce=reducedMotion.matches,time=reduce?0:now/1000;
-    if(home||entry){
+    if((home||entry)&&!window.GolfChristmasMenu?.active){
       // Aurora, stars and bulbs are on one bounded surface, never CSS filters.
       const glow=ctx.createLinearGradient(0,0,w,h*.45);glow.addColorStop(0,'#78d9ba22');glow.addColorStop(.5,'#adc4fb20');glow.addColorStop(1,'#ffffff00');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h*.45);
       for(let i=0;i<18;i++){ctx.fillStyle='#fff3cc';ctx.globalAlpha=.4+.3*Math.sin(time*.45+i);ctx.fillRect(((i*83.71)%100)/100*w,20+((i*37)%100)/100*h*.28,2,2);}ctx.globalAlpha=1;
       ctx.strokeStyle='#41613e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,8);ctx.quadraticCurveTo(w/2,60,w,8);ctx.stroke();
       for(let i=0;i<18;i++){ctx.fillStyle=['#e85c55','#ffe69b','#7dcb9a','#a6d7f2'][i%4];ctx.beginPath();ctx.ellipse((i+.5)*w/18,10+25*Math.sin((i+.5)/18*Math.PI),3,5,0,0,Math.PI*2);ctx.fill();}
     }
-    if(home){const root=document.querySelector('.living-menu-art'),m=root?.getScreenCTM();if(m){
+    if(home&&!window.GolfChristmasMenu?.active){const root=document.querySelector('.living-menu-art'),m=root?.getScreenCTM();if(m){
       ctx.save();ctx.setTransform(d*m.a,d*m.b,d*m.c,d*m.d,d*m.e,d*m.f);
       const portrait=root.viewBox.baseVal.height>root.viewBox.baseVal.width,lights=portrait?[[22,320],[88,337],[133,375],[37,405],[133,456],[66,493],[169,510],[45,549],[851,636],[895,657],[921,707]]:[[27,30],[120,58],[231,78],[315,28],[49,107],[169,142],[290,110],[1475,240],[1530,265],[1585,285]];
       lights.forEach(([x,y],i)=>{ctx.fillStyle=['#e36351','#f5d67a','#88cfac'][i%3];ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});

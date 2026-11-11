@@ -14,12 +14,14 @@
   }
   const scene=$('home-scenery');
   scene.innerHTML='<picture><source media="(orientation:portrait)" srcset="art/menu-garden-portrait.png"><img class="home-art" src="art/menu-garden.png" alt="Pituca, Pompom, Romeu, Luna, Frida, Juju, Cocota" width="1672" height="941" fetchpriority="high"></picture>';
+  window.GolfChristmasMenu?.mount();
   const livingScene=document.createElement('div');livingScene.className='living-scene';scene.append(livingScene);
   const animation=window.GolfMenuScene.mount(livingScene,home);
   // Prepare both compositions before exposing controls, including after rotation.
   const decodeArt=src=>{const image=new Image();image.src=src;return image.decode();};
   Promise.all([
     animation.ready,
+    window.GolfSeason?.theme==='christmas'?window.GolfChristmasMenu.ready:Promise.resolve(),
     decodeArt('art/menu-garden.png'),decodeArt('art/menu-garden-portrait.png'),
     ...[400,500,600,700].map(weight=>document.fonts.load(`${weight} 16px Poppins`)),
     document.fonts.ready
