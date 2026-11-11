@@ -331,7 +331,7 @@
     $('play-again').hidden=phase!=='finished'||room.host!==identity?.id;
   }
   function renderSpectators(){
-    if(!room)return;const enabled=lastBalls.get(identity?.id)?.hole||['results','finished'].includes(phase);$('spectator').hidden=!enabled;
+    if(!room)return;const enabled=(room.playStyle!=='turns'||phase!=='playing')&&(lastBalls.get(identity?.id)?.hole||['results','finished'].includes(phase));$('spectator').hidden=!enabled;
     const old=$('spectate').value;const options=room.players.filter(p=>p.connected).map(p=>{const e=text('option',p.nickname);e.value=String(p.id);return e;});$('spectate').replaceChildren(...options);
     if(options.some(o=>o.value===old))$('spectate').value=old;else $('spectate').value=String(identity?.id);
   }

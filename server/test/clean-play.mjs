@@ -1,4 +1,4 @@
-import {createLobby,fillBotCount,joinLobby,lobbyTab} from './navigation-fixture.mjs';
+import {createLobby,fillBotCount,joinLobby,lobbyTab,finishPresentation} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -39,7 +39,7 @@ try{
   // Live input checks use the existing original first course, without AI load.
   await fillBotCount(a,'0');await a.locator('#apply-bot-count').click();await b.locator('#bot-roster').waitFor({state:'hidden'});
   room.configurePool([...room.members.values()][0],'custom',[0]);await lobbyTab(a,'maps');await a.locator('#holes').selectOption('1');await a.locator('#start').click();
-  for(const page of pages){await page.locator('#presentation').waitFor({state:'visible'});await page.locator('#skip-presentation').click();}
+  for(const page of pages)await finishPresentation(page);
   for(const page of pages)await page.waitForFunction(()=>document.getElementById('status').textContent===GolfI18n.t('phase.playing'));
   for(const [page,name,id]of [[a,'desktop',1],[b,'mobile',2]]){
     await page.locator('#toggle-match-info').waitFor({state:'visible'});assert.equal(await page.locator('#toggle-match-info').getAttribute('aria-pressed'),'false');
@@ -63,7 +63,7 @@ try{
       assert.equal(await page.locator('#toggle-match-info').getAttribute('aria-label'),await page.evaluate(()=>GolfI18n.t('showMatchInfo')));
     }
   }
-  await reloadMultiplayer(a);await a.locator('#presentation').waitFor({state:'visible',timeout:90000});await a.locator('#skip-presentation').click();
+  await reloadMultiplayer(a);await finishPresentation(a);
   await a.waitForFunction(()=>document.body.classList.contains('match-info-hidden'));
   assert.equal(await a.locator('#toggle-match-info').getAttribute('aria-pressed'),'true');assert.equal(room.members.size,2);
   await a.locator('#toggle-match-info').click();await a.waitForFunction(()=>document.getElementById('toggle-match-info').getAttribute('aria-pressed')==='false');await a.locator('#show-scores').click();await a.locator('#scores').waitFor({state:'visible'});
@@ -74,7 +74,7 @@ try{
   room.deadline=0;while(room.busy)await a.waitForTimeout(10);await room.tick();await a.locator('#finish-exit').click();await a.locator('#main-menu').waitFor({state:'visible'});
   assert.equal(await a.locator('#music-controls').isVisible(),true);assert.equal(await a.locator('#toggle-match-info').isHidden(),true);
   // The preference also applies offline, and never hides the native pause/exit.
-  await openCampaign(a);await a.locator('#level-adventure [data-level="0"]').click();await a.locator('#play-course').click();await a.locator('#presentation').waitFor({state:'visible'});await a.locator('#skip-presentation').click();
+  await openCampaign(a);await a.locator('#level-adventure [data-level="0"]').click();await a.locator('#play-course').click();await finishPresentation(a);
   await a.waitForFunction(()=>document.body.classList.contains('match-info-hidden'));
   await canvasClick(a,1200-80*900/720,80*900/720);await a.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).state===7);
   await canvasClick(a,600,450+160*900/720);await a.locator('#main-menu').waitFor({state:'visible'});

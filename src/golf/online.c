@@ -39,7 +39,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_online_diagnostics(void) {
     golf_game_t *game=golf_game_get();
     golf_player_t *local=golf_game_get_local_player();
     vec2 screen=golf_graphics_world_to_screen(local->ball.draw_pos);
-    int used=snprintf(buffer,sizeof(buffer),"{\"active\":%s,\"state\":%d,\"local\":%u,\"touch\":%s,\"cameraAngle\":%.9g,\"aimPower\":%.9g,\"aimArrows\":%d,\"canShoot\":%s,\"screen\":[%.9g,%.9g],\"players\":[",online.active?"true":"false",game->state,game->local_player_id,golf_inputs_get()->is_touch?"true":"false",game->cam.angle,game->aim_line.power,game->aim_line.num_arrows,golf_online_can_shoot()?"true":"false",screen.x,screen.y);
+    int used=snprintf(buffer,sizeof(buffer),"{\"active\":%s,\"state\":%d,\"local\":%u,\"touch\":%s,\"cameraAngle\":%.9g,\"aimPower\":%.9g,\"aimArrows\":%d,\"canShoot\":%s,\"cameraPlayer\":%u,\"screen\":[%.9g,%.9g],\"players\":[",online.active?"true":"false",game->state,game->local_player_id,golf_inputs_get()->is_touch?"true":"false",game->cam.angle,game->aim_line.power,game->aim_line.num_arrows,golf_online_can_shoot()?"true":"false",golf_online_camera_player()->id,screen.x,screen.y);
     for(int i=0;i<game->player_count;i++) {
         golf_player_t *p=&game->players[i];
         int n=snprintf(buffer+used,sizeof(buffer)-(size_t)used,"%s[%u,%d,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g]",i?",":"",p->id,p->connected,p->ball.pos.x,p->ball.pos.y,p->ball.pos.z,p->ball.draw_pos.x,p->ball.draw_pos.y,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z);
@@ -57,6 +57,13 @@ bool golf_online_can_shoot(void) {
     return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
 }
 golf_player_t *golf_online_camera_player(void) {
+    // The server's turn identity also selects the view for waiting players.
+    // Resolve it each frame so disconnects and the return to our turn cannot
+    // leave a stale manual spectator target or change local input ownership.
+    if(online.turns&&online.playing){
+        golf_player_t *current=golf_game_get_player(online.turn_id);
+        return current&&current->connected?current:golf_game_get_local_player();
+    }
     golf_player_t *p=golf_game_get_player(online.camera_id);
     if (p && p->connected) return p;
     return golf_game_get_local_player();

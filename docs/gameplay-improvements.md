@@ -14,6 +14,8 @@ O servidor publica `playStyle`, `turn` e `turnOrder` nos estados e snapshots exi
 
 Uma desconexão libera a vez imediatamente: o worker não simula bolas de jogadores desconectados, portanto aguardar essa bola parar bloquearia a sala. Reconexão conserva a identidade e a sequência de tacadas; o jogador retorna à ordem disponível, sem tomar a vez atual. O próximo campo reinicia a ordem. O relógio global, a tolerância de conclusão, as regras de limite de tacadas e a penalidade existente não são substituídos por outro sistema.
 
+No modo por turnos, todos acompanham automaticamente a bola do jogador da vez enquanto aguardam. Quando a vez passa para o jogador local, a câmera volta à própria bola. A seleção usa a identidade enviada pelo servidor em cada quadro, incluindo desconexões; não altera a identidade controlada nem o zoom pessoal. O espectador manual do modo simultâneo permanece disponível como antes.
+
 ## Tutorial
 
 O botão Tutorial fica abaixo de Multijogador. Um diálogo com seis etapas explica mira/força, câmera/zoom, obstáculos/bichinhos, pontuação, simultâneo/turnos e conclusão/DNF. Há ajuste de força por arrasto e teclado, uma demonstração ilustrada e zoom da ilustração. A demonstração nunca cria uma partida nem altera pontuações, e não implementa outra física de jogo. É possível avançar, voltar e sair por botão ou Escape a qualquer momento. O diálogo contém o foco; o teclado não aciona o jogo ao fundo. Todo o texto usa o catálogo existente em português, inglês e espanhol.

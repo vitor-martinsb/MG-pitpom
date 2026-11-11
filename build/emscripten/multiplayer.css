@@ -486,3 +486,10 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 @media(max-height:550px) and (orientation:landscape){.main-menu:has(#open-tutorial){gap:6px}.main-menu:has(#open-tutorial) button{min-height:44px;padding:7px 12px}.camera-zoom{bottom:12px}}
 
 @media(orientation:portrait) and (max-height:760px){.main-menu:has(#open-tutorial){display:grid;grid-template-columns:1fr 1fr}.main-menu #offline,.main-menu #open-multiplayer{grid-column:1/-1}.main-menu #open-tutorial,.main-menu #exit-game{padding:8px 10px}.main-menu #open-tutorial>span:last-child{display:none}}
+/* Keep the added Tutorial action below Multiplayer without covering pet paws. */
+@media(orientation:portrait){.main-menu:has(#open-tutorial) button{height:44px;min-height:44px;line-height:1.15;padding:6px 14px}.main-menu:has(#open-tutorial) .menu-icon{font-size:1.2rem;line-height:1}}
+@media(orientation:portrait) and (min-aspect-ratio:2/3){.main-menu:has(#open-tutorial){display:grid;grid-template-columns:1fr 1fr}.main-menu #offline,.main-menu #open-multiplayer{grid-column:1/-1}.main-menu #open-tutorial,.main-menu #exit-game{padding:6px 10px}.main-menu #open-tutorial>span:last-child{display:none}}
+/* Leave the existing match-information toggle reachable on touch screens. */
+@media(max-width:600px),(pointer:coarse){.camera-zoom{bottom:calc(124px + var(--safe-bottom))}}
+@media(max-height:550px) and (orientation:landscape){.camera-zoom{right:calc(66px + var(--safe-right));bottom:calc(62px + var(--safe-bottom))}}
+@media(max-height:550px) and (orientation:landscape){.main-menu:has(#open-tutorial){width:22vw}.main-menu:has(#open-tutorial) button{gap:8px;padding:6px 10px;line-height:1.15}.main-menu:has(#open-tutorial) .menu-icon{font-size:1.2rem;line-height:1}.main-menu:has(#open-tutorial) button>span:last-child[aria-hidden=true]{display:none}}

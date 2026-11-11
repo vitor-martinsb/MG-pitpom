@@ -51,3 +51,15 @@ export async function showBotRoster(page){
  await lobbyTab(page,'players');
  if(!await page.locator('#bot-roster').evaluate(e=>e.open))await page.locator('#bot-roster>summary').click();
 }
+
+// A preview may finish naturally while another client is becoming ready.
+// Accept that completion, while still failing an unclickable active preview.
+export async function finishPresentation(page){
+ await page.bringToFront();
+ await page.waitForFunction(()=>{const f=window.GolfCourse?.inspect().frame;return f?.active&&(!f.intro||!document.getElementById('presentation').hidden);},{},{timeout:90000});
+ if(await page.locator('#skip-presentation').isVisible()){
+  try{await page.locator('#skip-presentation').click({timeout:10000});}
+  catch(error){if(!await page.evaluate(()=>{const f=GolfCourse.inspect().frame;return f?.active&&!f.intro;}))throw error;}
+ }
+ await page.waitForFunction(()=>{const f=GolfCourse.inspect().frame;return f?.active&&!f.intro;},{},{timeout:90000});
+}
