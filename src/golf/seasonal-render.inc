@@ -196,7 +196,7 @@ static void season_draw(float time){
     }
     garden.transform=mat4_identity();
     // Ice accents on water are visual only: water remains a hazard.
-    int ice=0;for(int i=0;i<game->physics.static_bvh.faces.length&&ice<12;i++){
+    int ice=0;for(int i=0;garden.biome!=7&&garden.biome!=8&&i<game->physics.static_bvh.faces.length&&ice<12;i++){
         golf_bvh_face_t *f=&game->physics.static_bvh.faces.data[i];if(!f->entity||f->entity->type!=WATER_ENTITY)continue;
         vec3 q=vec3_scale(vec3_add(vec3_add(f->a,f->b),f->c),1.f/3);q.y+=.015f;
         triangle(&mesh,q,vec3_add(q,V3(.17f,.003f,.07f)),vec3_add(q,V3(-.04f,.003f,.22f)),paint(.79f,.93f,.98f,0));ice++;
