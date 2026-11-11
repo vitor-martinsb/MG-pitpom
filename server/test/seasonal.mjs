@@ -8,7 +8,7 @@ try{
  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${app.server.address().port}`;
  browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true}):chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),headless:true,args:['--enable-unsafe-swiftshader']}));
  const errors=[],artRequests=[],context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/menu-christmas(?:-portrait)?\.png$/.test(r.url()))artRequests.push(r.url());});
- await page.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));
+ await page.addInitScript(()=>{localStorage.setItem('pitpom-language','pt-BR');const D=Date;globalThis.Date=class extends D{constructor(...args){super(...(args.length?args:['2026-12-15T12:00:00-03:00']));}};});
  await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await page.locator('#continue-home').click();
  assert.equal(await page.evaluate(()=>GolfSeason.theme),'original');assert.equal(artRequests.length,0,'original theme does not download Christmas illustrations');await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('christmas');await page.locator('#season-obstacles').check();
  await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===1);
@@ -21,10 +21,10 @@ try{
   await page.waitForFunction(key=>GolfHome.scene.layout===key&&GolfHome.scene.loaded,height>=width?'portrait':'landscape');
   await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('original');await page.locator('#music-controls summary').click();
   await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===0);
-  const freeze=async()=>{await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));await page.waitForTimeout(100);};
-  const snapshot=()=>page.evaluate(()=>({
+  const freeze=async()=>{await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));const n=await page.evaluate(()=>GolfHome.scene.petFrames);await page.waitForFunction(n=>GolfHome.scene.petFrames>n+2,n);};
+  const snapshot=()=>page.evaluate(async()=>({
    pets:[...document.querySelectorAll('[data-pet-help]')].map(p=>{const b=p.getBoundingClientRect();return {id:p.dataset.petHelp,x:b.x,y:b.y,w:b.width,h:b.height};}),
-   pixels:document.querySelector('[data-pet-surface]').toDataURL(),
+   pixels:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(document.querySelector('[data-pet-surface]').toDataURL())))).map(v=>v.toString(16).padStart(2,'0')).join(''),
    sources:[...document.querySelectorAll('[data-pet]')].map(p=>[p.dataset.pet,p.dataset.sourceArt])
   }));
   await freeze();const original=await snapshot();
