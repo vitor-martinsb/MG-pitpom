@@ -22,10 +22,10 @@ try{
   const geometry=await page.evaluate(()=>{
    const canvas=document.getElementById('christmas-menu-art'),menu=document.getElementById('main-menu').getBoundingClientRect();
    const pets=[...document.querySelectorAll('[data-pet-help]')].map(p=>{const b=p.getBoundingClientRect();return {id:p.dataset.petHelp,x:b.x,y:b.y,w:b.width,h:b.height};});
-   const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let clear=0;for(let i=3;i<pixels.length;i+=400)if(pixels[i]!==255)clear++;
-   return {pets,menu:{x:menu.x,y:menu.y,w:menu.width,h:menu.height},clear,ink:getComputedStyle(document.getElementById('home')).getPropertyValue('--menu-ink').trim()};
+   const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let clear=0;const clearAt=[];for(let i=3;i<pixels.length;i+=400)if(pixels[i]!==255){clear++;if(clearAt.length<5){const p=(i-3)/4;clearAt.push([p%canvas.width,Math.floor(p/canvas.width),pixels[i]]);}}
+   return {pets,menu:{x:menu.x,y:menu.y,w:menu.width,h:menu.height},clear,clearAt,ink:getComputedStyle(document.getElementById('home')).getPropertyValue('--menu-ink').trim()};
   });
-  assert.equal(geometry.pets.length,7);assert.equal(geometry.clear,0,'complete opaque illustration without cutout gaps');assert.equal(geometry.ink,'#173f26','Christmas artwork keeps the bright reference palette');
+  assert.equal(geometry.pets.length,7);assert.equal(geometry.clear,0,`complete opaque illustration without cutout gaps at ${width}x${height}: ${JSON.stringify(geometry.clearAt)}`);assert.equal(geometry.ink,'#173f26','Christmas artwork keeps the bright reference palette');
   for(const p of geometry.pets){assert.ok(p.x>=-1&&p.y>=-1&&p.x+p.w<=width+1&&p.y+p.h<=height+1,`${p.id} fits ${width}x${height}`);const m=geometry.menu;assert.ok(p.x+p.w<=m.x||p.x>=m.x+m.w||p.y+p.h<=m.y||p.y>=m.y+m.h,`${p.id} does not overlap menu buttons`);}
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`../out/christmas/reference-${width}x${height}.png`});

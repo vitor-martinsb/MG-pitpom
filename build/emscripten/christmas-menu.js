@@ -54,11 +54,17 @@
     const image=l.image,iw=image.naturalWidth,ih=image.naturalHeight;
     if(l.key==='portrait'&&(l.skyExtra||l.grassExtra)){
       const sky=l.skyExtra/l.scale,grass=l.grassExtra/l.scale;
-      ctx.drawImage(image,0,0,iw,90,0,0,iw,90);
-      ctx.drawImage(image,0,90,iw,65,0,90,iw,65+sky);
-      ctx.drawImage(image,0,155,iw,1105,0,155+sky,iw,1105);
-      ctx.drawImage(image,0,1260,iw,220,0,1260+sky,iw,220+grass);
-      ctx.drawImage(image,0,1480,iw,ih-1480,0,1480+sky+grass,iw,ih-1480);
+      // Safari antialiases fractional destination edges. Extend each strip by
+      // one physical pixel, sampling the real neighboring artwork, so adjacent
+      // strips cover the join completely without changing the image mapping.
+      function strip(sourceY,sourceHeight,destY,destHeight){
+        const pad=1/(d*l.scale),sourcePad=pad*sourceHeight/destHeight;
+        const top=Math.max(0,sourceY-sourcePad),bottom=Math.min(ih,sourceY+sourceHeight+sourcePad);
+        ctx.drawImage(image,0,top,iw,bottom-top,0,destY+(top-sourceY)*destHeight/sourceHeight,iw,(bottom-top)*destHeight/sourceHeight);
+      }
+      strip(0,90,0,90);strip(90,65,90,65+sky);
+      strip(155,1105,155+sky,1105);strip(1260,220,1260+sky,220+grass);
+      strip(1480,ih-1480,1480+sky+grass,ih-1480);
     }else ctx.drawImage(image,0,0);
     if(!motion.matches){
       ctx.save();ctx.translate(0,l.skyExtra/l.scale);
