@@ -14,7 +14,7 @@ O servidor publica `playStyle`, `turn` e `turnOrder` nos estados e snapshots exi
 
 Uma desconexão libera a vez imediatamente: o worker não simula bolas de jogadores desconectados, portanto aguardar essa bola parar bloquearia a sala. Reconexão conserva a identidade e a sequência de tacadas; o jogador retorna à ordem disponível, sem tomar a vez atual. O próximo campo reinicia a ordem. O relógio global, a tolerância de conclusão, as regras de limite de tacadas e a penalidade existente não são substituídos por outro sistema.
 
-No modo por turnos, quem aguarda vê o campo inteiro de uma câmera aérea fixa, enquadrada pelos limites e pela altura máxima da geometria. A câmera não acompanha bolas nem aceita arrasto/zoom durante a espera; os controles e o zoom pessoal voltam na própria vez. O espectador manual do modo simultâneo permanece disponível como antes.
+No modo por turnos, quem aguarda vê o campo inteiro de uma câmera aérea fixa em perspectiva, elevada e inclinada cerca de 37°, enquadrada pelos limites e pela altura máxima da geometria. A câmera não acompanha bolas nem aceita arrasto/zoom durante a espera; os controles e o zoom pessoal voltam na própria vez. O espectador manual do modo simultâneo permanece disponível como antes.
 
 A mira é enviada pelo cliente ativo a no máximo 10 Hz e incluída nos snapshots existentes. O servidor valida turno, partida, campo, sequência, direção e força, sem alterar posição, velocidade ou tacadas. Os observadores reutilizam o mesmo construtor de trajetória refletida e as mesmas cinco setas; a interface mostra o nickname e a força em porcentagem. Cancelamento, tacada, desconexão, troca de turno/campo e expiração removem a prévia. A sequência de mira é independente da sequência de tacadas e reinicia na reconexão.
 

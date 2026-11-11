@@ -499,7 +499,7 @@ void golf_game_update(float dt) {
                 float aspect=graphics->viewport_size.x/fmaxf(1,graphics->viewport_size.y);
                 graphics->cam_pos=golf_overview_position(game.mechanics.bounds_min,game.mechanics.bounds_max,game.cam.skyline,aspect);
                 graphics->cam_dir=vec3_normalize(vec3_sub(target,graphics->cam_pos));
-                graphics->cam_far=fmaxf(150,(graphics->cam_pos.y-game.mechanics.bounds_min.y)*2);
+                graphics->cam_far=golf_overview_far_plane(game.mechanics.bounds_min,game.mechanics.bounds_max,game.cam.skyline,graphics->cam_pos);
                 break;
             }
             if (game.cam.auto_rotate) {
