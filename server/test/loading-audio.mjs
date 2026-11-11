@@ -60,7 +60,7 @@ try{
     await page.evaluate(()=>{document.getElementById('loading').hidden=true;document.getElementById('connect').hidden=false;});
     console.log(`${name}: independent eight-frame runs, spacing, continuous orbit, resize and no dotted lines passed.`);
   }
-  const page=pages[0];await page.locator('#back-main').click();await page.locator('#main-menu').waitFor({state:'visible'});await page.locator('#music-controls summary').click();await page.waitForFunction(()=>GolfMusic.status().state==='running');
+  const page=pages[0];await page.bringToFront();await page.locator('#back-main').click();await page.locator('#main-menu').waitFor({state:'visible'});await page.locator('#music-controls summary').click();await page.waitForFunction(()=>GolfMusic.status().state==='running');
   const hashes=new Set(),metrics=[];
   for(let world=1;world<=10;world++){
     const audio=await page.evaluate(async world=>{
@@ -76,7 +76,12 @@ try{
   }
   assert.equal(hashes.size,10);fs.writeFileSync(`${out}/music-metrics.json`,JSON.stringify(metrics,null,2));
   await page.evaluate(()=>GolfMusic.world(1));await page.waitForTimeout(1200);const before=await page.evaluate(()=>GolfMusic.status());
-  await page.evaluate(()=>{for(let i=0;i<10;i++)GolfMusic.world(1);});await page.waitForTimeout(1200);const same=await page.evaluate(()=>GolfMusic.status());
+  await page.evaluate(()=>{for(let i=0;i<10;i++)GolfMusic.world(1);});
+  // The animation clock above is controlled, but Web Audio uses real time.
+  // Wait for observable progress on busy CI runners; still require the same
+  // world and switch count, so a restart or a stopped score cannot pass.
+  await page.waitForFunction(beat=>GolfMusic.status().state==='running'&&GolfMusic.status().beat>beat,before.beat,{timeout:10000});
+  const same=await page.evaluate(()=>GolfMusic.status());
   assert.equal(before.switches,same.switches);assert.ok(same.beat>before.beat,'same-world maps preserve the musical cursor');
   await page.evaluate(()=>GolfMusic.world(2));assert.ok((await page.evaluate(()=>GolfMusic.status())).layers>=2,'crossfade retains the outgoing layer');
   await page.waitForTimeout(2000);assert.ok(await page.evaluate(()=>GolfMusic.level()>0.00001));
