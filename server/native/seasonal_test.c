@@ -40,6 +40,11 @@ int main(void){
     golf_wildlife_t w=m.wildlife;for(int j=0;j<GOLF_WILDLIFE_COUNT;j++)w.animals[j].active=false;
     vec3 target=p.ball.capture_target;golf_wildlife_tick(&w,&p,1,1.4f,42,false);assert(!p.ball.captured&&p.ball.capture_until==0&&p.ball.capture_kind==0);assert(vec3_distance(p.ball.pos,target)<.001f);}else {assert(isfinite(p.ball.vel.x)&&vec3_length(p.ball.vel)<=12);assert(vec3_distance(before.vel,p.ball.vel)>.01f||vec3_distance(before.pos,p.ball.pos)>.01f);}golf_season_tick(&s,&p,1,1.01f);assert(p.ball.effect_serial==1);}
  }
+ // A strike near a candy-cane tip must resolve at that point, not teleport
+ // the ball to the obstacle center along its rotation axis.
+ golf_season_t cane={.enabled=true,.count=1,.items={{.kind=SEASON_CANDY,.pos=point}}};
+ golf_player_t tip=player(vec3_add(point,V3(.40f,.12f,.05f)));tip.ball.radius=.12f;tip.ball.vel=V3(0,0,-2);
+ golf_season_tick(&cane,&tip,1,0);assert(fabsf(tip.ball.pos.x-point.x-.40f)<.0001f);assert(tip.ball.pos.z>point.z+.19f);
  golf_season_t s={.enabled=true,.count=1,.items={{.kind=SEASON_STAR,.pos=point}}};golf_player_t crowd[GOLF_MAX_PLAYERS];
  for(int i=0;i<GOLF_MAX_PLAYERS;i++){crowd[i]=player(vec3_add(point,V3(.05f,.12f,0)));crowd[i].id=i+1;}
  golf_season_tick(&s,crowd,GOLF_MAX_PLAYERS,2);for(int i=0;i<GOLF_MAX_PLAYERS;i++)assert(crowd[i].ball.effect_serial==1);

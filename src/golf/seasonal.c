@@ -48,7 +48,7 @@ void golf_season_tick(golf_season_t *s,golf_player_t *players,int count,float ti
         for(int i=0;i<s->count;i++){
             golf_season_item_t *o=&s->items[i];vec3 q=golf_season_position(o,time);q.y+=b->radius;
             vec3 d=vec3_sub(b->pos,q);float distance=vec3_length(d),radius=o->kind==SEASON_ICE?.62f:.36f;
-            if(o->kind==SEASON_CANDY){vec3 axis=V3(cosf(time*.7f+o->phase),0,sinf(time*.7f+o->phase));float along=golf_clampf(vec3_dot(d,axis),-.48f,.48f);d=vec3_sub(d,vec3_scale(axis,along));distance=vec3_length(d);radius=.20f;}
+            if(o->kind==SEASON_CANDY){vec3 axis=V3(cosf(time*.7f+o->phase),0,sinf(time*.7f+o->phase));float along=golf_clampf(vec3_dot(d,axis),-.48f,.48f);q=vec3_add(q,vec3_scale(axis,along));d=vec3_sub(b->pos,q);distance=vec3_length(d);radius=.20f;}
             if(distance>=radius)continue;
             if(o->kind==SEASON_ICE){b->season_ice_until=time+.12f;continue;}
             if(time<s->cooldown[slot][i])continue;s->cooldown[slot][i]=time+1.8f;o->action_time=time;
