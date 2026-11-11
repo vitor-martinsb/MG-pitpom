@@ -94,7 +94,7 @@
   function petPainter(root,d){
     const canvas=document.createElement('canvas');canvas.dataset.petSurface='canvas-2d';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;display:block;pointer-events:none;transition:none';
     // Prefer a software raster backing; only the completed frame is composited.
-    const ctx=canvas.getContext('2d',{alpha:true,willReadFrequently:true}),parts=[],costumes=[],region={x:0,y:0,w:d.w,h:d.h};let frame=0,paletteKey='',layoutKey='',painted=0;
+    const ctx=canvas.getContext('2d',{alpha:true,willReadFrequently:true}),parts=[],region={x:0,y:0,w:d.w,h:d.h};let frame=0,paletteKey='',layoutKey='',painted=0;
     function sprite(node,path,source){
       const scale=source.scale??2,c=document.createElement('canvas');c.width=source.canvas.width;c.height=source.canvas.height;
       const cctx=c.getContext('2d');cctx.scale(scale,scale);cctx.translate(-source.x,-source.y);cctx.clip(new Path2D(path));cctx.drawImage(source.canvas,source.x,source.y,source.w,source.h);
@@ -149,11 +149,10 @@
         ctx.globalAlpha=Number(getComputedStyle(p.node).opacity);ctx.drawImage(image,p.x,p.y,p.w,p.h);
       }
       ctx.globalAlpha=1;
-      if(window.GolfSeason?.theme==='christmas')for(const {node,pet,body} of costumes){const bodyMatrix=body.getCTM();if(bodyMatrix){const m=inverse.multiply(bodyMatrix);ctx.setTransform(width/region.w*m.a,height/region.h*m.b,width/region.w*m.c,height/region.h*m.d,width/region.w*(m.e-region.x),height/region.h*(m.f-region.y));window.GolfSeason?.drawOutfit(ctx,pet.id,pet);}const matrix=node.getCTM();if(!matrix)continue;const m=inverse.multiply(matrix);ctx.setTransform(width/region.w*m.a,height/region.h*m.b,width/region.w*m.c,height/region.h*m.d,width/region.w*(m.e-region.x),height/region.h*(m.f-region.y));window.GolfSeason?.drawCostume(ctx,pet.id,pet);}
       painted++;
     }
     function run(){paint();frame=requestAnimationFrame(run);}
-    return {canvas,sprite,shape,light,costume(node,pet,body){costumes.push({node,pet,body});},bounds(box){Object.assign(region,box);canvas.dataset.region=JSON.stringify(region);},start(){if(!frame)run();},stop(){cancelAnimationFrame(frame);frame=0;},get frames(){return painted;}};
+    return {canvas,sprite,shape,light,bounds(box){Object.assign(region,box);canvas.dataset.region=JSON.stringify(region);},start(){if(!frame)run();},stop(){cancelAnimationFrame(frame);frame=0;},get frames(){return painted;}};
   }
   const layouts={
     landscape:{w:1672,h:941,sun:[1414,110,79],hub:[1259,304],post:'M1118 548L1144 548L1144 646L1118 646Z',
@@ -219,8 +218,6 @@
       const matrix=getRoot()?.getScreenCTM();
       const host=home.getBoundingClientRect();
       for(const {id,button,bounds}of items){
-        const festive=window.GolfChristmasMenu?.petBounds(id);
-        if(festive){Object.assign(button.style,{left:`${festive.x}px`,top:`${festive.y}px`,width:`${festive.width}px`,height:`${festive.height}px`});continue;}
         if(!matrix)continue;
         const [x,y,w,h]=bounds;
         Object.assign(button.style,{left:`${matrix.e+x*matrix.a-host.x}px`,top:`${matrix.f+y*matrix.d-host.y}px`,width:`${w*matrix.a}px`,height:`${h*matrix.d}px`});
@@ -348,7 +345,6 @@
         }
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
         const head=cut(oval(p.head),animal,'head',without(source,p.ears.map(oval)));
-        painter.costume(head,p,animal);
         head.style.transformOrigin=`${p.head[0]}px ${p.head[1]+p.head[3]*.7}px`;
         animate(head,[{transform:'rotate(0deg)'},{transform:'rotate(0deg)',offset:.58},{transform:'rotate(.65deg)',offset:.73},{transform:'rotate(-.4deg)',offset:.86},{transform:'rotate(0deg)'}],{duration:17000+index*2429,delay:-index*2917,easing:'ease-in-out'});
         const lids=el('g',{'data-motion':'blink'});head.append(lids);
@@ -387,7 +383,7 @@
       lastClock=performance.now();
     }
     function visibility(){
-      const run=!home.hidden&&!document.hidden&&!window.GolfChristmasMenu?.active;
+      const run=!home.hidden&&!document.hidden;
       if(run)painter?.start();else painter?.stop();
       for(const a of animations){
         const tail=tails.get(a);
@@ -400,7 +396,6 @@
       if(run){clock=new Date();updateLight();tick=setInterval(()=>{clock=new Date();updateLight();},1000);}
     }
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
-    window.addEventListener('seasonchange',()=>{visibility();help.layout();});window.addEventListener('seasonartready',()=>{if(window.GolfChristmasMenu?.active){visibility();help.layout();}});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
     const images=['menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];

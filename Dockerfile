@@ -16,7 +16,7 @@ RUN cmake -S . -B out/web -G Ninja \
     && cp out/web/golf.html out/web/golf.js out/web/golf.wasm out/web/golf.wasm.gz \
        out/web/multiplayer.js out/web/multiplayer.css out/web/course.js \
        out/web/adventure.js out/web/home.js out/web/menu-clock.js out/web/menu-scene.js \
-       out/web/music.js out/web/lofi.js out/web/seasonal.js out/web/seasonal.css out/web/christmas-menu.js \
+       out/web/music.js out/web/lofi.js out/web/seasonal.js out/web/seasonal.css \
        out/web/i18n.js out/web/i18n-data.js \
        out/web/campaign-data.js /ci/out/web/ \
     && cp -r out/web/art /ci/out/web/art

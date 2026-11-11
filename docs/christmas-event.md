@@ -10,7 +10,7 @@ No multiplayer, o anfitrião configura o evento na aba **Modo**. O **Torneio da 
 
 - `src/golf/seasonal.[ch]`: distribuição determinística e interações dos oito obstáculos, compartilhadas pelo solo, servidor e previsões dos bots. Nenhum arquivo de fase é modificado.
 - `src/golf/seasonal-render.inc`: apresentação pelo shader e buffer de profundidade existentes. Árvores, presentes, cabana com fumaça, guirlanda, sinos, bonecos de neve, rena, trenó, duende, aurora, estrelas e neve são geometria visual independente. A água recebe detalhes de gelo e continua perigosa (lava e cenários espaciais não são congelados); somente a plataforma especial habilitada modifica o atrito.
-- `build/emscripten/seasonal.js` / `.css`: preferências, controles do evento na sala, neve de interface, luzes, árvore do menu, fantasias sobre a arte original, comemorações e troféu. Os acessórios dos bichinhos usam a mesma superfície de canvas do menu, sem novos recortes ou filtros CSS.
+- `build/emscripten/seasonal.js` / `.css`: preferências, controles do evento na sala, neve de interface fora do menu, luzes, árvore e enfeites do cenário, comemorações e troféu. Os bichinhos do menu mantêm a aparência original, sem fantasias ou acessórios.
 - `lofi.js` / `music.js`: composição instrumental procedural original, sinos e vento, usando o mixer, mute e volumes existentes. A troca do tema faz um crossfade; nenhuma música externa ou novo AudioContext é criado.
 - `Room.seasonal` e os campos `seasonSkin` / `seasonTrail` estendem o protocolo existente. A autoridade envia posições, fases e instante de reação dos obstáculos nos snapshots; clientes não sorteiam nem simulam colisões separadamente.
 
@@ -33,12 +33,10 @@ A decoração usa um buffer fixo de até 36.000 vértices, 64 flocos no campo, a
 
 O teste em navegador emulado cobre Chromium e WebKit; ele não substitui uma medição de desempenho num aparelho Android ou iPhone físico.
 
-## Arte do menu de Natal
+## Menu de Natal
 
-O menu natalino utiliza as composições `menu-christmas.png` e `menu-christmas-portrait.png`, preparadas a partir da referência enviada em `1000132077.png`. A arte mantém os sete bichinhos agrupados, roupas natalinas completas, árvore com laço, guirlandas, presentes, lago e moinho iluminado. Barras pretas e elementos do telefone não fazem parte dos arquivos. Logo, legendas e botões são HTML independente.
+O Especial de Natal reutiliza integralmente a arte padrão do menu, suas composições para celular e desktop, iluminação, disposição dos sete bichinhos e animações existentes. Nenhum bichinho recebe roupa, gorro ou acessório. O título ganha a legenda Natal Encantado e uma pequena estrela, mantendo os botões em HTML e suas posições originais.
 
-`christmas-menu.js` desenha a composição adequada ao formato da tela em um único canvas opaco. Os rabos usam deformação local com bordas e pontos de ligação fixos; patas e corpos nunca são removidos da imagem. Luzes variam suavemente, sem apagar. O movimento respeita a preferência de movimento reduzido e para quando a página ou o menu ficam ocultos. O renderizador do menu original é pausado durante o Natal e retomado ao trocar de tema.
+Somente o ambiente recebe decoração: pisca-pisca no alto, enfeites nas árvores e uma pequena árvore natalina com presentes em uma área livre do cenário. A sobreposição usa o canvas já existente de `seasonal.js`, sem imagens extras, recortes, filtros sobre os animais ou um renderizador alternativo. O menu não recebe neve sobre os personagens nem alterações extras no céu. Ao desativar o tema, toda a decoração desaparece imediatamente.
 
-As imagens são carregadas sob demanda, sem downloads extras no tema original. As duas composições são decodificadas antes de revelar o menu quando o Natal está selecionado. No celular, a composição preserva a largura completa, incluindo a bandeira. Somente faixas de céu limpo e gramado vazio são estendidas; personagens, cenário e enfeites preservam proporções. Descrições acessíveis continuam disponíveis nos sete bichinhos, com áreas de interação ajustadas à nova arte.
-
-A validação visual cobre 320×900, 390×844, 768×1024, 844×390, 1280×800 e 1920×1080, verificando cobertura opaca, personagens inteiros, botões sem sobreposição, retorno do tema original e sincronização do lobby. A alteração é restrita à apresentação do menu; não muda campos, física ou regras da partida.
+A validação cobre Chromium e WebKit, seis resoluções, animações originais ativas, imagem e posições dos bichinhos preservadas, ausência de downloads da arte natalina descartada, retorno ao tema original e sincronização do lobby. A alteração é restrita à apresentação do menu; não muda campos, física ou regras da partida.

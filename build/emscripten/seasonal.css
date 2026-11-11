@@ -7,7 +7,6 @@ body:not([data-season="christmas"]) #season-atmosphere{display:none}
 .season-settings small,.season-cosmetics small{display:block;font-size:.75rem;color:#52654c}
 .season-cosmetics{padding:8px 0}.season-subtitle{display:block;color:#754228;font-weight:700;font-size:clamp(.65rem,1.5vw,1rem);background:#fff1d6e8;border-radius:20px;padding:4px 12px;margin:10px auto;width:max-content;max-width:90vw}
 body[data-season="christmas"] .home-brand h1{color:var(--menu-ink,#284c32)}
-body[data-season="christmas"] .main-menu button,body[data-season="christmas"] #continue-home{border:2px solid #c7ad60}
 body[data-season="christmas"] .lobby-header,body[data-season="christmas"] #scores h2{background:#385d43;color:#fff3d9}
 body[data-season="christmas"] #scores .panel,body[data-season="christmas"] .lobby-panel{border-color:#c9b777}
 body[data-season="christmas"] .real-loading:before{content:'✦ 🎁 ✦';color:#b74238;display:block;text-align:center;margin:8px}
@@ -15,14 +14,5 @@ body[data-season="christmas"] .real-loading:before{content:'✦ 🎁 ✦';color:
 #season-announcement{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:#fff2d9;color:#765528;border:2px solid #d7b868;border-radius:24px;padding:12px 20px;z-index:35;text-align:center;pointer-events:none;font-weight:700;max-width:90vw}
 @media(prefers-reduced-motion:reduce){#season-atmosphere{opacity:.75}}
 
-/* Reference artwork is a complete scene, with dedicated portrait/desktop
-   compositions. Controls and pet descriptions stay in accessible HTML. */
-#christmas-menu-art{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none}
-body[data-season=christmas] #home[data-christmas-art=ready] #christmas-menu-art{display:block}
-body[data-season=christmas] #home[data-christmas-art=ready] .living-scene,
-body[data-season=christmas] #home[data-christmas-art=ready] .home-scenery>picture{visibility:hidden}
-body[data-season=christmas] #home[data-christmas-art=ready]{--menu-ink:#173f26!important;--menu-surface:#fff7e1!important;--menu-accent:#496c37!important}
-body[data-season=christmas]:is([data-home=splash],[data-home=menu],[data-home=multiplayer]) .music-controls,
-body[data-season=christmas]:is([data-home=splash],[data-home=menu],[data-home=multiplayer]) .music-controls summary{background:#fff7e1;color:#173f26}
-body[data-season=christmas] #home[data-christmas-art=ready] .main-menu button{border-color:#c5a75b;box-shadow:0 4px 10px #23482c33}
-body[data-season=christmas] #home[data-christmas-art=ready] .season-subtitle{background:#fff7e1d9}
+/* Keep the standard menu artwork, lighting, buttons and animated pets. */
+body[data-season="christmas"] .home-brand h1::after{content:'✦';position:absolute;margin-left:.2em;color:#b38a36;font-size:.28em;letter-spacing:0;text-shadow:none}
