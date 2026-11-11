@@ -50,3 +50,12 @@ test('deployment requires all parallel checks and standalone Docker retains nati
   assert.match(docker,/FROM native-build AS native-checked[\s\S]*ctest --test-dir out\/server-native[\s\S]*ctest --test-dir out\/unit-tests/);
   assert.match(docker,/FROM ci-runtime AS runtime\r?\nCOPY --from=native-checked/);
 });
+
+
+test('Docker exports every script and stylesheet required by the HTML shell',()=>{
+  const html=fs.readFileSync(new URL('../../build/emscripten/multiplayer.html',import.meta.url),'utf8');
+  const docker=fs.readFileSync(new URL('../../Dockerfile',import.meta.url),'utf8');
+  const assets=Array.from(html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g),match=>match[1]);
+  assert.ok(assets.length>10);
+  for(const name of assets)assert.ok(docker.includes(`out/web/${name}`),`Docker is missing ${name}`);
+});

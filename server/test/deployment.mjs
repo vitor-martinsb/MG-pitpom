@@ -14,7 +14,8 @@ try{
   const health=await fetch(url+'/health');assert.equal(health.status,200);assert.equal((await health.json()).ok,true);
   const page=await fetch(url);const html=await page.text();assert.match(html,/<html\b[^>]*\blang=(?:"en"|'en'|en)(?:\s|>)/);
   assert.equal(page.headers.get('cross-origin-opener-policy'),'same-origin');assert.equal(page.headers.get('cross-origin-embedder-policy'),'require-corp');
-  for(const name of ['golf.js','golf.wasm','multiplayer.js','multiplayer.css','music.js','i18n.js','i18n-data.js']){
+  const assets=new Set(['golf.js','golf.wasm',...Array.from(html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g),m=>m[1])]);
+  for(const name of assets){
     const response=await fetch(url+'/'+name);assert.equal(response.status,200,name);const data=await response.arrayBuffer();assert.ok(data.byteLength>100,name);
     if(name==='golf.wasm')assert.equal(response.headers.get('content-type'),'application/wasm');
     if(name==='i18n-data.js')for(const text of ['English','Português','Español'])assert.ok(html.includes(text));
