@@ -14,7 +14,11 @@ O servidor publica `playStyle`, `turn` e `turnOrder` nos estados e snapshots exi
 
 Uma desconexão libera a vez imediatamente: o worker não simula bolas de jogadores desconectados, portanto aguardar essa bola parar bloquearia a sala. Reconexão conserva a identidade e a sequência de tacadas; o jogador retorna à ordem disponível, sem tomar a vez atual. O próximo campo reinicia a ordem. O relógio global, a tolerância de conclusão, as regras de limite de tacadas e a penalidade existente não são substituídos por outro sistema.
 
-No modo por turnos, todos acompanham automaticamente a bola do jogador da vez enquanto aguardam. Quando a vez passa para o jogador local, a câmera volta à própria bola. A seleção usa a identidade enviada pelo servidor em cada quadro, incluindo desconexões; não altera a identidade controlada nem o zoom pessoal. O espectador manual do modo simultâneo permanece disponível como antes.
+No modo por turnos, quem aguarda vê o campo inteiro de uma câmera aérea fixa, enquadrada pelos limites e pela altura máxima da geometria. A câmera não acompanha bolas nem aceita arrasto/zoom durante a espera; os controles e o zoom pessoal voltam na própria vez. O espectador manual do modo simultâneo permanece disponível como antes.
+
+A mira é enviada pelo cliente ativo a no máximo 10 Hz e incluída nos snapshots existentes. O servidor valida turno, partida, campo, sequência, direção e força, sem alterar posição, velocidade ou tacadas. Os observadores reutilizam o mesmo construtor de trajetória refletida e as mesmas cinco setas; a interface mostra o nickname e a força em porcentagem. Cancelamento, tacada, desconexão, troca de turno/campo e expiração removem a prévia. A sequência de mira é independente da sequência de tacadas e reinicia na reconexão.
+
+A Pompom usa agora o ritmo compartilhado de 1,20 rad/s (antes 0,95), cerca de 26% mais rápido. A pose, os passos e a posição autoritativa continuam usando o mesmo relógio, inclusive no multijogador.
 
 ## Tutorial
 
@@ -27,3 +31,10 @@ O botão Tutorial fica abaixo de Multijogador. Um diálogo com seis etapas expli
 - `server/test/turns.test.ts`: autoridade, tacada concorrente, rotação após repouso, sincronização, desconexão/reconexão, jogadores finalizados, ambos os modos físicos e bots.
 - `server/test/gameplay-improvements.mjs`: tutorial em quatro resoluções, navegação por teclado, zoom nativo com limites/restauração/roda/botões e dois clientes com bloqueio nativo por turno. O CI executa em Chromium e WebKit, junto às regressões existentes.
 - Regressões do menu preservam a exigência de carregamento simultâneo de todos os botões, agora incluindo Tutorial. A lista de mapas e os hashes dos recursos originais permanecem protegidos. Somente os hashes dos pontos de integração de gameplay intencionalmente alterados são atualizados na baseline revisada.
+
+### Verificação da visão aérea e mira compartilhada
+
+- `tests/overview_test.c`: enquadramento dos oito cantos do campo em cinco proporções de tela, incluindo campos grandes.
+- `server/test/turns.test.ts`: autorização da mira, validação de força/direção, limite de frequência, expiração, cancelamento, tacada e reconexão sem consumir tacadas.
+- `server/test/gameplay-improvements.mjs`: dois clientes reais, arrasto por mouse/toque, cinco setas remotas, porcentagem de força, mudança de direção, câmera imóvel e retorno à própria vez. `--turns-only` permite repetir somente essa regressão; o CI continua executando também tutorial e limites de zoom.
+- `server/test/pet-outfits.mjs`: usa o ritmo compartilhado da Pompom para verificar orientação e roupas em repouso, caminhada e reação, no desktop e no celular.

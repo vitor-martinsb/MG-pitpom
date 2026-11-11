@@ -30,6 +30,13 @@ typedef enum golf_game_state {
     GOLF_GAME_STATE_PAUSED,
 } golf_game_state_t;
 
+typedef struct {
+    float power;
+    vec2 aim_delta, offset;
+    int num_points, num_arrows;
+    vec3 points[MAX_AIM_LINE_POINTS];
+} golf_aim_line_t;
+
 typedef struct golf_game {
     golf_game_state_t state, state_before_pause;
 
@@ -44,8 +51,8 @@ typedef struct golf_game {
     golf_mechanics_t mechanics;
 
     struct {
-        bool auto_rotate;
-        float zoom;
+        bool auto_rotate, overview;
+        float zoom, skyline;
         float angle, start_angle, start_angle_velocity, angle_velocity;
     } cam;
 
@@ -56,13 +63,7 @@ typedef struct golf_game {
         vec_golf_collision_data_t collision_history; 
     } physics;
 
-    struct {
-        float power;
-        vec2 aim_delta;
-        vec2 offset;
-        int num_points, num_arrows;
-        vec3 points[MAX_AIM_LINE_POINTS];
-    } aim_line;
+    golf_aim_line_t aim_line, remote_aim_line;
 
     struct {
         float t0;
@@ -101,5 +102,7 @@ void golf_game_pause(void);
 void golf_game_resume(void);
 void golf_game_skip_presentation(void);
 bool golf_game_player_visible(const golf_player_t *player);
+
+vec3 golf_game_aim_direction(void);
 
 #endif

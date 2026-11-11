@@ -2,7 +2,7 @@
 #define GOLF_CAT_POSE_H
 #include "common/maths.h"
 #include <math.h>
-#define GOLF_CAT_PATROL_RATE .95f
+#define GOLF_CAT_PATROL_RATE 1.20f
 /* One clock for the original cat's actual crossing and rendered step. */
 static inline float golf_cat_patrol_angle(float time,float offset){return time*GOLF_CAT_PATROL_RATE+offset;}
 typedef struct golf_cat_pose {vec3 forward;float stride,gait;} golf_cat_pose_t;

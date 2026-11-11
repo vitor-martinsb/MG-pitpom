@@ -5,6 +5,8 @@
   const zoom=document.createElement('nav');zoom.className='camera-zoom';zoom.id='camera-zoom';zoom.hidden=true;
   zoom.innerHTML='<button type="button" id="zoom-out">−</button><button type="button" id="zoom-reset">1×</button><button type="button" id="zoom-in">+</button>';document.body.append(zoom);
   const turn=document.createElement('aside');turn.id='turn-status';turn.hidden=true;turn.setAttribute('role','status');turn.setAttribute('aria-live','polite');$('summary').before(turn);
+  const aim=document.createElement('div');aim.id='turn-aim-status';aim.hidden=true;
+  const aimLabel=document.createElement('span'),aimMeter=document.createElement('meter');aimMeter.min=0;aimMeter.max=1;aim.append(aimLabel,aimMeter);turn.after(aim);
   let frame,distance=1,turnText='';
   function changeZoom(value){
     if(zoom.hidden||!GolfCourse.initialized)return;
@@ -18,9 +20,16 @@
   $('canvas').addEventListener('wheel',e=>{if(zoom.hidden||GolfOnline.blocked())return;e.preventDefault();changeZoom(distance*Math.exp(Math.max(-100,Math.min(100,e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?innerHeight:1)))*.002));},{passive:false});
   window.addEventListener('courseframe',e=>{
     frame=e.detail;
-    zoom.hidden=!(frame.active&&!frame.intro&&GolfHome.route==='game'&&['home','connect','lobby','loading','solo-loading','level-selection','scores','chat-panel','adventure-modal'].every(id=>$(id).hidden)&&!$('music-controls').open);
+    const showGame=!!(frame.active&&!frame.intro&&GolfHome.route==='game'&&['home','connect','lobby','loading','solo-loading','level-selection','scores','chat-panel','adventure-modal'].every(id=>$(id).hidden)&&!$('music-controls').open);
+    zoom.hidden=!showGame||!!frame.overview;
     if(!zoom.hidden){distance=frame.zoom||1;paintZoom();}
-    const state=GolfOnline.turnState();turn.hidden=zoom.hidden||state.style!=='turns'||state.phase!=='playing';
+    const state=GolfOnline.turnState();turn.hidden=!showGame||state.style!=='turns'||state.phase!=='playing';
+    const preview=state.aim;
+    aim.hidden=turn.hidden||!frame.overview||!preview||!frame.remoteAimPower;
+    if(!aim.hidden){
+      const name=state.players.find(p=>p.id===preview.player)?.nickname??'…';
+      aimLabel.textContent=t('turns.aim',{name,power:Math.round(preview.power*100)});aimMeter.value=preview.power;aimMeter.setAttribute('aria-label',aimLabel.textContent);
+    }
     if(!turn.hidden){
       const name=id=>state.players.find(p=>p.id===id)?.nickname??'…';
       const text=[t(state.turn===state.local?'turns.yours':'turns.current',{name:name(state.turn)}),state.order.length>1?t('turns.next',{names:state.order.slice(1,4).map(name).join(' → ')}):''].filter(Boolean).join(' · ');

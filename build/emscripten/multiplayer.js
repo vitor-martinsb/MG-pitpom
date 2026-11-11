@@ -23,7 +23,7 @@
   let socket, identity, room, phase='lobby', sequence=0, initialized=false, online=false, loading=true;
   let retryTimer, connected=false, deadline=0, lastBalls=new Map(), reconnectStart=0, toastTimer,epoch=0;
   let lastChatId=0, unreadChat=0, chatCooldown;
-  let celebrated=false;
+  let celebrated=false;let aimSequence=0,aimLastSent=0,aimLastKey='',aimWasActive=false;
   let soloProfile=false;
   // The existing numeric avatar IDs stay compatible with saved profiles and rooms.
   const avatars=[
@@ -277,13 +277,13 @@
       } else if(m.type==='load'){
         loading=true;presenting=false;lastBalls.clear();call(m);$('scores').hidden=true;$('adventure-modal').hidden=true;
       } else if(m.type==='snapshot'){
-        if(room){room.turn=m.turn;room.turnOrder=m.turnOrder;room.playStyle=m.playStyle??'simultaneous';}
+        if(room){room.aim=m.aim??null;room.turn=m.turn;room.turnOrder=m.turnOrder;room.playStyle=m.playStyle??'simultaneous';}
         if(!room||m.hole!==room.hole)return;
         if(m.full)lastBalls.clear();for(const b of m.players)lastBalls.set(b.id,b);
         syncClock(m);room.simulationSpeed=m.simulationSpeed??1;call(m);GolfAudio?.events(m.events??[],m.hole);renderSummary();renderSpectators();
       } else if(m.type==='shot'){call(m);
       } else if(m.type==='error'){
-        if(m.scope!=='chat')call(m);toast(GolfI18n.error(m));
+        if(m.scope!=='chat'&&m.scope!=='aim')call(m);toast(GolfI18n.error(m));
         if(m.scope==='profile'){profilePending=false;renderProfile();}
         if(m.scope==='configure'){pendingConfig=undefined;if(room){$('holes').value=String(room.holes);$('game-mode').value=room.mode;$('play-style').value=room.playStyle??'simultaneous';modeControls();}}if(m.scope==='map-pool'){pendingPool=undefined;poolControls();}startState();
         if(!identity){$('create').disabled=false;$('join').disabled=false;GolfAdventure.busy(false);}
@@ -342,7 +342,7 @@
     applySoloProfile(){return saveSoloProfile();},
     active(){return online;},
     petAvatar,
-    turnState(){return {style:room?.playStyle,turn:room?.turn,order:room?.turnOrder??[],players:room?.players??[],local:identity?.id,phase};},
+    turnState(){return {aim:room?.aim??null,style:room?.playStyle,turn:room?.turn,order:room?.turnOrder??[],players:room?.players??[],local:identity?.id,phase};},
     initialized(){initialized=true;window.GolfCourse.initialized=true;GolfI18n.ready();GolfAdventure.busy(false);$('engine-status').textContent=t('engineReady');$('create').disabled=false;$('join').disabled=false;window.GolfHome?.ready();
       if(window.GOLF_CAMPAIGN){$('holes').replaceChildren(...GOLF_CAMPAIGN.courses.map((_,i)=>{const option=new Option(String(i+1),String(i+1));option.selected=i===2;return option;}));}
       if(window.GolfHome?.route==='multiplayer')window.GolfOnline.resume();
@@ -350,6 +350,13 @@
     resume(){try{const saved=JSON.parse(sessionStorage.getItem('golf-session'));if(saved&&initialized){identity=saved;online=true;connect({type:'reconnect',...saved});}}catch{}},
     preview(){presenting=true;$('loading').hidden=true;},
     ready(hole){loading=false;presenting=false;send({type:'ready',hole});},
+    aim(direction,power,active){
+      if(!connected||!room||phase!=='playing'||room.playStyle!=='turns'||room.turn!==identity?.id){aimWasActive=false;return;}
+      active=!!active&&!document.hidden;if(!active&&!aimWasActive)return;
+      const now=performance.now(),key=JSON.stringify([room.match,room.hole,active,direction.map(n=>Math.round(n*1000)),Math.round(power*1000)]);
+      if(active&&now-aimLastSent<100||active&&key===aimLastKey&&now-aimLastSent<250||!active&&!aimWasActive)return;
+      aimWasActive=active;aimLastKey=key;aimLastSent=now;send({type:'aim',match:room.match,hole:room.hole,sequence:++aimSequence,active,direction,power});
+    },
     shot(direction,power){if(connected&&phase==='playing'&&(room?.playStyle!=='turns'||room.turn===identity?.id))send({type:'shot',direction,power,sequence:++sequence});else call({type:'error'});},
     cancelAim(){call({type:'cancel-aim'});},
     blocked(){return !!document.activeElement?.closest('.camera-zoom')||document.activeElement?.id==='toggle-match-info'||!document.getElementById('home').hidden||!$('connect').hidden||!$('level-selection').hidden||!$('solo-loading').hidden||document.getElementById('music-controls').open||online&&(loading||!connected||!$('scores').hidden||!$('adventure-modal').hidden||!$('lobby').hidden||!$('connect').hidden||!$('chat-panel').hidden||$('music-controls').open);}

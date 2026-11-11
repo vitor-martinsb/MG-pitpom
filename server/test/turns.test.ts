@@ -51,3 +51,42 @@ test('turn mode bots take their authorized stroke without bypassing the human tu
   assert.equal(bot.ball!.strokes,1);assert.equal(room.mode,'impact');
  }finally{room.close();}
 });
+
+test('shared aiming is turn-authorized, bounded, throttled and never changes ball physics',async()=>{
+ const f=await fixture();const {room,host,guest}=f;
+ const aim=(sequence=1,extra:any={})=>({sequence,match:room.match,hole:room.hole,active:true,direction:[1,0,0],power:.6,...extra});
+ try{
+  const original=structuredClone(host.ball);
+  assert.equal(room.aim(guest,aim()),false);
+  assert.equal(room.aim(host,aim(1,{match:room.match+1})),false);
+  assert.equal(room.aim(host,aim(1,{hole:1})),false);
+  for(const extra of [{power:NaN},{power:1.1},{power:0},{direction:[0,0,0]},{direction:[0,1,0]},{direction:[Infinity,0,1]},{active:'true'}])assert.throws(()=>room.aim(host,aim(1,extra)),/Mira/);
+  assert.equal(room.aim(host,aim(1,{player:guest.id})),true);
+  assert.deepEqual(room.state().aim,{player:host.id,direction:[1,0,0],power:.6});
+  assert.equal(room.aim(host,aim(1)),false);assert.equal(room.aim(host,aim(2,{power:.8})),false);
+  await f.tick();await f.tick();assert.equal(room.aim(host,aim(3,{direction:[0,0,1],power:.8})),true);
+  await f.tick();await f.tick();
+  assert.deepEqual(f.a.messages.findLast(m=>m.type==='snapshot').aim,f.b.messages.findLast(m=>m.type==='snapshot').aim);
+  assert.deepEqual(room.state().aim,{player:host.id,direction:[0,0,1],power:.8});
+  assert.equal(host.ball!.strokes,original!.strokes);assert.deepEqual(host.ball!.vel,original!.vel);
+  assert.equal(room.aim(host,aim(4,{active:false})),true);assert.equal(room.state().aim,null);
+  await f.tick();await f.tick();assert.equal(room.aim(host,aim(5)),true);
+  for(let i=0;i<25;i++)await f.tick();assert.equal(room.state().aim,null,'stale previews expire');
+  assert.equal(room.aim(host,aim(6)),true);await room.shot(host,shot(1));assert.equal(room.state().aim,null);
+  assert.equal(room.aim(host,aim(7)),false,'cannot aim during the accepted stroke');
+  room.disconnect(host,f.a);assert.equal(room.state().aim,null);
+ }finally{room.close();}
+ const s=await fixture('simultaneous');try{assert.equal(s.room.aim(s.host,{sequence:1,match:s.room.match,hole:0,active:true,direction:[1,0,0],power:.5}),false);assert.equal(s.room.state().aim,null);}finally{s.room.close();}
+});
+
+test('reloading a client resets only its preview sequence and cannot retain another turn’s aim',async()=>{
+ const f=await fixture();const {room,host,guest}=f;
+ const aim=(sequence:number)=>({sequence,match:room.match,hole:room.hole,active:true,direction:[1,0,0],power:.5});
+ try{
+  assert.equal(room.aim(host,aim(50)),true);room.disconnect(host,f.a);assert.equal(room.state().aim,null);
+  const reconnected=await room.reconnect(socket(),host.token);room.ready(reconnected,0);
+  assert.equal(room.turn,guest.id);assert.equal(room.aim(host,aim(1)),false);
+  room.disconnect(guest,f.b);assert.equal(room.turn,host.id);assert.equal(room.aim(host,aim(1)),true);
+  assert.equal(host.lastSequence,0,'preview sequencing never consumes a shot');
+ }finally{room.close();}
+});

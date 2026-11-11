@@ -1,3 +1,4 @@
+#include "golf/online.h"
 #include "golf/draw.h"
 
 #include <float.h>
@@ -381,8 +382,9 @@ static void _draw_game(void) {
         sg_begin_pass(draw.game_draw_pass, &aim_line_pass_action);
 
         // Draw the aim line
-        game->aim_line.num_arrows = 0;
-        if (game->state == GOLF_GAME_STATE_AIMING && game->aim_line.power > 0) {
+        game->aim_line.num_arrows=game->remote_aim_line.num_arrows=0;
+        golf_aim_line_t *aim=golf_online_overview()?&game->remote_aim_line:&game->aim_line;
+        if ((game->state == GOLF_GAME_STATE_AIMING || golf_online_overview()) && aim->power > 0 && aim->num_points > 1) {
             golf_shader_t *shader = golf_data_get_shader("data/shaders/aim_line.glsl");
             golf_shader_pipeline_t *pipeline = golf_shader_get_pipeline(shader, "aim_line");
             sg_apply_pipeline(pipeline->sg_pipeline);
@@ -397,9 +399,9 @@ static void _draw_game(void) {
             sg_apply_bindings(&bindings);
 
             float total_length = 0;
-            for (int i = 0; i < game->aim_line.num_points - 1; i++) {
-                vec3 p0 = game->aim_line.points[i];
-                vec3 p1 = game->aim_line.points[i + 1];
+            for (int i = 0; i < aim->num_points - 1; i++) {
+                vec3 p0 = aim->points[i];
+                vec3 p1 = aim->points[i + 1];
                 total_length += vec3_distance(p1, p0);
             }
 
@@ -409,14 +411,14 @@ static void _draw_game(void) {
                 float distance = total_length * (arrow + 0.5f) / GOLF_AIM_ARROW_COUNT;
                 int segment = 0;
                 float start = 0;
-                while (segment < game->aim_line.num_points - 2) {
-                    float length = vec3_distance(game->aim_line.points[segment], game->aim_line.points[segment + 1]);
+                while (segment < aim->num_points - 2) {
+                    float length = vec3_distance(aim->points[segment], aim->points[segment + 1]);
                     if (start + length >= distance) break;
                     start += length;
                     segment++;
                 }
-                vec3 p0 = game->aim_line.points[segment];
-                vec3 p1 = game->aim_line.points[segment + 1];
+                vec3 p0 = aim->points[segment];
+                vec3 p1 = aim->points[segment + 1];
                 vec3 dir = vec3_normalize(vec3_sub(p1, p0));
                 vec3 position = vec3_add(p0, vec3_scale(dir, distance - start));
                 float len = fminf(0.35f, total_length * 0.72f / GOLF_AIM_ARROW_COUNT);
@@ -437,7 +439,7 @@ static void _draw_game(void) {
                 sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &(sg_range) { vs_uniform->data, vs_uniform->size });
 
                 golf_shader_uniform_t *fs_uniform = golf_shader_get_fs_uniform(shader, "aim_line_fs_params");
-                int force_level = (int)ceilf(game->aim_line.power * GOLF_AIM_ARROW_COUNT);
+                int force_level = (int)ceilf(aim->power * GOLF_AIM_ARROW_COUNT);
                 vec4 arrow_color = arrow < force_level ? V4(.92f, .78f, .42f, 1) : V4(.96f, .92f, .82f, .70f);
                 golf_shader_uniform_set_vec4(fs_uniform, "color", arrow_color);
                 golf_shader_uniform_set_vec2(fs_uniform, "texture_coord_offset", V2(0, 0));
@@ -449,7 +451,7 @@ static void _draw_game(void) {
 
                 sg_draw(0, square->positions.length, 1);
 
-                game->aim_line.num_arrows++;
+                aim->num_arrows++;
             }
         }
 

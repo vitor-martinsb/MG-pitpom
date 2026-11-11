@@ -8,7 +8,7 @@ int main(void){
     for(int dir=0;dir<3;dir++)for(int phase=0;phase<8;phase++)for(int sample=1;sample<36000;sample++){
         float t=sample/120.f,offset=phase*.7f,span=1.45f;
         golf_cat_pose_t p=golf_cat_patrol_pose(t,offset,span,directions[dir]);
-        float speed=span*.95f*cosf(golf_cat_patrol_angle(t,offset));
+        float speed=span*GOLF_CAT_PATROL_RATE*cosf(golf_cat_patrol_angle(t,offset));
         assert(vec3_dot(p.forward,vec3_scale(directions[dir],speed))>=-.00001f);
         vec3 nose=vec3_apply_mat4(V3(0,0,1),0,mat4_rotation_y(atan2f(p.forward.x,p.forward.z)));
         assert(vec3_dot(nose,vec3_scale(directions[dir],speed))>=-.00001f);

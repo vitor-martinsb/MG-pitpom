@@ -1,3 +1,4 @@
+#include "golf/overview.h"
 #include "golf/progress.h"
 #include "golf/online.h"
 #include "golf/physics.h"
@@ -231,26 +232,24 @@ static void _golf_game_update_state_waiting_for_aim(float dt) {
     }
 }
 
-static void _golf_game_update_state_aiming(float dt) {
-    golf_player_t *player = golf_game_get_local_player();
-
-    vec3 aim_direction = V3(game.aim_line.aim_delta.x, 0, game.aim_line.aim_delta.y);
-    aim_direction = vec3_normalize(vec3_rotate_y(aim_direction, game.cam.angle - 0.5f * MF_PI));
-
+vec3 golf_game_aim_direction(void) {
+    return vec3_normalize(vec3_rotate_y(V3(game.aim_line.aim_delta.x,0,game.aim_line.aim_delta.y),game.cam.angle-.5f*MF_PI));
+}
+static void build_aim_line(golf_aim_line_t *line,golf_player_t *player,vec3 aim_direction,float dt) {
     // Create aim line
     {
-        game.aim_line.offset.x += -3 * dt;
-        game.aim_line.num_points = 0;
+        line->offset.x += -3 * dt;
+        line->num_points = 0;
         vec3 cur_point = player->ball.pos;
         vec3 cur_dir = aim_direction;
         float min_length = CFG_NUM(game_cfg, "aim_line_min_length");
         float max_length = CFG_NUM(game_cfg, "aim_line_max_length");
-        max_length = min_length + game.aim_line.power * (max_length - min_length);
+        max_length = min_length + line->power * (max_length - min_length);
         float t = 0;
         while (true) {
-            if (game.aim_line.num_points == MAX_AIM_LINE_POINTS) break;
-            int idx = game.aim_line.num_points++;
-            game.aim_line.points[idx] = cur_point;
+            if (line->num_points == MAX_AIM_LINE_POINTS) break;
+            int idx = line->num_points++;
+            line->points[idx] = cur_point;
             if (t >= max_length) break;
 
             golf_bvh_face_t static_hit_face;
@@ -293,6 +292,11 @@ static void _golf_game_update_state_aiming(float dt) {
             }
         }
     }
+
+}
+static void _golf_game_update_state_aiming(float dt) {
+    golf_player_t *player=golf_game_get_local_player();
+    build_aim_line(&game.aim_line,player,golf_game_aim_direction(),dt);
 
     if (player->ball.is_moving) {
         game.state = GOLF_GAME_STATE_WATCHING_BALL;
@@ -438,6 +442,13 @@ void golf_game_update(float dt) {
     }
 
     if(game.begin_camera_animation.active)game.state=GOLF_GAME_STATE_BEGIN_CAMERA_ANIMATION;
+    golf_player_t *aim_player;vec3 aim_direction;float aim_power;
+    game.remote_aim_line.num_points=0;game.remote_aim_line.power=0;
+    if(golf_online_remote_aim(&aim_player,&aim_direction,&aim_power)){
+        game.remote_aim_line.power=aim_power;
+        build_aim_line(&game.remote_aim_line,aim_player,aim_direction,dt);
+    }
+    if(game.state!=GOLF_GAME_STATE_PAUSED){graphics->cam_far=0;game.cam.overview=false;}
     // Move around the camera
     switch (game.state) {
         case GOLF_GAME_STATE_BEGIN_CAMERA_ANIMATION: {
@@ -482,6 +493,15 @@ void golf_game_update(float dt) {
         case GOLF_GAME_STATE_WAITING_FOR_AIM:
         case GOLF_GAME_STATE_AIMING:
         case GOLF_GAME_STATE_WATCHING_BALL: {
+            if(golf_online_overview()) {
+                game.cam.overview=true;
+                vec3 target=vec3_scale(vec3_add(game.mechanics.bounds_min,game.mechanics.bounds_max),.5f);
+                float aspect=graphics->viewport_size.x/fmaxf(1,graphics->viewport_size.y);
+                graphics->cam_pos=golf_overview_position(game.mechanics.bounds_min,game.mechanics.bounds_max,game.cam.skyline,aspect);
+                graphics->cam_dir=vec3_normalize(vec3_sub(target,graphics->cam_pos));
+                graphics->cam_far=fmaxf(150,(graphics->cam_pos.y-game.mechanics.bounds_min.y)*2);
+                break;
+            }
             if (game.cam.auto_rotate) {
                 float camera_zone_angle = _golf_game_get_camera_zone_angle(player->ball.draw_pos);
                 float delta_angle = camera_zone_angle - game.cam.angle;
@@ -515,6 +535,7 @@ void golf_game_update(float dt) {
 }
 
 void golf_game_start_main_menu(void) {
+    game.cam.overview=false;
     game.begin_camera_animation.active=false;
     golf_game_set_debug_test_players(false);
     golf_player_t *player = golf_game_get_local_player();
@@ -553,6 +574,7 @@ void golf_game_start_main_menu(void) {
 }
 
 void golf_game_start_level(void) {
+    game.cam.overview=false;
     golf_player_t *player = golf_game_get_local_player();
 
     game.state = GOLF_GAME_STATE_BEGIN_CAMERA_ANIMATION;
@@ -626,6 +648,7 @@ void golf_game_start_level(void) {
         golf_bvh_face_t *f=&game.physics.static_bvh.faces.data[i];
         height=fmaxf(height,fmaxf(f->a.y,fmaxf(f->b.y,f->c.y)));
     }
+    game.cam.skyline=height;
     float aspect=fmaxf(.35f,graphics->viewport_size.x/fmaxf(1,graphics->viewport_size.y));
     float overview_height=fmaxf(8,fmaxf(width/aspect,depth)*1.15f);
     vec3 back=vec3_scale(game.mechanics.direction,-2.0f);

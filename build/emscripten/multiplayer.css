@@ -493,3 +493,5 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 @media(max-width:600px),(pointer:coarse){.camera-zoom{bottom:calc(124px + var(--safe-bottom))}}
 @media(max-height:550px) and (orientation:landscape){.camera-zoom{right:calc(66px + var(--safe-right));bottom:calc(62px + var(--safe-bottom))}}
 @media(max-height:550px) and (orientation:landscape){.main-menu:has(#open-tutorial){width:22vw}.main-menu:has(#open-tutorial) button{gap:8px;padding:6px 10px;line-height:1.15}.main-menu:has(#open-tutorial) .menu-icon{font-size:1.2rem;line-height:1}.main-menu:has(#open-tutorial) button>span:last-child[aria-hidden=true]{display:none}}
+
+#turn-aim-status{padding:6px 9px;border-radius:10px;background:#fff9e7;color:#294b31;font-size:.75rem;pointer-events:none}#turn-aim-status meter{display:block;width:100%;height:12px;accent-color:#5b814a}

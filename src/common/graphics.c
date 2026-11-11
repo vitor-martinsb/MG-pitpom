@@ -63,7 +63,7 @@ void golf_graphics_begin_frame(float dt) {
 
 void golf_graphics_update_proj_view_mat(void) {
     float near = 0.1f;
-    float far = 150.0f;
+    float far = fmaxf(150.0f,graphics.cam_far);
     graphics.proj_mat = mat4_perspective_projection(66.0f,
             graphics.viewport_size.x / graphics.viewport_size.y, near, far);
     graphics.view_mat = mat4_look_at(graphics.cam_pos,
@@ -111,7 +111,7 @@ vec2 golf_graphics_world_to_screen(vec3 world_pos) {
 
 vec3 golf_graphics_screen_to_world(vec3 screen_point) {
     float near = 0.1f;
-    float far = 150.0f;
+    float far = fmaxf(150.0f,graphics.cam_far);
     float c = (far + near) / (near - far);
     float d = (2.0f * far * near) / (near - far);
     screen_point.x = -1.0f + (2.0f * screen_point.x / graphics.viewport_size.x);

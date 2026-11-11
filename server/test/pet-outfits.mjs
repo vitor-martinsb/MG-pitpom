@@ -4,6 +4,7 @@ import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
 import {visitMultiplayer,createLobby,lobbyTab,finishPresentation} from './navigation-fixture.mjs';
 import {freezePhysics} from './room-fixture.mjs';
+const patrolRate=Number(fs.readFileSync('../src/golf/cat_pose.h','utf8').match(/#define GOLF_CAT_PATROL_RATE ([\d.]+)f/)[1]);
 process.env.GOLF_HOLE_SECONDS='600';
 const app=createServer();let browser;
 try{
@@ -24,7 +25,7 @@ try{
   await page.setViewportSize({width,height});await page.evaluate(value=>Module.ccall('golf_course_zoom','number',['number'],[value]),width<600?1.3:.65);
   let index=0;
   for(const kind of [1,2])for(const pose of ['rest','walk','reaction']){
-   const s=structuredClone(source),time=(2+index)*Math.PI/.95;index++;
+   const s=structuredClone(source),time=(2+index)*Math.PI/patrolRate;index++;
    s.time=time;s.mascots.thirdKind=kind;s.mascots.catPhase=0;s.mascots.catActive=s.mascots.catVisible=true;s.mascots.catPresence=1;s.mascots.dogActive=s.mascots.dogVisible=false;
    s.mascots.cat=offset(center,right,-.57);s.mascots.slapTime=pose==='reaction'?time-.17:-100;
    s.players[0].pos=offset(center,facing,.30);s.players[0].pos[1]+=.12;s.players[0].vel=[0,0,0];s.players[0].moving=false;

@@ -10,7 +10,7 @@ export type Member = {
   id: number; slot: number; nickname: string; color: string; avatar: number; token: string;
   socket?: WebSocket; ready: boolean; lastSequence: number; scores: number[]; dnf: boolean[];
   disconnectedAt?: number; ball?: Ball;
-  lastChatAt?: number;
+  lastChatAt?: number;lastAimAt?:number;lastAimSequence?:number;
   seasonSkin?:number;seasonTrail?:number;
   bot?: BotDifficulty; nextDecision?: number; planRetries?:number; windWaitStroke?:number;
 };
@@ -32,6 +32,23 @@ export class Room {
   mode: 'classic' | 'impact' = 'classic';
   playStyle:'simultaneous'|'turns'='simultaneous';
   turn=0;
+  private aimPreview?:{player:number;direction:number[];power:number;updatedAt:number};
+  private visibleAim(){
+    const p=this.aimPreview,m=p&&this.members.get(p.player);
+    return p&&this.playStyle==='turns'&&this.phase==='playing'&&p.player===this.turn&&m&&this.turnEligible(m)&&!m.ball?.moving&&!m.ball?.captureUntil&&this.now()-p.updatedAt<=1200
+      ? {player:p.player,direction:p.direction,power:p.power}:null;
+  }
+  aim(m:Member,message:any){
+    if(this.members.get(m.id)!==m||!m.socket||m.bot||this.playStyle!=='turns'||this.phase!=='playing'||this.turn!==m.id||this.turnShot||this.shotPending.has(m.id)||!this.turnEligible(m)||m.ball?.moving||m.ball?.captureUntil||message.hole!==this.hole||message.match!==this.match)return false;
+    if(!Number.isSafeInteger(message.sequence)||message.sequence<1||message.sequence<=(m.lastAimSequence??0))return false;
+    if(typeof message.active!=='boolean')throw Error('Mira inválida.');
+    const d=message.direction,power=message.power;
+    if(message.active&&(!Array.isArray(d)||d.length!==3||d.some((v:unknown)=>typeof v!=='number'||!Number.isFinite(v)||Math.abs(v)>1.0001)||Math.abs(d[1])>.001||Math.hypot(d[0],d[2])<.001||typeof power!=='number'||!Number.isFinite(power)||power<=0||power>1))throw Error('Mira inválida.');
+    m.lastAimSequence=message.sequence;
+    if(!message.active){this.aimPreview=undefined;return true;}
+    const now=this.now();if(m.lastAimAt!==undefined&&now-m.lastAimAt<70)return false;m.lastAimAt=now;
+    const length=Math.hypot(d[0],d[2]);this.aimPreview={player:m.id,direction:[d[0]/length,0,d[2]/length],power,updatedAt:now};return true;
+  }
   private turnStroke=0;
   private turnShot=false;
   private shotPending=new Set<number>();
@@ -46,7 +63,7 @@ export class Room {
     if(current&&this.turnEligible(current)&&!this.turnShot)return;
     const next=[...this.members.values()].filter(m=>this.turnEligible(m));
     const id=(next.find(m=>m.id>this.turn)??next[0])?.id??0;
-    const changed=id!==this.turn||this.turnShot;this.turn=id;this.turnShot=false;
+    const changed=id!==this.turn||this.turnShot;this.turn=id;this.turnShot=false;this.aimPreview=undefined;
     if(changed)this.publish();
   }
   selectedLevels: number[] = [];
@@ -95,7 +112,7 @@ export class Room {
   broadcast(message: unknown) { for (const member of this.members.values()) this.send(member, message); }
   state() {
     return { type: 'room', code: this.code, phase: this.phase, host: this.host, hole: this.hole, holes: this.holes, penalty: this.options.penalty,
-      level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),seasonal:this.seasonal,
+      level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,aim:this.visibleAim(),playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),seasonal:this.seasonal,
       sequence:this.selectedLevels, availableMaps:this.validLevels.length,mapPool:this.mapPool,mapPoolKind:this.mapPoolKind,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,timerSpeed:1,
       players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,seasonSkin:m.seasonSkin??0,seasonTrail:m.seasonTrail??0,
         connected: !!m.socket || !!m.bot, bot:m.bot, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
@@ -132,7 +149,7 @@ export class Room {
     const m=[...this.members.values()].find(m=> typeof token==='string' && m.token===token);
     if (!m || m.bot || (m.disconnectedAt !== undefined && this.now()-m.disconnectedAt>this.options.reconnectTTL)) throw new Error('Reconexão expirada.');
     if (m.socket) throw new Error('Jogador já conectado.');
-    m.socket=socket; m.disconnectedAt=undefined; m.ready=false;
+    m.socket=socket; m.disconnectedAt=undefined; m.ready=false;m.lastAimSequence=0;m.lastAimAt=undefined;
     if (!this.host) this.host=m.id;
     if (this.physics) await this.physics.connected(m.slot,true);
     this.send(m,{type:'welcome',id:m.id,token:m.token,code:this.code,sequence:m.lastSequence});
@@ -232,9 +249,9 @@ export class Room {
     const generation=++this.generation;
     this.botPlanning=undefined;this.nextBotPlanAt=0;this.botCursor=0;
     this.cpuSample=this.sampleTicks=this.cpuRate=this.cpuSamples=0;
-    this.turn=0;this.turnShot=false;this.shotPending.clear();
+    this.turn=0;this.turnShot=false;this.aimPreview=undefined;this.shotPending.clear();
     this.phase='loading'; this.loading=true; this.deadline=0; this.worldTime=0;this.lastPhysicsCpu=0;this.events=[];this.simulationSpeed=1;
-    for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0;m.planRetries=0;m.windWaitStroke=undefined; }
+    for (const m of this.members.values()) { m.ready=!!m.bot; m.ball=undefined;m.nextDecision=0;m.planRetries=0;m.windWaitStroke=undefined;m.lastAimAt=undefined; }
     this.lastSent.clear(); this.physics?.close();
     const level=this.selectedLevels[this.hole] ?? this.hole;
     this.publish(); this.broadcast({type:'load',level,hole:this.hole});
@@ -271,7 +288,7 @@ export class Room {
     if(this.shotPending.has(m.id)||this.playStyle==='turns'&&(this.turn!==m.id||this.turnShot))throw Error('Tacada indisponível.');
     const d=message.direction, power=message.power;
     if (!Array.isArray(d) || d.length!==3 || d.some(v=>typeof v!=='number' || !Number.isFinite(v) || Math.abs(v)>1) || Math.abs(d[1])>.001 || Math.hypot(d[0],d[2])<.001 || typeof power!=='number' || !Number.isFinite(power) || power<0 || power>1) throw new Error('Direção ou potência inválida.');
-    const physics=this.physics,generation=this.generation,targetStroke=(m.ball?.strokes??0)+1;this.shotPending.add(m.id);
+    const physics=this.physics,generation=this.generation,targetStroke=(m.ball?.strokes??0)+1;this.shotPending.add(m.id);this.aimPreview=undefined;
     try{
       if (!physics || !await physics.shot(m.slot,d,power)) throw new Error('Bola ainda em movimento.');
       if(physics!==this.physics||generation!==this.generation)return;
@@ -392,7 +409,7 @@ export class Room {
       if (full || this.lastSent.get(m.id)!==text) players.push(m.ball);
       if (!target) this.lastSent.set(m.id,text);
     }
-    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),remaining:Math.max(0,this.deadline-this.now()),simulationSpeed:this.simulationSpeed,timerSpeed:1,mascots:this.mascots,players,events:target?[]:this.events};
+    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,aim:this.visibleAim(),playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),remaining:Math.max(0,this.deadline-this.now()),simulationSpeed:this.simulationSpeed,timerSpeed:1,mascots:this.mascots,players,events:target?[]:this.events};
     if (target) this.send(target,snapshot); else this.broadcast(snapshot);
     this.metrics.snapshots++;
   }
