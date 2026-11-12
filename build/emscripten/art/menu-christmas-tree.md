@@ -5,3 +5,5 @@
 Direction: an organic, hand-painted evergreen for the existing summer-garden illustration, with olive foliage, burgundy bows, antique-gold ornaments and gifts. No snow, background, lettering or characters. It replaces the old flat triangular Canvas tree; the menu background and all seven pets are unchanged.
 
 The seasonal renderer lazily loads this resource only for Christmas. Its ambient RGB follows the existing Brasilia day/sunset/night clock, preserving the sprite alpha. Warm bulb emission is rendered separately. The foliage tint is cached at a small resolution and updated only when lighting changes. Canopy strands and fabric bows use the same restrained palette; lights remain gently lit rather than flashing.
+
+Daylight keeps the lamps as softly shaded glass with negligible bloom. Sunset warms foliage, bows and gold ornaments and gradually introduces an amber glow; full warm emission is reserved for night. All variants use the same sprite and the same menu artwork.

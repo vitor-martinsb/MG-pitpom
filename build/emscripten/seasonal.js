@@ -29,25 +29,31 @@
     const c=treeSurface.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(treeArt,0,0,treeSurface.width,treeSurface.height);treePixels=c.getImageData(0,0,treeSurface.width,treeSurface.height);treeLightKey='';animate();
   };treeArt.src='art/menu-christmas-tree.png';}
   function lighting(now){if(!lightSample||now-lightAt>=1000){lightSample=window.GolfMenuClock?.sample().weights??{night:0,sunset:0,morning:0};lightAt=now;}return lightSample;}
-  function material(rgb,light){const n=light.night,u=light.sunset,m=light.morning;return `rgb(${Math.round(rgb[0]*(1-.65*n-.03*m))},${Math.round(rgb[1]*(1-.62*n-.12*u))},${Math.round(rgb[2]*(1-.43*n-.30*u))})`;}
+  function ambient(light){return [1-.65*light.night-.03*light.morning+.035*light.sunset,1-.62*light.night-.10*light.sunset,1-.43*light.night-.28*light.sunset];}
+  function material(rgb,light){const factors=ambient(light);return `rgb(${rgb.map((v,i)=>Math.round(v*factors[i])).join(',')})`;}
+  function blendColor(a,b,t){return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')})`;}
   function paintedTree(light){
     if(!treePixels)return null;const key=[light.night,light.sunset,light.morning].map(n=>n.toFixed(2)).join(',');
     if(key!==treeLightKey){const c=treeSurface.getContext('2d'),pixels=c.createImageData(treePixels.width,treePixels.height),src=treePixels.data,dst=pixels.data;
-      const factors=[1-.65*light.night-.03*light.morning,1-.62*light.night-.12*light.sunset,1-.43*light.night-.30*light.sunset];
+      const factors=ambient(light);
       for(let i=0;i<src.length;i+=4){dst[i]=src[i]*factors[0];dst[i+1]=src[i+1]*factors[1];dst[i+2]=src[i+2]*factors[2];dst[i+3]=src[i+3];}
       c.putImageData(pixels,0,0);treeLightKey=key;
     }return treeSurface;
   }
   function lamp(x,y,size,index,time,light){
-    const warm=index%5!==0,pulse=.94+.06*Math.sin(time*.7+index*.8);
-    ctx.save();ctx.globalAlpha=pulse;
-    const radius=size*(2+light.night*2.2),glow=ctx.createRadialGradient(x,y,0,x,y,radius);
-    glow.addColorStop(0,warm?'rgba(255,218,135,.30)':'rgba(220,125,91,.20)');glow.addColorStop(1,'rgba(255,216,145,0)');
+    const warm=index%5!==0,emission=Math.min(1,light.night+light.sunset*.65),pulse=.94+.06*Math.sin(time*.7+index*.8);
+    // Sunlit bulbs read as painted glass. Their glow gently wakes at sunset.
+    ctx.save();ctx.globalAlpha=1-(1-pulse)*emission;
+    const radius=size*(1.5+emission*2.7),glow=ctx.createRadialGradient(x,y,0,x,y,radius),alpha=.015+emission*.285;
+    glow.addColorStop(0,warm?`rgba(255,218,135,${alpha})`:`rgba(220,125,91,${alpha*.67})`);glow.addColorStop(1,'rgba(255,216,145,0)');
     ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
     const glass=ctx.createRadialGradient(x-size*.3,y-size*.4,0,x,y,size*1.3);
-    glass.addColorStop(0,warm?'#fff9d8':'#f5c3a1');glass.addColorStop(.4,warm?'#f4d285':'#c97555');glass.addColorStop(1,warm?'#a38345':'#713f31');
+    glass.addColorStop(0,blendColor(warm?[249,229,170]:[229,187,152],warm?[255,249,216]:[245,195,161],emission));
+    glass.addColorStop(.4,blendColor(warm?[210,173,95]:[174,90,63],warm?[244,210,133]:[201,117,85],emission));
+    glass.addColorStop(1,material(warm?[153,123,66]:[113,63,49],light));
     ctx.fillStyle=glass;ctx.beginPath();ctx.ellipse(x,y,size*.75,size,0,0,Math.PI*2);ctx.fill();ctx.restore();
   }
+
   function lightStrand(points,count,size,time,light){
     const [a,b,c]=points;ctx.strokeStyle=material([68,82,49],light);ctx.lineWidth=Math.max(.8,size*.35);ctx.beginPath();ctx.moveTo(...a);ctx.quadraticCurveTo(...b,...c);ctx.stroke();
     for(let i=0;i<count;i++){const t=(i+.5)/count,x=(1-t)*(1-t)*a[0]+2*(1-t)*t*b[0]+t*t*c[0],y=(1-t)*(1-t)*a[1]+2*(1-t)*t*b[1]+t*t*c[1];

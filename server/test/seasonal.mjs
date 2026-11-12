@@ -8,7 +8,7 @@ try{
  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${app.server.address().port}`;
  browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true}):chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),headless:true,args:['--enable-unsafe-swiftshader']}));
  const errors=[],artRequests=[],treeRequests=[],context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().endsWith('/menu-christmas-tree.png'))treeRequests.push(r.url());if(/menu-christmas(?:-portrait)?\.png$/.test(r.url()))artRequests.push(r.url());});
- await page.addInitScript(()=>{localStorage.setItem('pitpom-language','pt-BR');const D=Date;globalThis.Date=class extends D{constructor(...args){super(...(args.length?args:[globalThis.__seasonalDate||'2026-12-15T12:00:00-03:00']));}};});
+ await page.addInitScript(()=>{localStorage.setItem('pitpom-language','pt-BR');const D=Date;globalThis.Date=class extends D{constructor(...args){super(...(args.length?args:[globalThis.__seasonalDate||'2026-12-15T10:00:00-03:00']));}};});
  await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await page.locator('#continue-home').click();
  assert.equal(await page.evaluate(()=>GolfSeason.theme),'original');assert.equal(artRequests.length,0,'original theme does not download Christmas illustrations');assert.equal(treeRequests.length,0,'original theme never requests the decoration sprite');await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('christmas');await page.locator('#season-obstacles').check();
  await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===1);
@@ -17,6 +17,12 @@ try{
  await page.waitForFunction(()=>GolfSeason.diagnostics().decorReady);assert.equal(treeRequests.length,1);
  assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35,'original scene and pet animations keep running in Christmas mode');
  fs.mkdirSync('../out/christmas',{recursive:true});
+ const coverage=()=>page.locator('#season-atmosphere').evaluate(c=>{
+   const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data,d=c.width/innerWidth;let visible=0,overPets=0;
+   for(let i=3;i<pixels.length;i+=4)if(pixels[i])visible++;
+   for(const p of document.querySelectorAll('[data-pet-help]')){const r=p.getBoundingClientRect();for(let y=Math.max(0,Math.ceil(r.top*d));y<Math.min(c.height,Math.floor(r.bottom*d));y++)for(let x=Math.max(0,Math.ceil(r.left*d));x<Math.min(c.width,Math.floor(r.right*d));x++)if(pixels[(y*c.width+x)*4+3])overPets++;}
+   return {visible,overPets};
+  });
  for(const [width,height]of [[1280,800],[390,844],[320,900],[768,1024],[844,390],[1920,1080]]){
   await page.setViewportSize({width,height});
   await page.waitForFunction(key=>GolfHome.scene.layout===key&&GolfHome.scene.loaded,height>=width?'portrait':'landscape');
@@ -36,12 +42,7 @@ try{
   assert.equal(festive.pets.length,7);assert.deepEqual(festive,original,`unaltered pet pixels, art and placement at ${width}x${height}`);
   assert.equal(await page.locator('#christmas-menu-art').count(),0,'no alternative art renderer');
   assert.equal(await page.locator('.season-subtitle').isVisible(),true);
-  const decor=await page.locator('#season-atmosphere').evaluate(c=>{
-   const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data,d=c.width/innerWidth;let visible=0,overPets=0;
-   for(let i=3;i<pixels.length;i+=4)if(pixels[i])visible++;
-   for(const p of document.querySelectorAll('[data-pet-help]')){const r=p.getBoundingClientRect();for(let y=Math.max(0,Math.ceil(r.top*d));y<Math.min(c.height,Math.floor(r.bottom*d));y++)for(let x=Math.max(0,Math.ceil(r.left*d));x<Math.min(c.width,Math.floor(r.right*d));x++)if(pixels[(y*c.width+x)*4+3])overPets++;}
-   return {visible,overPets};
-  });
+  const decor=await coverage();
   const bounds=await page.evaluate(()=>GolfSeason.diagnostics().treeBounds);assert.ok(bounds.left>=7.9&&bounds.right<=width-7.9,'the whole tree stays inside the viewport');
   assert.ok(decor.visible>100,'Christmas decorations are visible');assert.equal(decor.overPets,0,`no Christmas ornament or snow is painted over pets at ${width}x${height}`);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -49,17 +50,16 @@ try{
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>a.play()));
   const frame=await page.evaluate(()=>GolfHome.scene.petFrames);await page.waitForFunction(n=>GolfHome.scene.petFrames>n+2,frame);
  }
- for(const [width,height]of [[390,844],[1280,800]]){
-  await page.setViewportSize({width,height});await page.waitForFunction(key=>GolfHome.scene.layout===key&&GolfHome.scene.loaded,height>=width?'portrait':'landscape');
-  await page.evaluate(()=>{window.__seasonalDate='2026-12-15T23:00:00-03:00';});
-  await page.waitForFunction(()=>document.getElementById('home').dataset.period==='night'&&GolfSeason.diagnostics().decorLighting.startsWith('1.00'));
-  await page.screenshot({path:`../out/christmas/integrated-night-${width}x${height}.png`});
+ const periods=[['morning','10:00:00','0.00,0.00,1.00'],['afternoon','15:00:00','0.00,0.00,0.00'],['sunset','18:35:00','0.00,1.00,0.00'],['night','23:00:00','1.00,0.00,0.00']];
+ for(const [period,hour,key]of periods)for(const [width,height]of [[390,844],[1280,800]]){
+  await page.setViewportSize({width,height});await page.evaluate(({hour,width})=>{window.__seasonalDate=`2026-12-15T${hour}-03:00`;GolfHome.show(width<600?'splash':'menu',false);},{hour,width});
+  await page.waitForFunction(({layout,period,key})=>GolfHome.scene.layout===layout&&GolfHome.scene.loaded&&document.getElementById('home').dataset.period===period&&GolfSeason.diagnostics().decorLighting===key,{layout:height>=width?'portrait':'landscape',period,key});
+  const decor=await coverage();assert.equal(decor.overPets,0,`no ornaments cover pets during ${period} at ${width}x${height}`);
+  await page.screenshot({path:`../out/christmas/${width<600?'welcome':'integrated'}-${period}-${width}x${height}.png`});
  }
- await page.setViewportSize({width:390,height:844});await page.evaluate(()=>GolfHome.show('splash',false));
- await page.locator('#continue-home').waitFor({state:'visible'});await page.waitForFunction(()=>GolfHome.scene.layout==='portrait'&&GolfSeason.diagnostics().decorLighting.startsWith('1.00'));
- await page.screenshot({path:'../out/christmas/welcome-night-390x844.png'});await page.locator('#continue-home').click();
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>GolfHome.show('menu',false));await page.waitForFunction(()=>GolfHome.scene.layout==='portrait'&&GolfHome.scene.loaded);
  assert.equal(treeRequests.length,1,'responsive layouts reuse one decoration sprite');
- if(process.argv.includes('--menu-only')){assert.deepEqual(errors,[]);console.log('Christmas menu: integrated tree art, day/night lighting, unchanged pets, six responsive layouts and original-theme restoration passed.');process.exitCode=0;}
+ if(process.argv.includes('--menu-only')){assert.deepEqual(errors,[]);console.log('Christmas menu: integrated tree art, morning/afternoon/sunset/night lighting, unchanged pets, six responsive layouts and original-theme restoration passed.');process.exitCode=0;}
  else {
  assert.equal(artRequests.length,0,'neither theme downloads discarded artwork');
  await page.setViewportSize({width:390,height:844});
