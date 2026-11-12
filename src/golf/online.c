@@ -274,7 +274,7 @@ void golf_online_update(float dt) {
     if(online.has_snapshot) for(int i=0;i<game->player_count;i++) {
         golf_player_t *p=&game->players[i];
         p->ball.draw_pos=vec3_add(vec3_scale(online.from[i],1-alpha),vec3_scale(online.target[i],alpha));
-        if(p->ball.is_moving) {
+        if(p->ball.is_moving||vec3_distance(online.from[i],online.target[i])>.00001f) {
             vec3 axis=vec3_cross(V3(0,1,0),p->ball.vel);
             if(vec3_length(axis)>.001f) p->ball.orientation=quat_multiply(quat_create_from_axis_angle(vec3_normalize(axis),vec3_length(p->ball.vel)*dt/p->ball.radius),p->ball.orientation);
         }

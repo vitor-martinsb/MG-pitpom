@@ -109,32 +109,57 @@ static void resting_cache(void){
 }
 /* A rolling ball must accelerate from rest down real triangle contacts.
    Mirror the ramp and duplicate its face to cover direction and mesh seams. */
-static float ramp_roll(float degrees,int faces,bool shot){
+static float ramp_roll(float degrees,int faces,bool shot,float damping,bool multiplayer){
     float angle=degrees*MF_PI/180.f,slope=tanf(angle);
     golf_level_t level={0};golf_entity_t floor={0};floor.type=GEO_ENTITY;floor.parent_idx=-1;
     golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);
     for(int i=0;i<faces;i++){
         golf_bvh_face_t f={0};f.level=&level;f.entity=&floor;
         f.a=V3(-30,30*slope,-30);f.b=V3(0,0,30);f.c=V3(30,-30*slope,-30);
-        f.friction=.3f;f.vel_scale=1;vec_push(&fixed.faces,f);
+        f.friction=.3f;f.vel_scale=damping;vec_push(&fixed.faces,f);
     }
     golf_bvh_node_t leaf={0};leaf.is_leaf=true;leaf.aabb=(golf_bvh_aabb_t){V3(-30,-40,-30),V3(30,40,30)};leaf.leaf_node_info.face_count=faces;vec_push(&fixed.nodes,leaf);fixed.parent=0;
-    golf_config_t config={0};golf_physics_world_t w={0};w.level=&level;w.config=&config;w.static_bvh=&fixed;w.dynamic_bvh=&moving;w.multiplayer=true;
+    golf_config_t config={0};golf_physics_world_t w={0};w.level=&level;w.config=&config;w.static_bvh=&fixed;w.dynamic_bvh=&moving;w.multiplayer=multiplayer;
     golf_player_t p;golf_player_init(&p,1,"Ramp",V4(1,1,1,1),0);golf_player_start_level(&p,V3(sinf(angle)*GOLF_BALL_RADIUS*.99f,cosf(angle)*GOLF_BALL_RADIUS*.99f,0));
     if(shot){p.ball.is_moving=true;p.ball.vel=V3(cosf(angle)*.05f,-sinf(angle)*.05f,0);}
-    for(int tick=0;tick<240;tick++){w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);}
+    bool creeping=damping<1||(fabsf(degrees)>2&&fabsf(degrees)<3);int ready_tick=-1;vec3 ready_position=V3(0,0,0);
+    for(int tick=0;tick<240;tick++){
+        w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);
+        if(creeping&&!p.ball.is_moving&&ready_tick<0){
+            ready_tick=tick;ready_position=p.ball.pos;
+            golf_player_t ready=p;int strokes=ready.stroke_count;
+            assert(golf_physics_shoot(&w,&ready,V3(degrees>0?-1:1,0,0),.3f));
+            assert(ready.stroke_count==strokes+1&&ready.ball.is_moving&&ready.ball.time_going_slow==0);
+            assert(!golf_physics_shoot(&w,&ready,V3(1,0,0),.3f));
+        }
+        if(creeping&&tick<59)assert(p.ball.is_moving); /* No transient unlock. */
+    }
     float speed=vec3_length(p.ball.vel);
-    if(fabsf(degrees)>1){assert(p.ball.is_moving&&!p.ball.resting_static);assert(p.ball.pos.x*degrees>0);assert(p.ball.pos.y<cosf(angle)*GOLF_BALL_RADIUS*.99f-.03f);assert(speed>.3f&&speed<11);}
+    if(creeping){
+        assert(ready_tick>=59&&ready_tick<230);assert(!p.ball.resting_static);
+        assert(speed>.001f);assert(vec3_distance(p.ball.pos,ready_position)>.005f);
+        if(speed>=.15f){assert(p.ball.is_moving);assert(!golf_physics_shoot(&w,&p,V3(1,0,0),.3f));}
+        else assert(!p.ball.is_moving);
+        if(damping==1){
+            // A later impulse must wake a shot-ready ball immediately.
+            p.ball.is_moving=false;p.ball.vel=V3(cosf(angle)*.5f,-sinf(angle)*.5f,0);
+            w.time+=1.f/120;golf_physics_tick_player(&w,&p,1.f/120);
+            assert(vec3_length(p.ball.vel)>.15f&&p.ball.is_moving&&p.ball.time_going_slow==0);
+            assert(!golf_physics_shoot(&w,&p,V3(1,0,0),.3f));
+        }
+    }
+    else if(fabsf(degrees)>1){assert(p.ball.is_moving&&!p.ball.resting_static);assert(p.ball.pos.x*degrees>0);assert(p.ball.pos.y<cosf(angle)*GOLF_BALL_RADIUS*.99f-.03f);assert(speed>.3f&&speed<11);assert(!golf_physics_shoot(&w,&p,V3(1,0,0),.3f));}
     else assert(!p.ball.is_moving&&fabsf(p.ball.pos.x-sinf(angle)*GOLF_BALL_RADIUS*.99f)<.001f);
     vec_deinit(&fixed.faces);vec_deinit(&fixed.nodes);return speed;
 }
 static void slopes(void){
-    ramp_roll(0,1,false);ramp_roll(1,1,false);ramp_roll(-1,1,false);
+    ramp_roll(0,1,false,1,true);ramp_roll(1,1,false,1,true);ramp_roll(-1,1,false,1,true);
+    for(int mode=0;mode<2;mode++)for(int direction=-1;direction<=1;direction+=2)for(int faces=1;faces<=2;faces++){ramp_roll(2.1f*direction,faces,true,1,mode);ramp_roll(15*direction,faces,true,.7f,mode);}
     for(int direction=-1;direction<=1;direction+=2)for(int angle=5;angle<=35;angle+=10){
-        float normal=ramp_roll(angle*direction,1,false),duplicate=ramp_roll(angle*direction,2,false),slow=ramp_roll(angle*direction,1,true);
+        float normal=ramp_roll(angle*direction,1,false,1,true),duplicate=ramp_roll(angle*direction,2,false,1,true),slow=ramp_roll(angle*direction,1,true,1,true);
         assert(fabsf(normal-duplicate)<.03f);assert(slow>.3f);
     }
-    puts("Ramps: 5/15/25/35 degree mirrored descents accelerate from rest and tiny shots; flat rest and duplicate-face invariance passed.");
+    puts("Ramps: 5/15/25/35 degree mirrored descents accelerate from rest and tiny shots; flat rest, duplicate-face invariance and shots during sustained gentle/damped creep passed.");
 }
 int main(int argc,char **argv) {
     headless_config_load();

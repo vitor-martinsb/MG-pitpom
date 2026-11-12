@@ -42,3 +42,9 @@ O botão Tutorial fica abaixo de Multijogador. Um diálogo com seis etapas expli
 ### Regras do modo por turnos
 
 Cada jogador, humano ou bot, dispõe de até 20 tacadas por campo, sem cronômetro de partida. O servidor publica `strokeLimit: 20` e `remaining: null`; o cliente mostra “Sem limite de tempo” e a contagem de tacadas em relação ao limite. Servidor e controles nativos recusam a 21ª tacada. A última tacada termina movimento e resgates antes de definir o resultado: entrar no buraco na 20ª conta como conclusão; ficar fora recebe DNF +12 (32 pontos). O campo avança quando todos os participantes ativos concluírem ou esgotarem as tacadas. As esperas de carregamento e resultados continuam funcionando, e o modo simultâneo mantém suas regras anteriores.
+
+### Tacada durante uma descida muito lenta
+
+O critério de prontidão também é aplicado em rampas: velocidade inferior a 0,15 unidade/s durante mais de 0,5 s libera a mira, tolerando a pequena oscilação vertical dos contatos. No piso plano permanece o limite de 0,1 unidade/s. Gravidade, aceleração, atrito e trajetórias não são modificados: uma bola em rampa pode continuar descendo lentamente mesmo com `is_moving` falso, que indica prontidão para a próxima tacada. Ao superar a tolerância, a mira volta a ser bloqueada. A animação remota considera também o deslocamento entre snapshots para manter o rolamento visível.
+
+A física compartilhada autoriza a nova tacada no solo e no servidor; no modo por turnos o mesmo sinal libera o próximo participante. Capturas, resgates, proteção do buraco e limite de 20 tacadas continuam obedecendo às regras existentes. As regressões cobrem rampas suaves e com amortecimento, direções opostas, faces duplicadas, modos solo/multiplayer, retomada de velocidade e uma tacada real pela interface durante movimento residual.

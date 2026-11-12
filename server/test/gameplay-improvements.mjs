@@ -103,7 +103,15 @@ try{
  await observer.close();await guest.close();await host.waitForFunction(()=>!GolfCourse.inspect().frame.overview&&GolfCourse.inspect().frame.remoteAimPower===0&&GolfCourse.inspect().frame.zoom===1);await host.locator('#camera-zoom').waitFor({state:'visible'});
  assert.equal(room.turn,1,'disconnect restores the remaining player and camera');
  await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
- await freezePhysics(room);room.members.get(1).ball.strokes=20;room.members.get(1).ball.moving=false;room.members.get(1).dnf[room.hole]=true;room.publish();room.snapshot(true);
+ await freezePhysics(room);
+ // Authoritative snapshots can now be shot-ready while a ramp still creeps.
+ const creeping=room.members.get(1).ball;creeping.moving=false;creeping.vel=[.04,-.002,0];creeping.pos[0]+=.002;room.snapshot(true);
+ await host.waitForFunction(x=>{const d=JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[]));return d.canShoot&&Math.abs(d.players.find(p=>p[0]===d.local)[2]-x)<.00001;},creeping.pos[0]);
+ await host.locator('#canvas').focus();const slowBall=await host.evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).screen);
+ await host.mouse.move(...slowBall);await host.mouse.down();await host.waitForTimeout(120);await host.mouse.move(slowBall[0]+80,slowBall[1]+30,{steps:8});
+ await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).aimArrows===5);await host.mouse.up();
+ for(let tick=0;room.members.get(1).ball.strokes!==2;tick++){assert.ok(tick<100,'a real input stroke is accepted during slow ramp creep');await host.waitForTimeout(50);}
+ room.members.get(1).ball.strokes=20;room.members.get(1).ball.moving=false;room.members.get(1).dnf[room.hole]=true;room.publish();room.snapshot(true);
  await host.waitForFunction(()=>!JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
  await host.waitForFunction(()=>document.getElementById('summary').textContent.includes('20/20'));
  assert.equal(await host.locator('#timer').textContent(),'Sem limite de tempo');assert.match(await host.locator('#help').textContent(),/20.*DNF/);

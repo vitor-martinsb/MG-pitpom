@@ -452,7 +452,12 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
         world->contacts(bp0, contacts, num_contacts);
     }
 
-    if (!rolling_slope && vec3_length(bv) < 0.1f) {
+    /* Apply the same sustained-slow-motion rule on inclines as on flat ground.
+       A gentle/damped descent can remain below this speed indefinitely. The
+       rolling_slope wake-up below still integrates gravity and translation on
+       every tick, even while input is unlocked; faster motion locks it again. */
+    float slow_limit=rolling_slope?.15f:.1f; /* Includes tiny vertical contact oscillations. */
+    if (vec3_length(bv) < slow_limit) {
         player->ball.time_going_slow += dt;
     }
     else {

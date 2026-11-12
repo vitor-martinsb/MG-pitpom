@@ -146,3 +146,13 @@ test('the 20-shot allowance resets on the next course while the previous DNF sco
   await room.shot(host,shot(1));assert.equal(host.ball!.strokes,1);assert.deepEqual(host.scores,[32]);
  }finally{room.close();}
 });
+
+test('a sustained slow downhill roll releases a turn without granting a second stroke to that player',async()=>{
+ const f=await fixture();const {room,host,guest}=f;
+ try{
+  await room.shot(host,shot(1));const physics=(room as any).physics,step=physics.step.bind(physics);
+  physics.step=async(ticks:number)=>{const frame=await step(ticks),b=frame.players.find((b:any)=>b.id===host.id);b.moving=false;b.vel=[.04,-.002,0];b.captureUntil=0;return frame;};
+  await f.tick();assert.equal(room.turn,guest.id);assert.equal(host.ball!.strokes,1);assert.ok(Math.hypot(...host.ball!.vel)>0);
+  await assert.rejects(room.shot(host,shot(2)),/indisponível/);await room.shot(guest,shot(1));assert.equal(guest.ball!.strokes,1);
+ }finally{room.close();}
+});

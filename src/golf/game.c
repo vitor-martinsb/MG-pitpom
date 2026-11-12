@@ -701,7 +701,7 @@ void golf_game_stop_aiming(void) {
 
 void golf_game_hit_ball(vec2 aim_delta) {
     golf_player_t *player = golf_game_get_local_player();
-    if(game.begin_camera_animation.active || player->ball.capture_until>0)return;
+    if(game.begin_camera_animation.active || player->ball.is_moving || player->ball.capture_until>0)return;
 
     if (golf_online_active()) {
         vec3 direction = vec3_normalize(vec3_rotate_y(V3(aim_delta.x, 0, aim_delta.y), game.cam.angle - .5f * MF_PI));
