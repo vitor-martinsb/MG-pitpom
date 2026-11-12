@@ -277,7 +277,7 @@
       } else if(m.type==='load'){
         loading=true;presenting=false;lastBalls.clear();call(m);$('scores').hidden=true;$('adventure-modal').hidden=true;
       } else if(m.type==='snapshot'){
-        if(room){room.aim=m.aim??null;room.turn=m.turn;room.turnOrder=m.turnOrder;room.playStyle=m.playStyle??'simultaneous';}
+        if(room){room.aim=m.aim??null;room.strokeLimit=m.strokeLimit??null;room.turn=m.turn;room.turnOrder=m.turnOrder;room.playStyle=m.playStyle??'simultaneous';}
         if(!room||m.hole!==room.hole)return;
         if(m.full)lastBalls.clear();for(const b of m.players)lastBalls.set(b.id,b);
         syncClock(m);room.simulationSpeed=m.simulationSpeed??1;call(m);GolfAudio?.events(m.events??[],m.hole);renderSummary();renderSpectators();
@@ -313,9 +313,9 @@
   function sorted(){return room?[...room.players].sort((a,b)=>a.total-b.total||a.id-b.id):[];}
   function renderSummary(){
     if(!room)return;speedLabel.hidden=(room.simulationSpeed??1)<2||!['playing','settling'].includes(phase);speedLabel.textContent=t('botSpeed');const list=sorted();let visible=list.slice(0,5);const local=list.find(p=>p.id===identity?.id);if(local&&!visible.includes(local))visible.push(local);
-    $('summary').replaceChildren(...visible.map(p=>{const row=playerRow(p),b=lastBalls.get(p.id);row.append(text('span',`${t('points',{count:p.total})} · ${b?.hole?'✓':t((b?.strokes??0)===1?'strokes.one':'strokes.other',{count:b?.strokes??0})}`));return row;}));
+    $('summary').replaceChildren(...visible.map(p=>{const row=playerRow(p),b=lastBalls.get(p.id);row.append(text('span',`${t('points',{count:p.total})} · ${b?.hole&&!p.dnf?.[room.hole]?'✓':t(room.strokeLimit?'turns.strokes':(b?.strokes??0)===1?'strokes.one':'strokes.other',{count:b?.strokes??0,limit:room.strokeLimit})}${p.dnf?.[room.hole]?' · DNF':''}`));return row;}));
     const ball=lastBalls.get(identity?.id);
-    $('help').textContent=ball?.hole?t('helpDone'):phase==='playing'
+    $('help').textContent=room.playStyle==='turns'&&local?.dnf?.[room.hole]?t('turns.limitReached'):ball?.hole?t('helpDone'):phase==='playing'
       ?t(touchControls?'helpTouch':'helpMouse')
       :phase==='settling'?t('helpSettling'):t(touchControls?'helpScoresTouch':'helpScoresMouse');
   }
@@ -414,7 +414,7 @@
   document.addEventListener('keydown',e=>{if(e.key==='Tab'&&online&&!['lobby','loading'].includes(phase)){e.preventDefault();showScores(phase==='results'||phase==='finished');}});
   document.addEventListener('keyup',e=>{if(e.key==='Tab'&&online&&!['results','finished'].includes(phase))$('scores').hidden=true;});
   let lastCountdown;
-  setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));$('timer').textContent=phase==='finished'?t('final'):seconds+'s';if(phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
+  setInterval(()=>{if(room){const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));const untimed=phase==='playing'&&room.playStyle==='turns';$('timer').textContent=phase==='finished'?t('final'):untimed?t('turns.noTime'):seconds+'s';if(!untimed&&phase==='playing'&&seconds<=5&&seconds>0&&lastCountdown!==seconds)GolfAudio?.play('countdown');lastCountdown=seconds;}},100);
   restoreProfile();
   previewProfile();
 })();

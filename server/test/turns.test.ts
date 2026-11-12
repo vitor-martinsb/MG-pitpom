@@ -10,7 +10,7 @@ async function fixture(style:'turns'|'simultaneous'='turns'){
  let now=0;const room=new Room('TURNS',root,['data/levels/level-1.level'],{...defaults,duration:300000},()=>now),a=socket(),b=socket();
  const host=room.join(a,'Host','#ffffff',0),guest=room.join(b,'Guest','#ff0000',1);
  await room.start(host,1,'classic',style);room.ready(host,0);room.ready(guest,0);
- return {room,host,guest,a,b,async tick(){now+=50;await room.tick();}};
+ return {room,host,guest,a,b,async tick(ms=50){now+=ms;await room.tick();}};
 }
 const shot=(sequence:number)=>({sequence,direction:[1,0,0],power:.01});
 test('turns authorize one stroke, reject duplicates and advance only after the authoritative ball settles',async()=>{
@@ -88,5 +88,61 @@ test('reloading a client resets only its preview sequence and cannot retain anot
   assert.equal(room.turn,guest.id);assert.equal(room.aim(host,aim(1)),false);
   room.disconnect(guest,f.b);assert.equal(room.turn,host.id);assert.equal(room.aim(host,aim(1)),true);
   assert.equal(host.lastSequence,0,'preview sequencing never consumes a shot');
+ }finally{room.close();}
+});
+
+test('turns have no course deadline and cap each human at exactly 20 real shots',async()=>{
+ const f=await fixture();const {room,host,guest}=f;
+ try{
+  assert.equal(room.state().strokeLimit,20);assert.equal(room.state().remaining,null);assert.equal(room.deadline,0);
+  await f.tick(3600000);assert.equal(room.phase,'playing');assert.equal(room.state().remaining,null);
+  for(let stroke=1;stroke<=20;stroke++)for(const m of [host,guest]){
+   assert.equal(room.turn,m.id);await room.shot(m,shot(stroke));assert.equal(m.ball!.strokes,stroke);
+   if(stroke===20){assert.equal(room.phase,'playing');assert.equal(room.turn,m.id);assert.ok(room.state().turnOrder.includes(m.id),'the last moving stroke remains in the active order');}
+   for(let tick=0;tick<600&&room.phase==='playing'&&room.turn===m.id;tick++)await f.tick();
+   assert.equal(m.ball!.moving,false);
+   if(stroke===20){assert.equal(m.dnf[0],true);await assert.rejects(room.shot(m,shot(21)),/indisponível/);}
+  }
+  assert.equal(room.phase,'results');assert.deepEqual(host.scores,[32]);assert.deepEqual(guest.scores,[32]);
+  assert.equal(f.a.messages.findLast(m=>m.type==='snapshot').strokeLimit,20);
+  await f.tick(6000);assert.equal(room.phase,'finished','normal result progression still works');
+ }finally{room.close();}
+});
+test('a ball holed on stroke 20 succeeds, and a capped bot is skipped and cannot take stroke 21',async()=>{
+ const f=await fixture();const {room,host,guest}=f;
+ try{
+  room.disconnect(guest,f.b);host.ball!.strokes=19;
+  const physics=(room as any).physics,step=physics.step.bind(physics);
+  physics.step=async(ticks:number)=>{const frame=await step(ticks);const b=frame.players.find((b:any)=>b.id===host.id);b.strokes=20;b.moving=false;b.hole=true;b.captureUntil=0;return frame;};
+  await room.shot(host,shot(1));await f.tick();assert.equal(room.phase,'results');assert.equal(host.scores[0],20);assert.equal(host.dnf[0],false);
+ }finally{room.close();}
+ let now=0;const bots=new Room('CAPBOT',root,['data/levels/level-1.level'],defaults,()=>now),a=socket(),human=bots.join(a,'Host','#ffffff',0);
+ try{
+  bots.botSettings(human,'add',null,{difficulty:'easy'});await bots.start(human,1,'classic','turns');bots.ready(human,0);
+  const bot=[...bots.members.values()].find(m=>m.bot)!;bot.ball!.strokes=20;bot.ball!.moving=false;
+  const physics=(bots as any).physics,step=physics.step.bind(physics);
+  physics.step=async(ticks:number)=>{const frame=await step(ticks);const b=frame.players.find((b:any)=>b.id===bot.id);b.strokes=20;b.moving=false;return frame;};
+  now+=50;await bots.tick();assert.equal(bot.dnf[0],true);assert.deepEqual(bots.state().turnOrder,[human.id]);
+  await assert.rejects(bots.shot(bot,shot(1)),/indisponível/);assert.equal(bot.ball!.strokes,20);
+ }finally{bots.close();}
+});
+test('simultaneous keeps its existing deadline and allows human stroke 21',async()=>{
+ const f=await fixture('simultaneous');try{
+  assert.equal(f.room.state().strokeLimit,null);assert.ok(f.room.state().remaining!>0);
+  f.host.ball!.strokes=20;await f.room.shot(f.host,shot(1));assert.equal(f.host.ball!.strokes,21);
+  await f.tick(306000);assert.notEqual(f.room.phase,'playing');
+ }finally{f.room.close();}
+});
+
+test('the 20-shot allowance resets on the next course while the previous DNF score is retained',async()=>{
+ let now=0;const room=new Room('NEXT',root,['data/levels/level-1.level','data/levels/level-2.level'],defaults,()=>now),a=socket(),host=room.join(a,'Host','#ffffff',0);
+ try{
+  await room.start(host,2,'classic','turns');room.ready(host,0);
+  const physics=(room as any).physics,step=physics.step.bind(physics);
+  physics.step=async(ticks:number)=>{const frame=await step(ticks);frame.players[0].strokes=20;frame.players[0].moving=false;return frame;};
+  now+=50;await room.tick();assert.equal(room.phase,'results');assert.deepEqual(host.scores,[32]);
+  now+=6000;await room.tick();assert.equal(room.hole,1);room.ready(host,1);
+  assert.equal(room.phase,'playing');assert.equal(room.state().remaining,null);assert.equal(host.ball!.strokes,0);assert.equal(host.dnf[1],undefined);
+  await room.shot(host,shot(1));assert.equal(host.ball!.strokes,1);assert.deepEqual(host.scores,[32]);
  }finally{room.close();}
 });

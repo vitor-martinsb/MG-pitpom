@@ -18,6 +18,7 @@ export type ChatMessage = { type: 'chat'; id: number; playerId: number; nickname
 export type RoomOptions = { duration: number; grace: number; loadingTimeout: number; resultsDuration: number; penalty: number; reconnectTTL: number; snapshotHz: number; catForwardProbability: number };
 export const defaults: RoomOptions = { duration: 120000, grace: 5000, loadingTimeout: 10000, resultsDuration: 5000, penalty: 12, reconnectTTL: 60000, snapshotHz: 15, catForwardProbability: .5 };
 export const BOT_STROKE_LIMIT=48;
+export const TURN_STROKE_LIMIT=20;
 const botNames=['GPT-6','Claude','Gemini','DeepSeek','Llama','Mistral','Qwen','Grok','Gemma','Phi','Command R','Falcon','Yi','Mixtral','Kimi'];
 export class Room {
   readonly members = new Map<number, Member>();
@@ -52,7 +53,12 @@ export class Room {
   private turnStroke=0;
   private turnShot=false;
   private shotPending=new Set<number>();
-  private turnEligible(m:Member){return !!(m.socket||m.bot)&&m.ready&&!!m.ball&&!m.ball.hole&&!(m.bot&&m.ball.strokes>=BOT_STROKE_LIMIT);}
+  private strokeLimit(m:Member){return this.playStyle==='turns'?TURN_STROKE_LIMIT:m.bot?BOT_STROKE_LIMIT:Infinity;}
+  private limitReached(m:Member){return !!m.ball&&m.ball.strokes>=this.strokeLimit(m);}
+  private holeDone(m:Member){return !!m.ball?.hole||m.dnf[this.hole]===true||(this.limitReached(m)&&!m.ball?.moving&&!m.ball?.captureUntil&&!this.shotPending.has(m.id));}
+  private timedOut(now=this.now()){return this.playStyle!=='turns'&&now>=this.deadline;}
+  private remaining(){return this.playStyle==='turns'&&this.phase==='playing'?null:Math.max(0,this.deadline-this.now());}
+  private turnEligible(m:Member){return !!(m.socket||m.bot)&&m.ready&&!!m.ball&&!this.holeDone(m);}
   private turnOrder(){const ids=[...this.members.values()].filter(m=>this.turnEligible(m)).map(m=>m.id);const start=ids.indexOf(this.turn);return start<0?ids:[...ids.slice(start),...ids.slice(0,start)];}
   private rotateTurn(){
     if(this.playStyle!=='turns'||this.phase!=='playing')return;
@@ -112,7 +118,7 @@ export class Room {
   broadcast(message: unknown) { for (const member of this.members.values()) this.send(member, message); }
   state() {
     return { type: 'room', code: this.code, phase: this.phase, host: this.host, hole: this.hole, holes: this.holes, penalty: this.options.penalty,
-      level: this.selectedLevels[this.hole] ?? this.hole, remaining: Math.max(0, this.deadline - this.now()), worldTime: this.worldTime, mode: this.mode,aim:this.visibleAim(),playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),seasonal:this.seasonal,
+      level: this.selectedLevels[this.hole] ?? this.hole, remaining:this.remaining(),strokeLimit:this.playStyle==='turns'?TURN_STROKE_LIMIT:null, worldTime: this.worldTime, mode: this.mode,aim:this.visibleAim(),playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),seasonal:this.seasonal,
       sequence:this.selectedLevels, availableMaps:this.validLevels.length,mapPool:this.mapPool,mapPoolKind:this.mapPoolKind,match:this.match,completed:this.phase==='finished'&&this.hole>=this.holes,simulationSpeed:this.simulationSpeed,timerSpeed:1,
       players: [...this.members.values()].map(m => ({ id: m.id, nickname: m.nickname, color: m.color, avatar: m.avatar,seasonSkin:m.seasonSkin??0,seasonTrail:m.seasonTrail??0,
         connected: !!m.socket || !!m.bot, bot:m.bot, ready: m.ready, scores: m.scores, dnf: m.dnf, total: m.scores.reduce((a,b) => a+b,0) })) };
@@ -279,12 +285,12 @@ export class Room {
     const connected=[...this.members.values()].filter(m=>m.socket);
     if (connected.length && connected.every(m=>m.ready)) this.begin();
   }
-  private begin() { this.phase='playing'; this.deadline=this.now()+this.options.duration; this.lastStep=this.now(); this.rotateTurn();this.publish(); }
+  private begin() { this.phase='playing'; this.deadline=this.playStyle==='turns'?0:this.now()+this.options.duration; this.lastStep=this.now(); this.rotateTurn();this.publish(); }
   async shot(m: Member, message: any) {
     const seq=message.sequence;
     if (!Number.isSafeInteger(seq) || seq<=m.lastSequence) throw new Error('Tacada duplicada ou fora de ordem.');
     m.lastSequence=seq;
-    if (this.phase!=='playing' || this.now()>=this.deadline || (!m.socket&&!m.bot) || !m.ready || m.ball?.moving || m.ball?.hole || m.ball?.captureUntil || (m.bot&&(m.ball?.strokes??0)>=BOT_STROKE_LIMIT)) throw new Error('Tacada indisponível.');
+    if (this.phase!=='playing' || this.timedOut() || (!m.socket&&!m.bot) || !m.ready || m.ball?.moving || m.ball?.hole || m.ball?.captureUntil || this.limitReached(m) || m.dnf[this.hole]===true) throw new Error('Tacada indisponível.');
     if(this.shotPending.has(m.id)||this.playStyle==='turns'&&(this.turn!==m.id||this.turnShot))throw Error('Tacada indisponível.');
     const d=message.direction, power=message.power;
     if (!Array.isArray(d) || d.length!==3 || d.some(v=>typeof v!=='number' || !Number.isFinite(v) || Math.abs(v)>1) || Math.abs(d[1])>.001 || Math.hypot(d[0],d[2])<.001 || typeof power!=='number' || !Number.isFinite(power) || power<0 || power>1) throw new Error('Direção ou potência inválida.');
@@ -322,12 +328,12 @@ export class Room {
     if (this.phase==='results') { if (now>=this.deadline) { if (++this.hole<this.holes) await this.load(); else { this.phase='finished'; this.physics?.close(); this.physics=undefined; this.publish(); } } return; }
     if (this.phase==='finished' || !this.physics) return;
     const humans=[...this.members.values()].filter(m=>!m.bot);
-    const botsRemain=[...this.members.values()].some(m=>m.bot&&!m.ball?.hole&&(m.ball?.strokes??0)<BOT_STROKE_LIMIT);
+    const botsRemain=[...this.members.values()].some(m=>m.bot&&!this.holeDone(m)&&!this.limitReached(m));
     const capacity=!this.cpuLimit||(this.cpuSamples>0&&this.cpuRate*5<=this.cpuLimit*(this.simulationSpeed===5?.7:.55));
     const speed=capacity&&humans.length>0&&humans.every(m=>m.ball?.hole||m.dnf[this.hole]===true)&&botsRemain?5:1;
     const elapsed=Math.max(0,now-this.lastStep);
     if(speed!==this.simulationSpeed){this.simulationSpeed=speed;this.publish();}
-    if (this.phase==='playing' && now>=this.deadline) { this.phase='settling'; this.deadline+=this.options.grace; this.publish(); }
+    if (this.phase==='playing' && this.timedOut(now)) { this.phase='settling'; this.deadline+=this.options.grace; this.publish(); }
     this.busy=true;
     const physics=this.physics, generation=this.generation;
     try {
@@ -347,13 +353,17 @@ export class Room {
       }
       this.metrics.physicsPeakRssBytes=Math.max(this.metrics.physicsPeakRssBytes,frame.rssBytes);this.metrics.physicsPeakTrackedBytes=Math.max(this.metrics.physicsPeakTrackedBytes,frame.memoryBytes);
       for (const b of frame.players) this.members.get(b.id)!.ball=b;
-      this.rotateTurn();
+      let capped=false;
+      if(this.playStyle==='turns')for(const m of this.members.values()){
+        if(!m.ball?.hole&&this.holeDone(m)&&m.dnf[this.hole]!==true){m.dnf[this.hole]=true;capped=true;}
+      }
+      this.rotateTurn();if(capped)this.publish();
       this.snapshot(++this.frameNumber % (this.options.snapshotHz*2) === 0);
       const active=[...this.members.values()].filter(m=>m.socket||m.bot);
-      if (active.length && active.every(m=>m.ball?.hole||(m.bot&&!m.ball?.moving&&(m.ball?.strokes??0)>=BOT_STROKE_LIMIT)) || this.phase==='settling' && now>=this.deadline) this.finishHole();
+      if (active.length && active.every(m=>this.holeDone(m)) || this.phase==='settling' && now>=this.deadline) this.finishHole();
       else if(this.phase==='playing'&&!this.botPlanning&&this.now()>=this.nextBotPlanAt){
         const clock=frame.time*1000;
-        const bots=active.filter(m=>(this.playStyle!=='turns'||this.turn===m.id&&!this.turnShot)&&m.bot&&m.ready&&!m.ball?.moving&&!m.ball?.hole&&!m.ball?.captureUntil&&(m.ball?.strokes??0)<BOT_STROKE_LIMIT&&(m.nextDecision??0)<=clock);
+        const bots=active.filter(m=>(this.playStyle!=='turns'||this.turn===m.id&&!this.turnShot)&&m.bot&&m.ready&&!m.ball?.moving&&!m.ball?.hole&&!m.ball?.captureUntil&&!this.limitReached(m)&&m.dnf[this.hole]!==true&&(m.nextDecision??0)<=clock);
         if(bots.length){
           // One shared planner, with a fair turn for each eligible bot. Never
           // hold the physics/snapshot loop while searching possible shots.
@@ -378,7 +388,7 @@ export class Room {
       const cpuShare=this.cpuLimit>0&&this.cpuLimit<.5&&!humanMoving
         ? Math.max(this.cpuLimit*.05,this.cpuLimit*.8-this.cpuRate*this.simulationSpeed) : undefined;
       const plan=await physics.plan(bot.slot,bot.bot!,cpuShare);
-      if(!current()||this.phase!=='playing'||this.now()>=this.deadline||this.playStyle==='turns'&&(this.turn!==bot.id||this.turnShot))return;
+      if(!current()||this.phase!=='playing'||this.timedOut()||this.playStyle==='turns'&&(this.turn!==bot.id||this.turnShot))return;
       const ball=bot.ball;
       if(!ball||ball.strokes!==strokes||ball.moving||ball.hole||ball.captureUntil||Math.hypot(...ball.pos.map((v,i)=>v-pos[i]!))>.025)return;
       const clock=this.worldTime*1000;
@@ -396,7 +406,7 @@ export class Room {
   private finishHole() {
     if(this.phase==='results'||this.phase==='finished')return;
     for (const m of this.members.values()) {
-      const finished=!!m.ball?.hole;
+      const finished=!!m.ball?.hole&&(this.playStyle!=='turns'||m.dnf[this.hole]!==true);
       m.scores[this.hole]=(m.ball?.strokes??0)+(finished?0:12);
       m.dnf[this.hole]=!finished;
     }
@@ -409,7 +419,7 @@ export class Room {
       if (full || this.lastSent.get(m.id)!==text) players.push(m.ball);
       if (!target) this.lastSent.set(m.id,text);
     }
-    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,aim:this.visibleAim(),playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),remaining:Math.max(0,this.deadline-this.now()),simulationSpeed:this.simulationSpeed,timerSpeed:1,mascots:this.mascots,players,events:target?[]:this.events};
+    const snapshot={type:'snapshot',full,hole:this.hole,time:this.worldTime,aim:this.visibleAim(),playStyle:this.playStyle,turn:this.turn,turnOrder:this.turnOrder(),remaining:this.remaining(),strokeLimit:this.playStyle==='turns'?TURN_STROKE_LIMIT:null,simulationSpeed:this.simulationSpeed,timerSpeed:1,mascots:this.mascots,players,events:target?[]:this.events};
     if (target) this.send(target,snapshot); else this.broadcast(snapshot);
     this.metrics.snapshots++;
   }

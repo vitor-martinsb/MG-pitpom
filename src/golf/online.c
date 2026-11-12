@@ -29,7 +29,7 @@ static void online_preview(void) {}
 
 static struct {
     bool active, playing, turns, aim_cancelled, shot_pending, loading, has_snapshot, awaiting_ready, impact, returning_to_menu;
-    int requested_level, hole;
+    int requested_level, hole, stroke_limit;
     uint32_t local_id, camera_id, turn_id;
     float age, interval, time, aim_age, aim_power;
     uint32_t aim_player;
@@ -72,7 +72,7 @@ bool golf_online_remote_aim(golf_player_t **player,vec3 *direction,float *power)
 }
 bool golf_online_can_shoot(void) {
     golf_player_t *p=golf_game_get_local_player();
-    return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
+    return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && (!online.stroke_limit||p->stroke_count<online.stroke_limit) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
 }
 golf_player_t *golf_online_camera_player(void) {
     if(online.turns&&online.playing){
@@ -100,6 +100,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
     if (!type) {json_value_free(value);return;}
     if(!strcmp(type,"room")||!strcmp(type,"snapshot")){
         const char *style=json_object_get_string(o,"playStyle");online.turns=style&&!strcmp(style,"turns");online.turn_id=(uint32_t)json_object_get_number(o,"turn");
+        online.stroke_limit=(int)json_object_get_number(o,"strokeLimit");
         JSON_Object *aim=json_object_get_object(o,"aim");
         online.aim_player=(uint32_t)json_object_get_number(aim,"player");online.aim_power=(float)json_object_get_number(aim,"power");
         online.aim_direction=golf_json_object_get_vec3(aim,"direction");online.aim_age=0;

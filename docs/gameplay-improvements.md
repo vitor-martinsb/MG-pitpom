@@ -38,3 +38,7 @@ O botão Tutorial fica abaixo de Multijogador. Um diálogo com seis etapas expli
 - `server/test/turns.test.ts`: autorização da mira, validação de força/direção, limite de frequência, expiração, cancelamento, tacada e reconexão sem consumir tacadas.
 - `server/test/gameplay-improvements.mjs`: dois clientes reais, arrasto por mouse/toque, cinco setas remotas, porcentagem de força, mudança de direção, acompanhamento da bola por anfitrião e dois convidados, zoom de espectador e retorno à própria vez. `--turns-only` permite repetir somente essa regressão; o CI continua executando também tutorial e limites de zoom.
 - `server/test/pet-outfits.mjs`: usa o ritmo compartilhado da Pompom para verificar orientação e roupas em repouso, caminhada e reação, no desktop e no celular.
+
+### Regras do modo por turnos
+
+Cada jogador, humano ou bot, dispõe de até 20 tacadas por campo, sem cronômetro de partida. O servidor publica `strokeLimit: 20` e `remaining: null`; o cliente mostra “Sem limite de tempo” e a contagem de tacadas em relação ao limite. Servidor e controles nativos recusam a 21ª tacada. A última tacada termina movimento e resgates antes de definir o resultado: entrar no buraco na 20ª conta como conclusão; ficar fora recebe DNF +12 (32 pontos). O campo avança quando todos os participantes ativos concluírem ou esgotarem as tacadas. As esperas de carregamento e resultados continuam funcionando, e o modo simultâneo mantém suas regras anteriores.

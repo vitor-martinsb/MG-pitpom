@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium,webkit} from '@playwright/test';
 import {createServer} from '../dist/index.js';
+import {freezePhysics} from './room-fixture.mjs';
 import {visitMultiplayer,createLobby,joinLobby,lobbyTab,finishPresentation} from './navigation-fixture.mjs';
 process.env.GOLF_HOLE_SECONDS='300';
 const app=createServer();let browser;
@@ -31,7 +32,7 @@ try{
  await lobbyTab(guest,'mode');await guest.waitForFunction(()=>document.getElementById('play-style').value==='turns');assert.equal(await guest.locator('#play-style').isDisabled(),true);
  await lobbyTab(host,'maps');await lobbyTab(host,'mode');assert.equal(await host.locator('#play-style').inputValue(),'turns');
  await host.locator('#start').click();
- for(const p of [host,guest,observer])await finishPresentation(p);console.log('Both clients loaded turn match');
+ for(const p of [host,guest,observer]){await finishPresentation(p);await p.waitForFunction(()=>document.getElementById('timer').textContent===GolfI18n.t('turns.noTime'));}console.log('All three clients loaded an untimed turn match');
  for(const p of [host]){
   await p.locator('#camera-zoom').waitFor({state:'visible',timeout:90000});
   assert.equal(await p.evaluate(()=>{const a=document.getElementById('camera-zoom').getBoundingClientRect(),b=document.getElementById('toggle-match-info').getBoundingClientRect();return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}),false,'zoom must not cover the existing information toggle');
@@ -101,6 +102,12 @@ try{
  assert.ok(waitingCamera.every(Number.isFinite));
  await observer.close();await guest.close();await host.waitForFunction(()=>!GolfCourse.inspect().frame.overview&&GolfCourse.inspect().frame.remoteAimPower===0&&GolfCourse.inspect().frame.zoom===1);await host.locator('#camera-zoom').waitFor({state:'visible'});
  assert.equal(room.turn,1,'disconnect restores the remaining player and camera');
+ await host.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
+ await freezePhysics(room);room.members.get(1).ball.strokes=20;room.members.get(1).ball.moving=false;room.members.get(1).dnf[room.hole]=true;room.publish();room.snapshot(true);
+ await host.waitForFunction(()=>!JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
+ await host.waitForFunction(()=>document.getElementById('summary').textContent.includes('20/20'));
+ assert.equal(await host.locator('#timer').textContent(),'Sem limite de tempo');assert.match(await host.locator('#help').textContent(),/20.*DNF/);
+
  assert.deepEqual(errors,[]);console.log('Gameplay: synced turn settings, native turn gating, settled-ball rotation, host and two guests follow the current ball with independent spectator zoom, shared native mouse/touch aiming and power, mobile zoom, own-turn return and disconnect recovery passed.');
 }catch(error){
  for(const [index,page]of (browser?.contexts().flatMap(c=>c.pages())??[]).entries()){
