@@ -7,13 +7,14 @@ const app=createServer();let browser;
 try{
  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${app.server.address().port}`;
  browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true}):chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),headless:true,args:['--enable-unsafe-swiftshader']}));
- const errors=[],artRequests=[],context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/menu-christmas(?:-portrait)?\.png$/.test(r.url()))artRequests.push(r.url());});
- await page.addInitScript(()=>{localStorage.setItem('pitpom-language','pt-BR');const D=Date;globalThis.Date=class extends D{constructor(...args){super(...(args.length?args:['2026-12-15T12:00:00-03:00']));}};});
+ const errors=[],artRequests=[],treeRequests=[],context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().endsWith('/menu-christmas-tree.png'))treeRequests.push(r.url());if(/menu-christmas(?:-portrait)?\.png$/.test(r.url()))artRequests.push(r.url());});
+ await page.addInitScript(()=>{localStorage.setItem('pitpom-language','pt-BR');const D=Date;globalThis.Date=class extends D{constructor(...args){super(...(args.length?args:[globalThis.__seasonalDate||'2026-12-15T12:00:00-03:00']));}};});
  await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await page.locator('#continue-home').click();
- assert.equal(await page.evaluate(()=>GolfSeason.theme),'original');assert.equal(artRequests.length,0,'original theme does not download Christmas illustrations');await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('christmas');await page.locator('#season-obstacles').check();
+ assert.equal(await page.evaluate(()=>GolfSeason.theme),'original');assert.equal(artRequests.length,0,'original theme does not download Christmas illustrations');assert.equal(treeRequests.length,0,'original theme never requests the decoration sprite');await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('christmas');await page.locator('#season-obstacles').check();
  await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===1);
  assert.equal(await page.evaluate(()=>GolfSeason.theme),'christmas');const music=await page.evaluate(async()=>{const a=await GolfMusic.renderPreview(1,4),data=a.getChannelData(0);let sum=0,peak=0;for(const n of data){sum+=n*n;peak=Math.max(peak,Math.abs(n));}return {rms:Math.sqrt(sum/data.length),peak};});assert.ok(music.rms>.0001&&music.peak<.5);await page.locator('#music-controls summary').click();
  assert.equal(artRequests.length,0,'Christmas decor reuses the standard art without alternative illustrations');
+ await page.waitForFunction(()=>GolfSeason.diagnostics().decorReady);assert.equal(treeRequests.length,1);
  assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35,'original scene and pet animations keep running in Christmas mode');
  fs.mkdirSync('../out/christmas',{recursive:true});
  for(const [width,height]of [[1280,800],[390,844],[320,900],[768,1024],[844,390],[1920,1080]]){
@@ -41,12 +42,25 @@ try{
    for(const p of document.querySelectorAll('[data-pet-help]')){const r=p.getBoundingClientRect();for(let y=Math.max(0,Math.ceil(r.top*d));y<Math.min(c.height,Math.floor(r.bottom*d));y++)for(let x=Math.max(0,Math.ceil(r.left*d));x<Math.min(c.width,Math.floor(r.right*d));x++)if(pixels[(y*c.width+x)*4+3])overPets++;}
    return {visible,overPets};
   });
-  assert.ok(decor.visible>100,'Christmas decorations are visible');assert.equal(decor.overPets,0,'no Christmas ornament or snow is painted over pets');
+  const bounds=await page.evaluate(()=>GolfSeason.diagnostics().treeBounds);assert.ok(bounds.left>=7.9&&bounds.right<=width-7.9,'the whole tree stays inside the viewport');
+  assert.ok(decor.visible>100,'Christmas decorations are visible');assert.equal(decor.overPets,0,`no Christmas ornament or snow is painted over pets at ${width}x${height}`);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`../out/christmas/standard-${width}x${height}.png`});
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>a.play()));
   const frame=await page.evaluate(()=>GolfHome.scene.petFrames);await page.waitForFunction(n=>GolfHome.scene.petFrames>n+2,frame);
  }
+ for(const [width,height]of [[390,844],[1280,800]]){
+  await page.setViewportSize({width,height});await page.waitForFunction(key=>GolfHome.scene.layout===key&&GolfHome.scene.loaded,height>=width?'portrait':'landscape');
+  await page.evaluate(()=>{window.__seasonalDate='2026-12-15T23:00:00-03:00';});
+  await page.waitForFunction(()=>document.getElementById('home').dataset.period==='night'&&GolfSeason.diagnostics().decorLighting.startsWith('1.00'));
+  await page.screenshot({path:`../out/christmas/integrated-night-${width}x${height}.png`});
+ }
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>GolfHome.show('splash',false));
+ await page.locator('#continue-home').waitFor({state:'visible'});await page.waitForFunction(()=>GolfHome.scene.layout==='portrait'&&GolfSeason.diagnostics().decorLighting.startsWith('1.00'));
+ await page.screenshot({path:'../out/christmas/welcome-night-390x844.png'});await page.locator('#continue-home').click();
+ assert.equal(treeRequests.length,1,'responsive layouts reuse one decoration sprite');
+ if(process.argv.includes('--menu-only')){assert.deepEqual(errors,[]);console.log('Christmas menu: integrated tree art, day/night lighting, unchanged pets, six responsive layouts and original-theme restoration passed.');process.exitCode=0;}
+ else {
  assert.equal(artRequests.length,0,'neither theme downloads discarded artwork');
  await page.setViewportSize({width:390,height:844});
  await page.locator('[data-pet-help=juju]').click();assert.equal(await page.locator('#menu-pet-tooltip').getAttribute('data-pet'),'juju');await page.keyboard.press('Escape');assert.equal(await page.locator('#menu-pet-tooltip').isHidden(),true);
@@ -65,4 +79,5 @@ try{
  const frame=await page.evaluate(()=>GolfCourse.inspect().frame);assert.ok(frame.season.vertices<36000);assert.equal(frame.season.theme,true);const own=frame.players.find(p=>p.id===frame.local);assert.equal(own.seasonSkin,4);assert.equal(own.seasonTrail,3);assert.ok(own.seasonColor[0]>.9&&own.seasonColor[1]>.7);await page.screenshot({path:'../out/christmas/course-mobile.png'});
  await guest.waitForFunction(()=>GolfCourse.inspect().frame?.season.enabled,{},{timeout:30000});
  assert.deepEqual(errors,[]);console.log('Christmas: live toggle, original restoration, unchanged pets and mobile/desktop menu decorations, 2-client lobby sync, host permissions, saved cosmetics and bounded WebGL decoration passed.');
+}
 }finally{await browser?.close();app.close();}

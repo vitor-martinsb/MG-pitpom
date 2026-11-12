@@ -5,7 +5,7 @@ body:not([data-season="christmas"]) #season-atmosphere{display:none}
 .season-settings label:has(input){display:flex;align-items:center;gap:10px;margin:12px 0;font-size:.9rem}
 .season-settings input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;accent-color:#a84037}
 .season-settings small,.season-cosmetics small{display:block;font-size:.75rem;color:#52654c}
-.season-cosmetics{padding:8px 0}.season-subtitle{display:block;color:#754228;font-weight:700;font-size:clamp(.65rem,1.5vw,1rem);background:#fff1d6e8;border-radius:20px;padding:4px 12px;margin:10px auto;width:max-content;max-width:90vw}
+.season-cosmetics{padding:8px 0}.season-subtitle{display:block;color:var(--menu-ink,#754228);font-weight:700;font-size:clamp(.65rem,1.5vw,1rem);background:var(--menu-surface,#fff1d6);border:1px solid #b49b6170;border-radius:20px;padding:4px 12px;margin:10px auto;width:max-content;max-width:90vw}
 body[data-season="christmas"] .home-brand h1{color:var(--menu-ink,#284c32)}
 body[data-season="christmas"] .lobby-header,body[data-season="christmas"] #scores h2{background:#385d43;color:#fff3d9}
 body[data-season="christmas"] #scores .panel,body[data-season="christmas"] .lobby-panel{border-color:#c9b777}

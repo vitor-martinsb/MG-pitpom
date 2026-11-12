@@ -23,9 +23,52 @@
   const trophy=node('p');trophy.id='season-trophy';trophy.setAttribute('role','status');$('winner-banner').after(trophy);
   const announcement=node('div');announcement.id='season-announcement';announcement.setAttribute('role','status');announcement.hidden=true;document.body.append(announcement);
   const canvas=node('canvas');canvas.id='season-atmosphere';canvas.setAttribute('aria-hidden','true');document.body.append(canvas);const ctx=canvas.getContext('2d');let raf=0,previous=0;
+  const treeArt=new Image();let treePixels,treeSurface,treeBounds,treeLightKey='',lightSample,lightAt=-1000;
+  function loadTree(){if(treeArt.src)return;treeArt.onload=()=>{
+    treeSurface=document.createElement('canvas');treeSurface.width=300;treeSurface.height=Math.round(300*treeArt.naturalHeight/treeArt.naturalWidth);
+    const c=treeSurface.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(treeArt,0,0,treeSurface.width,treeSurface.height);treePixels=c.getImageData(0,0,treeSurface.width,treeSurface.height);treeLightKey='';animate();
+  };treeArt.src='art/menu-christmas-tree.png';}
+  function lighting(now){if(!lightSample||now-lightAt>=1000){lightSample=window.GolfMenuClock?.sample().weights??{night:0,sunset:0,morning:0};lightAt=now;}return lightSample;}
+  function material(rgb,light){const n=light.night,u=light.sunset,m=light.morning;return `rgb(${Math.round(rgb[0]*(1-.65*n-.03*m))},${Math.round(rgb[1]*(1-.62*n-.12*u))},${Math.round(rgb[2]*(1-.43*n-.30*u))})`;}
+  function paintedTree(light){
+    if(!treePixels)return null;const key=[light.night,light.sunset,light.morning].map(n=>n.toFixed(2)).join(',');
+    if(key!==treeLightKey){const c=treeSurface.getContext('2d'),pixels=c.createImageData(treePixels.width,treePixels.height),src=treePixels.data,dst=pixels.data;
+      const factors=[1-.65*light.night-.03*light.morning,1-.62*light.night-.12*light.sunset,1-.43*light.night-.30*light.sunset];
+      for(let i=0;i<src.length;i+=4){dst[i]=src[i]*factors[0];dst[i+1]=src[i+1]*factors[1];dst[i+2]=src[i+2]*factors[2];dst[i+3]=src[i+3];}
+      c.putImageData(pixels,0,0);treeLightKey=key;
+    }return treeSurface;
+  }
+  function lamp(x,y,size,index,time,light){
+    const warm=index%5!==0,pulse=.94+.06*Math.sin(time*.7+index*.8);
+    ctx.save();ctx.globalAlpha=pulse;
+    const radius=size*(2+light.night*2.2),glow=ctx.createRadialGradient(x,y,0,x,y,radius);
+    glow.addColorStop(0,warm?'rgba(255,218,135,.30)':'rgba(220,125,91,.20)');glow.addColorStop(1,'rgba(255,216,145,0)');
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
+    const glass=ctx.createRadialGradient(x-size*.3,y-size*.4,0,x,y,size*1.3);
+    glass.addColorStop(0,warm?'#fff9d8':'#f5c3a1');glass.addColorStop(.4,warm?'#f4d285':'#c97555');glass.addColorStop(1,warm?'#a38345':'#713f31');
+    ctx.fillStyle=glass;ctx.beginPath();ctx.ellipse(x,y,size*.75,size,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  function lightStrand(points,count,size,time,light){
+    const [a,b,c]=points;ctx.strokeStyle=material([68,82,49],light);ctx.lineWidth=Math.max(.8,size*.35);ctx.beginPath();ctx.moveTo(...a);ctx.quadraticCurveTo(...b,...c);ctx.stroke();
+    for(let i=0;i<count;i++){const t=(i+.5)/count,x=(1-t)*(1-t)*a[0]+2*(1-t)*t*b[0]+t*t*c[0],y=(1-t)*(1-t)*a[1]+2*(1-t)*t*b[1]+t*t*c[1];
+      ctx.strokeStyle=material([87,72,42],light);ctx.lineWidth=Math.max(.8,size*.3);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+size*.8);ctx.stroke();
+      ctx.fillStyle=material([111,88,47],light);ctx.fillRect(x-size*.42,y+size*.45,size*.84,size*.6);lamp(x,y+size*1.5,size,i,time,light);
+    }
+  }
+  function ribbon(x,y,light){
+    ctx.save();ctx.translate(x,y);ctx.rotate(-.12);ctx.scale(.86,.86);
+    const fabric=ctx.createLinearGradient(-30,-20,27,35);fabric.addColorStop(0,material([191,81,53],light));fabric.addColorStop(.45,material([157,53,39],light));fabric.addColorStop(1,material([99,39,31],light));
+    ctx.fillStyle=fabric;ctx.strokeStyle=material([92,39,29],light);ctx.lineWidth=1.2;
+    for(const side of [-1,1]){
+      ctx.beginPath();ctx.moveTo(side*4,2);ctx.bezierCurveTo(side*13,7,side*15,24,side*27,33);ctx.lineTo(side*17,30);ctx.lineTo(side*13,38);ctx.bezierCurveTo(side*8,24,side*9,15,side*3,8);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(side*16,-16,side*33,-26,side*35,-14);ctx.bezierCurveTo(side*43,7,side*22,13,0,4);ctx.fill();ctx.stroke();
+      ctx.strokeStyle=material([208,112,75],light);ctx.beginPath();ctx.moveTo(side*8,0);ctx.quadraticCurveTo(side*19,-10,side*29,-12);ctx.stroke();ctx.strokeStyle=material([92,39,29],light);
+    }
+    ctx.fillStyle=fabric;ctx.beginPath();ctx.moveTo(-6,-6);ctx.quadraticCurveTo(0,-10,7,-4);ctx.lineTo(5,8);ctx.quadraticCurveTo(0,11,-6,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+  }
   function persist(){try{localStorage.setItem('pitpom-season',JSON.stringify(prefs));}catch{}apply();}
   function native(){if(!window.GolfCourse?.initialized)return;const key=[theme()==='christmas'?1:0,prefs.skin,prefs.trail,!room&&prefs.obstacles?1:0].join(',');if(nativeKey===key)return;Module.ccall('golf_season_settings','number',['number','number','number','number'],key.split(',').map(Number));nativeKey=key;}
-  function apply(){document.body.dataset.season=theme();themeSelect.value=prefs.theme;themeSelect.disabled=!!room;mechanicsInput.checked=prefs.obstacles;mechanicsInput.disabled=!!room;localCosmetics.hidden=!!room;
+  function apply(){if(theme()==='christmas')loadTree();document.body.dataset.season=theme();themeSelect.value=prefs.theme;themeSelect.disabled=!!room;mechanicsInput.checked=prefs.obstacles;mechanicsInput.disabled=!!room;localCosmetics.hidden=!!room;
     ball.value=localBall.value=String(prefs.skin);trail.value=localTrail.value=String(prefs.trail);subtitle.hidden=theme()!=='christmas';tournamentTitle.hidden=!room?.seasonal?.tournament;trophy.hidden=room?.phase!=='finished'||!room?.seasonal?.tournament;
     native();if(appliedTheme!==theme()){appliedTheme=theme();window.dispatchEvent(new Event('seasonchange'));}animate();}
   themeSelect.onchange=()=>{prefs.theme=themeSelect.value;persist();};mechanicsInput.onchange=()=>{prefs.obstacles=mechanicsInput.checked;if(prefs.obstacles)prefs.theme='christmas';persist();};
@@ -48,31 +91,26 @@
     if(now-previous<33){animate();return;}previous=now;
     const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);if(canvas.width!==Math.round(w*d)||canvas.height!==Math.round(h*d)){canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);}ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
     const home=!$('home').hidden,entry=!$('connect').hidden,reduce=reducedMotion.matches,time=reduce?0:now/1000;
+    const light=lighting(now);
     if(home||entry){
-      // Decorations only: the original sky, palette and pets stay untouched.
-      ctx.strokeStyle='#41613e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,8);ctx.quadraticCurveTo(w/2,60,w,8);ctx.stroke();
-      for(let i=0;i<18;i++){ctx.globalAlpha=.78+.22*(.5+.5*Math.sin(time*1.3+i));ctx.fillStyle=['#e85c55','#ffe69b','#7dcb9a','#a6d7f2'][i%4];ctx.beginPath();ctx.ellipse((i+.5)*w/18,10+25*Math.sin((i+.5)/18*Math.PI),3,5,0,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+      lightStrand([[0,7],[w*.5,45],[w,7]],Math.max(12,Math.min(24,Math.round(w/32))),2.6,time,light);
     }
     if(home){const root=document.querySelector('.living-menu-art'),m=root?.getScreenCTM();if(m){
       ctx.save();ctx.setTransform(d*m.a,d*m.b,d*m.c,d*m.d,d*m.e,d*m.f);
-      const portrait=root.viewBox.baseVal.height>root.viewBox.baseVal.width,lights=portrait?[[22,320],[88,337],[133,375],[37,405],[133,456],[66,493],[169,510],[45,549],[851,636],[895,657],[921,707]]:[[27,30],[120,58],[231,78],[315,28],[49,107],[169,142],[290,110],[1475,240],[1530,265],[1585,285]];
-      lights.forEach(([x,y],i)=>{ctx.fillStyle=['#e36351','#f5d67a','#88cfac'][i%3];ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
-      // Ribbon stays on the large tree, well away from all pet silhouettes.
-      const [bx,by]=portrait?[140,460]:[120,150];
-      ctx.fillStyle='#ba3734';ctx.strokeStyle='#812d2b';ctx.lineWidth=1.5;
-      for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(bx,by);ctx.bezierCurveTo(bx+side*40,by-35,bx+side*40,by+25,bx,by+4);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(bx,by+2);ctx.lineTo(bx+side*12,by+35);ctx.lineTo(bx+side*19,by+26);ctx.lineTo(bx+side*27,by+30);ctx.lineTo(bx+side*9,by);ctx.fill();}
-      ctx.fillStyle='#dfb851';ctx.beginPath();ctx.arc(bx,by+2,6,0,Math.PI*2);ctx.fill();
-      // A small decorated evergreen grows on free ground behind the flag.
-      const [x,y]=portrait?[135,850]:[270,550],h=portrait?125:145;
-      ctx.fillStyle='#805337';ctx.fillRect(x-7,y-23,14,33);
-      for(let tier=2;tier>=0;tier--){
-        const top=y-h+tier*h*.21,base=y-h*.53+tier*h*.25,half=h*(.16+tier*.07);
-        ctx.fillStyle=['#39764b','#326d43','#29603c'][tier];ctx.beginPath();ctx.moveTo(x,top);ctx.quadraticCurveTo(x-half*.7,base-h*.07,x-half,base);ctx.quadraticCurveTo(x,base+h*.08,x+half,base);ctx.quadraticCurveTo(x+half*.7,base-h*.07,x,top);ctx.fill();
-        ctx.strokeStyle='#ddbd66';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-half*.65,base-h*.12);ctx.quadraticCurveTo(x,base+h*.07,x+half*.72,base-h*.09);ctx.stroke();
-        for(let i=0;i<3;i++){ctx.fillStyle=['#cf4841','#f3ce69','#e9f1d2'][(i+tier)%3];ctx.beginPath();ctx.arc(x+(i-1)*half*.55,base-h*(i%2?.04:.12),3.5,0,Math.PI*2);ctx.fill();}
+      const portrait=root.viewBox.baseVal.height>root.viewBox.baseVal.width;
+      const strands=portrait?
+        [[[-8,320],[65,370],[135,375]],[[12,415],[82,455],[155,460]],[[4,486],[78,536],[160,511]],[[838,636],[891,678],[938,691]]]:
+        [[[0,32],[138,94],[315,28]],[[15,105],[132,171],[278,116]],[[1475,240],[1535,291],[1585,285]]];
+      strands.forEach(points=>lightStrand(points,6,3,time,light));
+      const [bx,by]=portrait?[140,460]:[120,150];ribbon(bx,by,light);
+      const tree=paintedTree(light);if(tree){
+        const [anchor,y]=portrait?[135,840]:[270,560],height=portrait?155:168,width=height*tree.width/tree.height;
+        const left=-m.e/m.a,right=(w-m.e)/m.a,x=Math.max(left+width*.5+8/m.a,Math.min(right-width*.5-8/m.a,anchor));
+        treeBounds={left:(x-width*.5)*m.a+m.e,right:(x+width*.5)*m.a+m.e,top:(y-height)*m.d+m.f,bottom:y*m.d+m.f};
+        ctx.imageSmoothingQuality='high';ctx.drawImage(tree,x-width*.5,y-height,width,height);
+        // Tiny warm lamps retain light while foliage follows the scene's night tint.
+        for(const [u,v]of [[.55,.21],[.48,.40],[.32,.62],[.60,.72],[.74,.56]])lamp(x+(u-.5)*width,y-height+v*height,1.4,1,time,light);
       }
-      ctx.fillStyle='#f4d680';ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?5:11;ctx.lineTo(x+Math.cos(a)*r,y-h+Math.sin(a)*r);}ctx.closePath();ctx.fill();
-      for(const [dx,color]of [[-30,'#b63b39'],[16,'#d8ae55']]){ctx.fillStyle=color;ctx.fillRect(x+dx,y-7,22,17);ctx.fillStyle='#ffead0';ctx.fillRect(x+dx+9,y-7,3,17);ctx.fillRect(x+dx,y-3,22,3);}
       ctx.restore();
     }}
     // Native snow is depth-tested during play. Screen snow is for UI only.
@@ -81,7 +119,7 @@
       else if(i%3===1){ctx.strokeStyle='#f1cf72';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-4,0);ctx.lineTo(4,0);ctx.moveTo(0,-4);ctx.lineTo(0,4);ctx.stroke();}else ctx.fillRect(-3,-3,6,6);ctx.restore();}}
     animate();
   }
-  window.GolfSeason=Object.freeze({get theme(){return theme();},get tournament(){return !!room?.seasonal?.tournament;},cosmetics:()=>({seasonSkin:prefs.skin,seasonTrail:prefs.trail}),room:syncRoom,leave(){room=undefined;lastRoomPhase=undefined;apply();},frame,diagnostics:()=>({theme:theme(),obstacles:room?.seasonal?.obstacles??prefs.obstacles,particles:innerWidth<600?32:56,skin:prefs.skin,trail:prefs.trail})});
+  window.GolfSeason=Object.freeze({get theme(){return theme();},get tournament(){return !!room?.seasonal?.tournament;},cosmetics:()=>({seasonSkin:prefs.skin,seasonTrail:prefs.trail}),room:syncRoom,leave(){room=undefined;lastRoomPhase=undefined;apply();},frame,diagnostics:()=>({decorReady:!!treePixels,treeBounds,decorLighting:treeLightKey,theme:theme(),obstacles:room?.seasonal?.obstacles??prefs.obstacles,particles:innerWidth<600?32:56,skin:prefs.skin,trail:prefs.trail})});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;}else animate();});
   setInterval(()=>{native();const f=window.GolfCourse?.inspect()?.frame;if(f)frame(f);},150);
   window.addEventListener('languagechange',()=>{legend.textContent=t('title');subtitle.textContent=t('subtitle');cosmeticNote.textContent=localCosmeticNote.textContent=t('cosmeticNote');});
