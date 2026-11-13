@@ -1,4 +1,6 @@
 #season-atmosphere{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:12}
+.home-screen #season-atmosphere{z-index:2}
+.home-screen .home-brand{z-index:3}
 body:not([data-season="christmas"]) #season-atmosphere{display:none}
 .season-settings{border:1px solid #b7ac79;border-radius:16px;padding:12px;margin:12px 0;min-width:0}
 .season-settings legend{font-weight:700;color:#415e3e;padding:0 6px}

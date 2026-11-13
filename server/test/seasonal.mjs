@@ -43,6 +43,8 @@ try{
   assert.equal(await page.locator('#christmas-menu-art').count(),0,'no alternative art renderer');
   assert.equal(await page.locator('.season-subtitle').isVisible(),true);
   const decor=await coverage();
+  assert.equal(await page.locator('#season-atmosphere').evaluate(c=>c.parentElement.id),'home','menu scenery is composited inside the home layer');
+  assert.ok(await page.evaluate(()=>Number(getComputedStyle(document.getElementById('season-atmosphere')).zIndex)<Number(getComputedStyle(document.getElementById('main-menu')).zIndex)),'decorations stay behind every menu button');
   const bounds=await page.evaluate(()=>GolfSeason.diagnostics().treeBounds);assert.ok(bounds.left>=7.9&&bounds.right<=width-7.9,'the whole tree stays inside the viewport');
   assert.ok(decor.visible>100,'Christmas decorations are visible');assert.equal(decor.overPets,0,`no Christmas ornament or snow is painted over pets at ${width}x${height}`);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
