@@ -39,7 +39,7 @@ try{
   assert.equal(await page.locator('#season-atmosphere').evaluate(c=>c.getContext('2d').getImageData(0,0,c.width,c.height).data.every((v,i)=>i%4!==3||v===0)),true,'original theme clears every decoration');
   await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('christmas');await page.locator('#music-controls summary').click();
   await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===1);await freeze();const festive=await snapshot();
-  assert.equal(festive.pets.length,7);assert.deepEqual(festive,original,`unaltered pet pixels, art and placement at ${width}x${height}`);
+  assert.equal(festive.pets.length,8);assert.deepEqual(festive,original,`unaltered pet pixels, art and placement at ${width}x${height}`);
   assert.equal(await page.locator('#christmas-menu-art').count(),0,'no alternative art renderer');
   assert.equal(await page.locator('.season-subtitle').isVisible(),true);
   const decor=await coverage();

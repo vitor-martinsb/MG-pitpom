@@ -21,6 +21,7 @@
   // The supplied six-character RGBA atlas is retained byte for byte. Crops and
   // transparent gutters are composed at runtime, never re-encoded or recolored.
   const referenceRigs={
+    meg:{bounds:[135,16,1135,1215],feet:700,head:[720,280,270,250],ears:[],eyes:[],tail:[205,785,190,344],pivot:[394,1100]},
     luna:{bounds:[277,0,708,505],feet:500,head:[505,149,207,135],ears:[[359,127,67,92],[636,89,67,75]],eyes:[[462,150,31,35,'#443228'],[575,129,31,33,'#443228']],tail:[277,341,78,141],pivot:[350,461]},
     romeu:{clip:'M687 55H1107V505H840L819 495L792 492L772 487L746 487L727 494L687 505Z',bounds:[687,55,1107,505],feet:900,head:[899,218,203,161],ears:[[751,243,55,67],[1040,245,57,67]],eyes:[[840,203,30,31,'#353236'],[959,202,30,31,'#353236']],tail:[688,374,78,96],pivot:[765,457]},
     frida:{clip:'M1159 110H1500V512H1190L1174 483L1159 473Z',bounds:[1159,110,1500,512],feet:1320,head:[1318,243,155,128],ears:[[1246,150,37,47],[1438,196,37,46]],eyes:[],tail:[1417,352,81,151],pivot:[1420,471]},
@@ -181,6 +182,8 @@
   // Keep all established anchors. The new companion occupies the open front green.
   layouts.landscape.pets.push({id:'juju',anchor:[470,837],head:[1180,713,70,65],ears:[[1130,663,20,26],[1230,679,20,25]],eyes:[]});
   layouts.portrait.pets.push({id:'juju',anchor:[755,1205],head:[815,1100,58,55],ears:[],eyes:[]});
+  layouts.landscape.pets.push({id:'meg',anchor:[270,837],head:[270,650,100,70],ears:[],eyes:[]});
+  layouts.portrait.pets.push({id:'meg',anchor:[196,1224],head:[196,1069,85,70],ears:[],eyes:[]});
   for(const [name,d]of Object.entries(layouts)){const bird=d.pets.find(p=>p.id==='maritaca');bird.anchor[1]=name==='portrait'?1039:647;}
   // Interaction uses the same sprite bounds as the canvas painter. The hidden
   // SVG rig and animated artwork never need to intercept pointer events.
@@ -250,7 +253,16 @@
   }
   function mount(container,home){
     let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
-    const help=petHelp(home,()=>root);
+    let petGroup,ensembleBounds;
+    const help=petHelp(home,()=>petGroup??root);
+    function fitPets(){
+      const m=root?.getScreenCTM(),b=ensembleBounds;if(!m||!b||!petGroup)return;
+      const left=-m.e/m.a+8/m.a,right=(innerWidth-m.e)/m.a-8/m.a;
+      const scale=Math.min(1,(right-left)/(b.right-b.left)),cx=(b.left+b.right)/2;
+      const center=Math.max(left+(b.right-b.left)*scale/2,Math.min(right-(b.right-b.left)*scale/2,cx));
+      petGroup.setAttribute('transform',`translate(${center} ${b.bottom}) scale(${scale}) translate(${-cx} ${-b.bottom})`);
+    }
+    new ResizeObserver(()=>{fitPets();help.layout();}).observe(container);
     const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)'),tails=new Map();
     const tailFrames=swing=>[{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'},{transform:`rotate(${swing}deg)`,offset:.5,easing:'ease-in-out'},{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'}];
     function image(file,w,h){return el('image',{href:`art/${file}`,width:w,height:h});}
@@ -321,10 +333,11 @@
         const foliage=leaf.querySelector('image');foliage.style.transformOrigin=`${x}px ${y}px`;
         animate(foliage,[{transform:'skewX(-.35deg) rotate(-.28deg)'},{transform:'skewX(.45deg) rotate(.3deg)',offset:.43},{transform:'skewX(-.35deg) rotate(-.28deg)'}],{duration:11600,easing:'ease-in-out',delay:-2500});
       }
-      const pets=el('g',{'visibility':'hidden','data-pet-rig':'motion-only'});root.append(pets);painter=petPainter(root,d);
+      const pets=el('g',{'visibility':'hidden','data-pet-rig':'motion-only'});petGroup=pets;root.append(pets);painter=petPainter(root,d);
       const characterBounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
       for(const [index,template]of d.pets.entries()){
-        const source=referenceRigs[template.id]?referenceSprite(originals['menu-cast-reference.png'],template):birdSprite(originals[original],template,contours[layout][template.id].path);
+        const sourceArt=template.id==='meg'?'menu-pet-meg.png':referenceRigs[template.id]?'menu-cast-reference.png':original;
+        const source=referenceRigs[template.id]?referenceSprite(originals[sourceArt],template):birdSprite(originals[original],template,contours[layout][template.id].path);
         help.add(template.id,source);
         characterBounds.left=Math.min(characterBounds.left,source.x);characterBounds.top=Math.min(characterBounds.top,source.y);
         characterBounds.right=Math.max(characterBounds.right,source.x+source.w);characterBounds.bottom=Math.max(characterBounds.bottom,source.y+source.h);
@@ -333,7 +346,7 @@
           const [x,y]=[p.anchor[0],p.anchor[1]+1],rx=p.head[2]*.85,shadow=el('ellipse',{cx:x,cy:y,rx,ry:12,fill:'#224a31',opacity:'.24'});pets.append(shadow);
           painter.shape(shadow,x-rx-1,y-13,rx*2+2,26,c=>{c.fillStyle='#224a31';c.beginPath();c.ellipse(x,y,rx,12,0,0,Math.PI*2);c.fill();});
         }
-        const animal=el('g',{'data-pet':p.id,'data-source-art':source.rig?'menu-cast-reference.png':original});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
+        const animal=el('g',{'data-pet':p.id,'data-source-art':sourceArt});pets.append(animal);animal.style.transformOrigin=`${p.anchor[0]}px ${p.anchor[1]}px`;
         animate(animal,[{transform:'scale(1,1)'},{transform:'scale(1.002,1.009)'},{transform:'scale(1,1)'}],{duration:3900+index*367,delay:-index*947,easing:'ease-in-out'});
         if(source.tail){
           const tail=cut(rectangle,animal,'tail',source.tail);tail.style.transformOrigin=`${p.tail[1]}px ${p.tail[2]}px`;
@@ -343,6 +356,9 @@
           const animation=animate(tail,tailFrames(swing),{duration:2200+index*137,delay:-index*419,easing:'ease-in-out'});
           tails.set(animation,{swing,reduced:undefined});
         }
+        // Keep Meg's head, ears and paws in one intact illustration. Only the
+        // anchored tail window flexes, using the same fixed-boundary painter.
+        if(p.id==='meg'){cut(rectangle,animal,'body',source);continue;}
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
         const head=cut(oval(p.head),animal,'head',without(source,p.ears.map(oval)));
         head.style.transformOrigin=`${p.head[0]}px ${p.head[1]+p.head[3]*.7}px`;
@@ -364,7 +380,7 @@
       painter.bounds({x:characterBounds.left-32,y:characterBounds.top-110,w:characterBounds.right-characterBounds.left+64,h:characterBounds.bottom-characterBounds.top+142});
       const lamps=el('g',{'data-night':'lamps'}),lights=layout==='portrait'?[[709,791],[712,741],[855,1000],[917,1010],[200,839],[76,804]]:[[1259,409],[1259,358],[1434,638],[1521,655],[209,421],[1109,441]];
       for(const [x,y]of lights){lamps.append(el('circle',{cx:x,cy:y,r:15,fill:'#ffd76a',opacity:'.08'}),el('circle',{cx:x,cy:y,r:8,fill:'#ffd76a',opacity:'.15'}),el('rect',{x:x-2.6,y:y-4,width:5.2,height:8,rx:1.8,fill:'#fff1aa'}));}root.append(lamps);
-      root._matrix=matrix;container.replaceChildren(root,painter.canvas);home.dataset.sceneReady='true';loaded=true;help.ready();updateLight();visibility();
+      root._matrix=matrix;ensembleBounds=characterBounds;container.replaceChildren(root,painter.canvas);fitPets();home.dataset.sceneReady='true';loaded=true;help.ready();updateLight();visibility();
     }
     const colors={morning:{ink:[22,62,39],surface:[255,249,227],accent:[73,108,55]},afternoon:{ink:[40,59,30],surface:[255,244,217],accent:[79,101,49]},sunset:{ink:[59,35,38],surface:[255,226,191],accent:[115,66,52]},night:{ink:[231,243,255],surface:[22,43,72],accent:[48,77,107]}};
     const attribute=(node,key,value)=>{value=String(value);if(node.getAttribute(key)!==value)node.setAttribute(key,value);};
@@ -398,7 +414,7 @@
     const observer=new MutationObserver(visibility);observer.observe(home,{attributes:true,attributeFilter:['hidden']});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
-    const images=['menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
+    const images=['menu-pet-meg.png','menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
     return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,petFrames:painter?.frames??0,petRenderer:'canvas-2d',lastClock};}});
   }

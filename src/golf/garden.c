@@ -564,64 +564,51 @@ static void muddy_ball(garden_mesh_t *mesh,const golf_player_t *p,float time){
     garden.transform=mat4_identity();
 }
 
-static void meg_disc(garden_mesh_t *mesh,vec3 center,vec3 size,vec4 color,int rings,int segments){
-    (void)rings;int count=segments*2;if(count<24)count=24;
-    for(int i=0;i<count;i++){
-        float a=2*MF_PI*i/count,b=2*MF_PI*(i+1)/count;
-        triangle(mesh,center,vec3_add(center,V3(cosf(a)*size.x,sinf(a)*size.y,0)),vec3_add(center,V3(cosf(b)*size.x,sinf(b)*size.y,0)),color);
-    }
-}
-/* A shallow, camera-facing cartoon silhouette uses the existing depth-tested
-   actor mesh: no DOM overlay, texture download or extra rendering pipeline. */
+/* Meg uses the same volumetric actor mesh and fixed world heading as Pituca. */
 static void meg(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time,golf_game_t *game){
-    vec3 view=vec3_sub(golf_graphics_get()->cam_pos,a->pos);
-    garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_multiply(mat4_rotation_y(atan2f(view.x,view.z)),mat4_scale(V3(1,1,.1f))));
-    vec4 outline=paint(.055f,.045f,.04f,0),coat=paint(.14f,.125f,.12f,0),soft=paint(.22f,.20f,.19f,0),white=paint(.94f,.88f,.78f,0);
-    float breath=.006f*sinf(time*2.2f),age=time-a->action_time;
+    garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
+    vec4 black=paint(.105f,.105f,.115f,0),soft=paint(.18f,.17f,.18f,0),gray=paint(.46f,.44f,.43f,0),white=paint(.96f,.92f,.85f,0),nose=paint(.045f,.04f,.04f,0);
+    float breath=.008f*sinf(time*2.2f),age=time-a->action_time;
     float nod=a->action==MEG_CAPTURING?.035f*sinf(golf_clampf(age/.18f,0,1)*MF_PI):a->action==MEG_RELEASING?.045f*sinf(golf_clampf(age/.25f,0,1)*MF_PI):0;
-    float wag=.12f*sinf(time*(a->action==MEG_HOLDING?13:5));
-    for(int pass=0;pass<2;pass++)for(int i=0;i<=14;i++){
-        float t=i/14.f,x=(1-t)*(1-t)*(-.30f)+2*(1-t)*t*(-.66f)+t*t*(-.56f+wag),y=(1-t)*(1-t)*.22f+2*(1-t)*t*.25f+t*t*.58f,radius=(.075f-.045f*t)*(pass?.72f:1);
-        meg_disc(mesh,V3(x,y,-.03f+pass*.01f),V3(radius,radius,0),pass?coat:outline,1,12);
-    }
-    meg_disc(mesh,V3(0,.44f+breath,0),V3(.39f,.46f,.07f),outline,3,20);
-    meg_disc(mesh,V3(0,.45f+breath,.025f),V3(.365f,.43f,.07f),coat,3,20);
+    oval(mesh,V3(0,.42f+breath,-.18f),V3(.32f,.36f,.44f),black,5,12);
+    // Seated haunches, planted front legs and four paws remain joined to torso.
     for(int side=-1;side<=1;side+=2){
-        meg_disc(mesh,V3(side*.32f,.20f,.01f),V3(.20f,.22f,.08f),outline,3,14);
-        meg_disc(mesh,V3(side*.31f,.21f,.035f),V3(.17f,.20f,.08f),coat,3,14);
-        meg_disc(mesh,V3(side*.20f,.11f,.10f),V3(.18f,.11f,.075f),outline,3,14);
-        meg_disc(mesh,V3(side*.20f,.12f,.13f),V3(.155f,.085f,.07f),soft,3,14);
-        for(int toe=0;toe<2;toe++)branch(mesh,V3(side*.20f+(toe?1:-1)*.045f,.07f,.192f),V3(side*.20f+(toe?1:-1)*.045f,.13f,.192f),.006f,.004f,coat);
+        oval(mesh,V3(side*.27f,.20f,-.36f),V3(.18f,.20f,.25f),black,4,10);
+        oval(mesh,V3(side*.29f,.075f,-.27f),V3(.135f,.075f,.17f),soft,3,9);
+        branch(mesh,V3(side*.17f,.53f,.035f),V3(side*.20f,.09f,.18f),.09f,.07f,black);
+        oval(mesh,V3(side*.20f,.075f,.20f),V3(.115f,.075f,.16f),black,3,10);
+        for(int toe=0;toe<2;toe++)branch(mesh,V3(side*.20f+(toe?1:-1)*.035f,.065f,.326f),V3(side*.20f+(toe?1:-1)*.035f,.095f,.326f),.004f,.003f,soft);
     }
-    // The chest blaze and silver muzzle are Meg's distinguishing markings.
-    const vec2 blaze[]={V2(-.17f,.65f),V2(-.12f,.61f),V2(-.14f,.72f),V2(-.05f,.65f),V2(0,.76f),V2(.05f,.66f),V2(.16f,.71f),V2(.12f,.61f),V2(.18f,.63f),V2(.1f,.48f),V2(.04f,.4f),V2(0,.29f),V2(-.04f,.4f),V2(-.11f,.5f)};
-    for(int i=0;i<14;i++){vec2 a=blaze[i],b=blaze[(i+1)%14];triangle(mesh,V3(0,.55f,.12f),V3(b.x,b.y,.12f),V3(a.x,a.y,.12f),white);}
-    float head=.98f+breath+nod;
-    meg_disc(mesh,V3(0,head,.055f),V3(.35f,.32f,.08f),outline,4,24);
-    meg_disc(mesh,V3(0,head+.006f,.08f),V3(.328f,.296f,.075f),coat,4,24);
+    oval(mesh,V3(0,.52f+breath,.265f),V3(.125f,.18f,.045f),white,4,10);
+    oval(mesh,V3(-.045f,.63f+breath,.225f),V3(.07f,.11f,.045f),white,3,8);
+    oval(mesh,V3(.02f,.37f+breath,.255f),V3(.055f,.085f,.035f),white,3,8);
+    float head=.94f+breath+nod;
+    oval(mesh,V3(0,head,.12f),V3(.275f,.255f,.255f),black,5,12);
     for(int side=-1;side<=1;side+=2){
-        meg_disc(mesh,V3(side*.325f,head-.12f,.08f),V3(.14f,.30f,.065f),outline,3,18);
-        meg_disc(mesh,V3(side*.325f,head-.11f,.10f),V3(.115f,.27f,.06f),soft,3,18);
-        meg_disc(mesh,V3(side*.315f,head-.09f,.13f),V3(.083f,.24f,.045f),coat,3,16);
-        float eye=fmodf(time,4.7f)<.13f?.009f:.082f;
-        meg_disc(mesh,V3(side*.12f,head+.04f,.165f),V3(.073f,eye,.018f),outline,3,14);
-        meg_disc(mesh,V3(side*.12f,head+.038f,.179f),V3(.056f,eye*.86f,.012f),paint(.58f,.31f,.12f,0),3,14);
-        meg_disc(mesh,V3(side*.12f,head+.044f,.189f),V3(.036f,eye*.75f,.009f),outline,3,12);
-        if(eye>.02f)meg_disc(mesh,V3(side*.12f-.015f,head+.075f,.20f),V3(.015f,.019f,.007f),white,2,10);
-        meg_disc(mesh,V3(side*.073f,head-.105f,.16f),V3(.105f,.075f,.05f),paint(.48f,.45f,.42f,0),3,16);
-        for(int dot=0;dot<3;dot++)meg_disc(mesh,V3(side*(.09f+dot*.016f),head-.10f-dot%2*.02f,.211f),V3(.005f,.005f,.003f),coat,2,6);
+        oval(mesh,V3(side*.27f,head-.09f,.075f),V3(.13f,.28f,.13f),black,4,11);
+        oval(mesh,V3(side*.30f,head-.095f,.15f),V3(.08f,.21f,.06f),soft,3,9);
+        float eye=fmodf(time,4.7f)<.13f?.007f:.077f;
+        oval(mesh,V3(side*.108f,head+.04f,.35f),V3(.062f,eye,.020f),white,3,9);
+        oval(mesh,V3(side*.108f,head+.04f,.370f),V3(.049f,eye*.9f,.015f),paint(.52f,.29f,.12f,0),3,9);
+        oval(mesh,V3(side*.108f,head+.045f,.386f),V3(.029f,eye*.78f,.010f),nose,3,8);
+        if(eye>.02f)oval(mesh,V3(side*.098f,head+.068f,.397f),V3(.012f,.016f,.006f),white,2,7);
+        oval(mesh,V3(side*.064f,head-.105f,.34f),V3(.105f,.075f,.105f),gray,4,10);
+        for(int dot=0;dot<3;dot++)oval(mesh,V3(side*(.065f+dot*.02f),head-.1f-dot%2*.02f,.437f),V3(.005f,.005f,.004f),black,2,5);
     }
-    meg_disc(mesh,V3(0,head-.061f,.218f),V3(.069f,.048f,.028f),outline,3,16);
-    meg_disc(mesh,V3(-.022f,head-.046f,.244f),V3(.022f,.008f,.005f),soft,2,10);
-    meg_disc(mesh,V3(0,head-.17f,.165f),V3(.077f,.052f,.025f),outline,3,16);
-    bool holding=false;
+    oval(mesh,V3(0,head-.04f,.445f),V3(.067f,.042f,.043f),nose,3,10);
+    oval(mesh,V3(-.02f,head-.027f,.479f),V3(.021f,.008f,.007f),soft,2,7);
+    oval(mesh,V3(0,head-.15f,.397f),V3(.08f,.045f,.055f),nose,3,9);
+    const golf_player_t *holder=NULL;
     for(int i=0;i<game->player_count;i++)if(game->players[i].connected&&game->players[i].ball.capture_kind==GOLF_CAPTURE_MEG){
-        meg_disc(mesh,V3(.075f,.78f,.23f),V3(GOLF_BALL_RADIUS+.008f,GOLF_BALL_RADIUS+.008f,0),outline,1,20);
-        meg_disc(mesh,V3(.075f,.78f,.24f),V3(GOLF_BALL_RADIUS,GOLF_BALL_RADIUS,0),paint(game->players[i].color.x,game->players[i].color.y,game->players[i].color.z,0),1,20);
-        meg_disc(mesh,V3(.04f,.82f,.25f),V3(.022f,.028f,0),white,1,12);holding=true;
+        if(!holder||game->players[i].id==game->local_player_id)holder=&game->players[i];
         if(game->players[i].id==game->local_player_id)break;
     }
-    if(!holding)meg_disc(mesh,V3(.024f,head-.195f,.20f),V3(.04f,.07f,.017f),paint(.94f,.43f,.47f,0),3,12);
+    if(holder)oval(mesh,V3(0,.84f,.50f),V3(GOLF_BALL_RADIUS,GOLF_BALL_RADIUS,GOLF_BALL_RADIUS),paint(holder->color.x,holder->color.y,holder->color.z,0),5,12);
+    else oval(mesh,V3(.02f,head-.175f,.447f),V3(.042f,.065f,.018f),paint(.92f,.43f,.47f,0),3,9);
+    // Fixed socket and bounded tail joints, with genuine thickness from all views.
+    float wag=.10f*sinf(time*(a->action==MEG_HOLDING?13:5));
+    vec3 tail[]={V3(-.20f,.32f,-.43f),V3(-.36f,.34f,-.57f),V3(-.49f,.46f,-.60f),V3(-.47f+wag,.64f,-.55f)};
+    for(int j=0;j<3;j++)branch(mesh,tail[j],tail[j+1],.065f-j*.014f,.05f-j*.014f,black);
     garden.transform=mat4_identity();
     if(a->action==MEG_RELEASING&&age<.25f)for(int i=0;i<game->player_count;i++){
         golf_player_t *p=&game->players[i];if(p->ball.effect_kind!=GOLF_EFFECT_MEG||p->ball.captured||time-p->ball.effect_time>.25f)continue;

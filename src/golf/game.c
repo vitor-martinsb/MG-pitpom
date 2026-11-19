@@ -530,6 +530,7 @@ void golf_game_update(float dt) {
             // Keep the camera above the course while a ball falls; no sky flash
             // or plunge below the landscape before the maritaca arrives.
             vec3 focus=player->ball.draw_pos;
+            if(player->ball.capture_kind==GOLF_CAPTURE_MEG)focus=vec3_add(game.mechanics.wildlife.animals[GOLF_MEG].pos,V3(0,.30f,0));
             focus.y=fmaxf(focus.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f);
             vec3 wanted_pos = vec3_add(focus, cam_delta);
             // Clip the view ray against the same world geometry on every map.

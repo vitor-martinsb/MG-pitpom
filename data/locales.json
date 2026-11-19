@@ -1,5 +1,7 @@
 {
   "en": {
+    "pet.meg.name": "Meg",
+    "pet.meg.description": "Our playful ball launcher! Meg holds your ball until you tap her, then sends it flying at full power in a random direction.",
     "meg.hold": "Tap Meg to release!",
     "effect.meg": "Meg is holding your ball",
     "meg.name": "Meg",
@@ -352,6 +354,8 @@
     "tutorial.step5.body": "Get the ball into the cup. Simultaneous has a time limit; By turns allows 20 strokes per player per course, without a timer. An unfinished course receives DNF: strokes taken plus 12 penalty points. Finished players wait or spectate until the next course, which loads with the same room rules."
   },
   "pt-BR": {
+    "pet.meg.name": "Meg",
+    "pet.meg.description": "Nossa lançadora brincalhona! A Meg segura sua bolinha até você tocar nela e então lança com força máxima em uma direção aleatória.",
     "meg.hold": "Toque na Meg para soltar!",
     "effect.meg": "Meg está segurando sua bola",
     "meg.name": "Meg",
@@ -707,6 +711,8 @@
     "tutorial.step5.body": "Coloque a bola no buraco. Simultâneo tem tempo limite; Por turnos permite 20 tacadas por jogador em cada campo, sem cronômetro. Um campo não concluído recebe DNF: tacadas realizadas mais 12 pontos de penalidade. Quem terminou aguarda ou acompanha os outros até o próximo campo, que carrega com as mesmas regras da sala."
   },
   "es": {
+    "pet.meg.name": "Meg",
+    "pet.meg.description": "¡Nuestra lanzadora juguetona! Meg sostiene tu pelota hasta que la toques y la lanza con fuerza máxima en una dirección aleatoria.",
     "meg.hold": "¡Toca a Meg para soltar!",
     "effect.meg": "Meg sostiene tu pelota",
     "meg.name": "Meg",

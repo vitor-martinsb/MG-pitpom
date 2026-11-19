@@ -2,7 +2,7 @@
 
 Meg é a quinta candidata ao terceiro animal de cada campo, junto de Romeu, Luna, Frida e Juju. Pituca e Pompom continuam fixas. O catálogo e o posicionamento compartilhado a incluem nos campos existentes e futuros com animais, sem editar a geometria das fases. A posição sentada usa a navegação e as mesmas verificações de piso, obstáculos, tee e buraco. O marcador opcional `animal:4` permite indicar uma preferência em novos campos.
 
-A ilustração cartoon usa a malha de atores já existente, com contornos planos arredondados, orelhas caídas, olhos castanhos, focinho grisalho e mancha branca no peito. Sua silhueta é maior que a dos companheiros. Ela se volta para a câmera, permanece apoiada no piso e participa do teste de profundidade do cenário. Respiração, piscadas e rabo são calculados sem imagens recortadas ou sobreposições HTML. Não há texturas ou dependências novas.
+Durante a partida, Meg usa volumes 3D completos na mesma malha de atores da Pituca: corpo sentado, quatro patas apoiadas, cabeça, orelhas caídas, focinho grisalho, olhos castanhos, mancha branca no peito e rabo com juntas fixas. Sua orientação permanece no mundo ao girar a câmera. A boca projetada acompanha a direção da personagem, e a bola segurada utiliza uma esfera 3D com a cor do jogador. Respiração, piscadas e reações continuam preservadas. O menu usa uma ilustração própria no estilo dos demais bichinhos, com respiração e rabo animados; os oito animais compartilham o mesmo carregamento inicial e iluminação de dia, fim de tarde e noite. Durante a retenção, a câmera enquadra o corpo da Meg para manter a interação visível no celular, preservando o zoom escolhido. Não há dependências novas.
 
 ## Captura e lançamento
 

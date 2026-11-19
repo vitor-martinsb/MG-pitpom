@@ -74,7 +74,7 @@ try{
    return {checks,bodies:bodies.map(({id,minimum})=>({id,minimum}))};
   });
   const capture=(async()=>{
-   await page.waitForFunction(()=>window.__petSamples?.length===7);
+   await page.waitForFunction(()=>window.__petSamples?.length===document.querySelectorAll('[data-pet]').length);
    for(let frame=0;frame<8;frame++){
     await page.waitForTimeout(4500);
     const samples=await page.evaluate(()=>{const v=document.querySelector('.living-menu-art')._characterLight;return window.__petSamples.map(body=>{const m=body.node.getScreenCTM();return {id:body.id,points:body.points.map(p=>{const q=new DOMPoint(p.x,p.y).matrixTransform(m);return {x:q.x,y:q.y,rgb:p.rgb.map((c,i)=>c*v[i]+(i===2?v[3]*255:0))};})};});});

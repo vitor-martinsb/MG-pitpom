@@ -159,7 +159,7 @@
       bridge.forEach(points=>garland(points,time,light,.8));
       for(const [x,y]of portrait?[[820,981],[932,998]]:[[1257,634],[1340,656],[1521,664]]){lantern(x,y-3,.9,time,light);ribbon(x,y+13,light,.44,0);}
       // Presents stay on the open grass, away from character silhouettes.
-      for(const [x,y,s,gold]of portrait?[[160,1308,1,false],[211,1316,.65,true]]:[[265,866,1.15,false],[311,871,.8,true],[1180,835,1.3,false],[1230,851,.85,true]])gift(x,y,s,gold,light);
+      for(const [x,y,s,gold]of portrait?[[160,1308,1,false],[211,1316,.65,true]]:[[205,912,1.15,false],[250,918,.8,true],[1180,835,1.3,false],[1230,851,.85,true]])gift(x,y,s,gold,light);
       const tree=paintedTree(light);if(tree){
         const [anchor,y]=portrait?[135,840]:[270,560],height=portrait?178:210,width=height*tree.width/tree.height;
         const left=-m.e/m.a,right=(w-m.e)/m.a,x=Math.max(left+width*.5+8/m.a,Math.min(right-width*.5-8/m.a,anchor));

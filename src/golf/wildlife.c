@@ -379,7 +379,7 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
 }
 
 /* A held ball has no expiry. Only this explicit interaction can launch it. */
-vec3 golf_meg_mouth(const golf_wildlife_t *w){return vec3_add(w->animals[GOLF_MEG].pos,V3(0,.84f,0));}
+vec3 golf_meg_mouth(const golf_wildlife_t *w){return vec3_add(vec3_add(w->animals[GOLF_MEG].pos,vec3_scale(w->animals[GOLF_MEG].forward,.50f)),V3(0,.84f,0));}
 bool golf_meg_release(golf_wildlife_t *w,golf_player_t *p,golf_config_t *config,float time,uint32_t seed){
     if(!p||!p->connected||p->ball.is_in_hole||p->ball.capture_kind!=GOLF_CAPTURE_MEG||!p->ball.captured)return false;
     golf_wild_animal_t *meg=&w->animals[GOLF_MEG];if(!meg->active||!meg->present)return false;

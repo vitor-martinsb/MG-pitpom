@@ -13,7 +13,10 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const D=Date;globalThis.Date=class extends D{constructor(...a){super(...(a.length?a:['2026-10-24T15:00:00-03:00']));}};});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});
-  assert.equal(await page.locator('[data-pet]').count(),7,'six pets from the supplied atlas and the existing bird');
+  assert.equal(await page.locator('[data-pet]').count(),8,'six atlas pets, the existing bird and Meg');
+  assert.equal(await page.locator('[data-pet=meg]').getAttribute('data-source-art'),'menu-pet-meg.png');
+  const megArt=fs.readFileSync('../build/emscripten/art/menu-pet-meg.png'),megServed=Buffer.from(await (await fetch(url+'/art/menu-pet-meg.png')).arrayBuffer());
+  assert.equal(createHash('sha256').update(megServed).digest('hex'),createHash('sha256').update(megArt).digest('hex'));
   for(const pet of ['luna','romeu','frida','pituca','pompom','juju']){
    const file='menu-cast-reference.png';assert.equal(await page.locator(`[data-pet=${pet}]`).getAttribute('data-source-art'),file);
    const local=fs.readFileSync('../build/emscripten/art/'+file),served=Buffer.from(await (await fetch(url+'/art/'+file)).arrayBuffer());

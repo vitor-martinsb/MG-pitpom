@@ -24,6 +24,10 @@ try{
  const actorVertices=await host.evaluate(()=>GolfCourse.inspect().frame.actorVertices);assert.ok(actorVertices>0&&actorVertices<40960,'Meg stays inside the existing actor buffer');
  assert.equal(await host.evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot),false);
  await host.screenshot({path:'../out/meg/desktop-holding.png'});await guest.screenshot({path:'../out/meg/mobile-holding.png'});
+ const angle=await host.evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).cameraAngle);
+ await host.mouse.move(1050,430);await host.mouse.down();await host.mouse.move(1190,470,{steps:12});await host.mouse.up();
+ await host.waitForFunction(angle=>Math.abs(JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).cameraAngle-angle)>.1,angle);
+ await host.waitForTimeout(300);await host.screenshot({path:'../out/meg/desktop-3d-profile.png'});
  const screen=await host.evaluate(()=>GolfCourse.inspect().frame.megScreen);
  await host.locator('#canvas').focus();await host.mouse.click(screen[0]>640?120:1160,400);await host.waitForTimeout(200);
  assert.equal(owner.ball.captureKind,6,'clicking outside Meg cannot release the ball');

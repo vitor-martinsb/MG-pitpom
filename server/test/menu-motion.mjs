@@ -70,7 +70,7 @@ try{
    }
    return tails.map(t=>({id:t.node.closest('[data-pet]').dataset.pet,samples:t.points.length,minimum:t.minimum}));
   });
-  assert.equal(joints.length,6,'all existing tail sockets are exercised');
+  assert.equal(joints.length,7,'all existing tail sockets are exercised');
   assert.ok(joints.reduce((n,joint)=>n+joint.samples,0)>40,'socket samples cover the actual opaque cut boundaries');
   for(const joint of joints)assert.ok(joint.minimum>.98,`${name}: ${joint.id} must not expose scenery at its cut boundary: ${JSON.stringify(joint)}`);
   await page.screenshot({path:`../out/menu-motion/${name}-joined.png`});
@@ -91,7 +91,7 @@ try{
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>a.play()));
   await page.locator('#open-multiplayer').click();await page.locator('#connect').waitFor({state:'visible'});assert.ok(await page.evaluate(()=>GolfHome.scene.running)>45,'multiplayer entry keeps the original living menu');await page.locator('#back-main').click();assert.ok(await page.evaluate(()=>GolfHome.scene.running)>45);
   await page.locator('#exit-game').click();await page.locator('#continue-home').waitFor({state:'visible'});await page.locator('#continue-home').click();await page.locator('#offline').click();await page.locator('#level-selection').waitFor({state:'visible'});await page.close();
-  console.log(`${name}: ${tailsOnly?'six independently moving tails and their painted pixels':'automatic motion and rendered pixel changes for mill, cloud, water, wind, breathing, head, ear, tail and blink'} passed; no duplicate Frida tail or tagline; menu controls passed.`);
+  console.log(`${name}: ${tailsOnly?'seven independently moving tails and their painted pixels':'automatic motion and rendered pixel changes for mill, cloud, water, wind, breathing, head, ear, tail and blink'} passed; no duplicate Frida tail or tagline; menu controls passed.`);
  }
  assert.deepEqual(errors,[]);
 }finally{await browser?.close();app.close();}
