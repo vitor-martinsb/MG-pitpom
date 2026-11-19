@@ -4,13 +4,13 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Physics} from '../src/physics.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-test('Juju is a stable fourth companion candidate; authority includes clean mud state and preserves planner isolation',async()=>{
+test('Juju is a stable Juju companion candidate; authority includes clean mud state and preserves planner isolation',async()=>{
  const p=new Physics(root,'data/levels/level-3.level');
  try{
   await p.add(0,1);await p.add(1,2);let selected=-1;
   for(let seed=1;seed<=32;seed++){
    await p.configure(false,seed);const frame=await p.step(0);
-   assert.equal(frame.mascots.wildlife!.length,4);assert.equal(frame.mascots.wildlife!.filter(a=>a.active).length,1);
+   assert.equal(frame.mascots.wildlife!.length,5);assert.equal(frame.mascots.wildlife!.filter(a=>a.active).length,1);
    if(frame.mascots.thirdKind===3){selected=seed;break;}
   }
   assert.ok(selected>0);const before=await p.step(0),after=await p.step(1200);

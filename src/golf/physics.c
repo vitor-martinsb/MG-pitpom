@@ -556,6 +556,8 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
     }
 }
 
+float golf_physics_max_shot_speed(golf_config_t *config){return CFG_NUM(config,"aim_dark_red_speed");}
+
 bool golf_physics_shoot(golf_physics_world_t *world, golf_player_t *player, vec3 direction, float power) {
     if (!player || !player->connected || player->ball.is_moving || player->ball.is_in_hole || player->ball.capture_until>0 ||
             !isfinite(power) || power < 0 || power > 1 ||
@@ -564,7 +566,7 @@ bool golf_physics_shoot(golf_physics_world_t *world, golf_player_t *player, vec3
     float len = vec3_length(direction);
     if (!isfinite(len) || len < 0.001f) return false;
     float gp = CFG_NUM(world->config, "aim_green_power"), yp = CFG_NUM(world->config, "aim_yellow_power"), rp = CFG_NUM(world->config, "aim_red_power");
-    float gs = CFG_NUM(world->config, "aim_green_speed"), ys = CFG_NUM(world->config, "aim_yellow_speed"), rs = CFG_NUM(world->config, "aim_red_speed"), ds = CFG_NUM(world->config, "aim_dark_red_speed");
+    float gs = CFG_NUM(world->config, "aim_green_speed"), ys = CFG_NUM(world->config, "aim_yellow_speed"), rs = CFG_NUM(world->config, "aim_red_speed"), ds = golf_physics_max_shot_speed(world->config);
     float speed = power < gp ? gs + (ys-gs)*power/gp : power < yp ? ys + (rs-ys)*(power-gp)/(yp-gp) : power < rp ? rs + (ds-rs)*(power-yp)/(rp-yp) : ds;
     player->ball.vel = vec3_scale(direction, speed / len);
     player->ball.vel=vec3_scale(player->ball.vel,golf_ball_shot_scale(&player->ball));

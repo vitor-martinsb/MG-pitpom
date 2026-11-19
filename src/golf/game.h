@@ -92,6 +92,7 @@ golf_game_t *golf_game_get(void);
 /* IDs are player identities, not array indices. Unknown IDs return NULL. */
 golf_player_t *golf_game_get_player(uint32_t id);
 golf_player_t *golf_game_get_local_player(void);
+bool golf_game_release_meg(void);
 void golf_game_init(void);
 /* Visual-only test players; the local player's simulation is left untouched. */
 bool golf_game_set_debug_test_players(bool enabled);

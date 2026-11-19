@@ -1,5 +1,8 @@
 {
   "en": {
+    "meg.hold": "Tap Meg to release!",
+    "effect.meg": "Meg is holding your ball",
+    "meg.name": "Meg",
     "settings": "Settings",
     "language": "Language",
     "tagline": "MINIGOLF · UP TO 50 PLAYERS",
@@ -349,6 +352,9 @@
     "tutorial.step5.body": "Get the ball into the cup. Simultaneous has a time limit; By turns allows 20 strokes per player per course, without a timer. An unfinished course receives DNF: strokes taken plus 12 penalty points. Finished players wait or spectate until the next course, which loads with the same room rules."
   },
   "pt-BR": {
+    "meg.hold": "Toque na Meg para soltar!",
+    "effect.meg": "Meg está segurando sua bola",
+    "meg.name": "Meg",
     "settings": "Configurações",
     "language": "Idioma",
     "tagline": "MINIGOLFE · ATÉ 50 JOGADORES",
@@ -701,6 +707,9 @@
     "tutorial.step5.body": "Coloque a bola no buraco. Simultâneo tem tempo limite; Por turnos permite 20 tacadas por jogador em cada campo, sem cronômetro. Um campo não concluído recebe DNF: tacadas realizadas mais 12 pontos de penalidade. Quem terminou aguarda ou acompanha os outros até o próximo campo, que carrega com as mesmas regras da sala."
   },
   "es": {
+    "meg.hold": "¡Toca a Meg para soltar!",
+    "effect.meg": "Meg sostiene tu pelota",
+    "meg.name": "Meg",
     "settings": "Ajustes",
     "language": "Idioma",
     "tagline": "MINIGOLF · HASTA 50 JUGADORES",

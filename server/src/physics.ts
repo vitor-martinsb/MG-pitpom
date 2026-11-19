@@ -72,6 +72,7 @@ export class Physics {
   }
   connected(slot: number, connected: boolean) { return this.command({ cmd: 'connected', slot, connected }); }
   async shot(slot: number, direction: number[], power: number): Promise<boolean> { return (await this.command({ cmd: 'shot', slot, direction, power })).ok; }
+  async releaseMeg(slot:number):Promise<boolean>{return (await this.command({cmd:"meg",slot})).ok;}
   async step(ticks: number): Promise<Frame> { return this.command({ cmd: 'step', ticks }); }
   async plan(slot:number,difficulty:BotDifficulty,cpuShare?:number){
     if(this.planning)throw new Error('Bot planner already busy');

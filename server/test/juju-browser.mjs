@@ -31,7 +31,7 @@ try{
  await Promise.all(pages.map(page=>page.waitForFunction(()=>GolfCourse.inspect().frame?.active)));
  await Promise.all(pages.map(page=>page.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]))));
  await Promise.all(pages.map(page=>page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden)));
- const snapshot=await freezePhysics(room);assert.equal(snapshot.mascots.wildlife.length,4);
+ const snapshot=await freezePhysics(room);assert.equal(snapshot.mascots.wildlife.length,5);
  // Isolate the new actor and clean white ball for visual inspection. Native
  // tests separately verify the real three-resident composition on all maps.
  snapshot.mascots.catVisible=snapshot.mascots.dogVisible=false;

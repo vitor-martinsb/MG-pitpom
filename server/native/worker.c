@@ -170,6 +170,8 @@ int main(int argc, char **argv) {
             golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn);memset(&bot_memory[slot],0,sizeof(bot_memory[slot]));ok=true;
         } else if (cmd && !strcmp(cmd,"connected") && slot>=0 && slot<GOLF_MAX_PLAYERS) { players[slot].connected=json_object_get_boolean(o,"connected")==1; ok=true;
         } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { vec3 direction=golf_json_object_get_vec3(o,"direction");float power=(float)json_object_get_number(o,"power");ok=golf_physics_shoot(&world,&players[slot],direction,power);if(ok){golf_wildlife_shot(&mechanics.wildlife,&players[slot]);golf_bot_record(&bot_memory[slot],&players[slot],direction,power);event("shot",&players[slot],power);}
+        } else if (cmd && !strcmp(cmd,"meg") && slot>=0 && slot<GOLF_MAX_PLAYERS && !planner_only) {
+            ok=golf_meg_release(&mechanics.wildlife,&players[slot],&config,world.time,mechanics.seed);if(ok)event("meg",&players[slot],1);
         } else if (cmd && !strcmp(cmd,"step")) {
             int ticks=(int)json_object_get_number(o,"ticks"); if (ticks<0 || ticks>1200) ticks=0;
             bool full_players=getenv("GOLF_PHYSICS_FULL_PLAYERS")!=NULL;
@@ -198,7 +200,7 @@ int main(int argc, char **argv) {
                     if(players[i].ball.effect_serial!=effects[i]){
                         const char *kinds[]={"","romeu","luna","frida","portal","capture","juju"};
                         int effect=players[i].ball.effect_kind;
-                        event(effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
+                        event(effect==GOLF_EFFECT_MEG?"meg":effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
                     }
                     else if(players[i].ball.cat_hits!=hits[i])event("slap",&players[i],1);
                     else if(!captures[i]&&players[i].ball.capture_until)event("capture",&players[i],1);

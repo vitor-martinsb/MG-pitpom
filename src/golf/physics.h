@@ -24,6 +24,7 @@ typedef struct golf_physics_world {
 
 void golf_physics_build_world(golf_physics_world_t *world, bool dynamic);
 void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player, float dt);
+float golf_physics_max_shot_speed(golf_config_t *);
 bool golf_physics_shoot(golf_physics_world_t *world, golf_player_t *player, vec3 direction, float power);
 
 #endif

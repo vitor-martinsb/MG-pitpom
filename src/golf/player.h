@@ -23,12 +23,12 @@ typedef struct golf_ball {
     int dog_stroke;
     /* Temporary effects are per ball; cosmetics remain in golf_player.color. */
     float season_ice_until;
-    float slow_until,wildlife_protection,wildlife_cooldown[4],portal_cooldown;
+    float slow_until,wildlife_protection,wildlife_cooldown[5],portal_cooldown;
     int slow_shots,slow_born_stroke;
     int mud_shots,mud_born_stroke;
     float mud_fade_until;
     bool puddle_contact, mud_print_contact;
-    uint32_t wildlife_hits[4],wildlife_contact,effect_serial;
+    uint32_t wildlife_hits[5],wildlife_contact,effect_serial;
     int capture_kind,effect_kind;
     float effect_time;
     vec3 capture_target;

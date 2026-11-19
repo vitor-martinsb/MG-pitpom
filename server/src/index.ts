@@ -78,6 +78,7 @@ export function createServer() {
           else if(message.type==='rematch')room!.rematch(member);
           else if (message.type==='ready') room!.ready(member,message.hole);
           else if (message.type==='aim') room!.aim(member,message);
+          else if (message.type==='meg') await room!.releaseMeg(member,message);
           else if (message.type==='shot') await room!.shot(member,message);
           else if (message.type==='chat') room!.chat(member,message.text);
           else throw Error('Mensagem desconhecida.');

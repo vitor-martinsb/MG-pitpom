@@ -688,6 +688,12 @@ void golf_game_start_level(void) {
     graphics->cam_dir = game.begin_camera_animation.cam_dir0;
 }
 
+bool golf_game_release_meg(void){
+    if(game.begin_camera_animation.active||game.state==GOLF_GAME_STATE_PAUSED)return false;
+    if(golf_online_active())return golf_online_release_meg();
+    return golf_meg_release(&game.mechanics.wildlife,golf_game_get_local_player(),game_cfg,game.t,game.mechanics.seed);
+}
+
 void golf_game_start_aiming(void) {
     if(game.begin_camera_animation.active || golf_game_get_local_player()->ball.capture_until>0)return;
     if (golf_online_active() && !golf_online_can_shoot()) return;

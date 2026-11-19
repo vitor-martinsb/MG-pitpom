@@ -303,6 +303,18 @@ export class Room {
       this.send(m,{type:'shot',sequence:seq,accepted:true});
     }finally{this.shotPending.delete(m.id);}
   }
+  async releaseMeg(m:Member,message:any,refresh=true){
+    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==6||!m.ball.captured||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error('Interação com a Meg indisponível.');
+    const physics=this.physics,generation=this.generation;if(!physics)throw Error('Interação com a Meg indisponível.');
+    this.shotPending.add(m.id);
+    try{
+      if(!await physics.releaseMeg(m.slot))throw Error('A Meg não está segurando sua bola.');
+      if(!refresh)return;
+      const frame=await physics.step(0);if(generation!==this.generation||physics!==this.physics)return;
+      for(const ball of frame.players){const member=this.members.get(ball.id);if(member)member.ball=ball;}
+      this.mascots=frame.mascots;this.worldTime=frame.time;this.events=frame.events;this.snapshot(true);
+    }finally{this.shotPending.delete(m.id);}
+  }
   chat(m: Member, text: unknown) {
     if (this.members.get(m.id)!==m || !m.socket) throw new Error('Entre na sala para conversar.');
     if (typeof text!=='string' || !text.trim() || text.length>240 || /[\u0000-\u001f\u007f]/.test(text))
@@ -358,6 +370,16 @@ export class Room {
         if(!m.ball?.hole&&this.holeDone(m)&&m.dnf[this.hole]!==true){m.dnf[this.hole]=true;capped=true;}
       }
       this.rotateTurn();if(capped)this.publish();
+      // A bot explicitly interacts through the same authorized command as a tap.
+      let megBots=0;
+      for(const bot of this.members.values())if(bot.bot&&bot.ready&&bot.ball?.captureKind===6&&(this.playStyle!=='turns'||this.turn===bot.id)&&this.phase==='playing'&&!this.timedOut()){
+        await this.releaseMeg(bot,{hole:this.hole,match:this.match},false);megBots++;
+      }
+      if(megBots){
+        const released=await physics.step(0);if(generation!==this.generation||physics!==this.physics)return;
+        for(const ball of released.players){const member=this.members.get(ball.id);if(member)member.ball=ball;}
+        this.mascots=released.mascots;this.events=[...this.events,...released.events];
+      }
       this.snapshot(++this.frameNumber % (this.options.snapshotHz*2) === 0);
       const active=[...this.members.values()].filter(m=>m.socket||m.bot);
       if (active.length && active.every(m=>this.holeDone(m)) || this.phase==='settling' && now>=this.deadline) this.finishHole();

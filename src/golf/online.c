@@ -14,12 +14,14 @@
 #ifdef GOLF_PLATFORM_EMSCRIPTEN
 #include <emscripten.h>
 EM_JS(void, online_ready, (int hole), { if (window.GolfOnline) window.GolfOnline.ready(hole); });
+EM_JS(void, online_send_meg, (), {if(window.GolfOnline)window.GolfOnline.releaseMeg();});
 EM_JS(void, online_send_shot, (float x, float z, float power), { if (window.GolfOnline) window.GolfOnline.shot([x,0,z],power); });
 EM_JS(void, online_send_aim, (float x,float z,float power,int active), { if(window.GolfOnline)window.GolfOnline.aim([x,0,z],power,!!active); });
 EM_JS(int, online_blocked, (), { return window.GolfOnline && window.GolfOnline.blocked() ? 1 : 0; });
 EM_JS(void, online_preview, (), { if(window.GolfOnline)window.GolfOnline.preview(); });
 #else
 static void online_ready(int hole) { (void)hole; }
+static void online_send_meg(void) {}
 static void online_send_shot(float x, float z, float power) { (void)x; (void)z; (void)power; }
 static void online_send_aim(float x,float z,float power,int active) {(void)x;(void)z;(void)power;(void)active;}
 static int online_blocked(void) { return 0; }
@@ -54,6 +56,10 @@ EMSCRIPTEN_KEEPALIVE const char *golf_online_diagnostics(void) {
     return buffer;
 }
 
+bool golf_online_release_meg(void){
+    if(!online.active||!online.playing||online.loading||online.shot_pending||!online.has_snapshot||(online.turns&&online.turn_id!=online.local_id)||golf_game_get_local_player()->ball.capture_kind!=GOLF_CAPTURE_MEG)return false;
+    online.shot_pending=true;online_send_meg();return true;
+}
 bool golf_online_active(void) { return online.active; }
 bool golf_online_overview(void) {return online.active&&online.playing&&online.turns&&online.turn_id!=online.local_id&&!online.loading;}
 bool golf_online_input_blocked(void) {

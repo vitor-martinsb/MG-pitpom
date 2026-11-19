@@ -315,7 +315,7 @@
     if(!room)return;speedLabel.hidden=(room.simulationSpeed??1)<2||!['playing','settling'].includes(phase);speedLabel.textContent=t('botSpeed');const list=sorted();let visible=list.slice(0,5);const local=list.find(p=>p.id===identity?.id);if(local&&!visible.includes(local))visible.push(local);
     $('summary').replaceChildren(...visible.map(p=>{const row=playerRow(p),b=lastBalls.get(p.id);row.append(text('span',`${t('points',{count:p.total})} · ${b?.hole&&!p.dnf?.[room.hole]?'✓':t(room.strokeLimit?'turns.strokes':(b?.strokes??0)===1?'strokes.one':'strokes.other',{count:b?.strokes??0,limit:room.strokeLimit})}${p.dnf?.[room.hole]?' · DNF':''}`));return row;}));
     const ball=lastBalls.get(identity?.id);
-    $('help').textContent=room.playStyle==='turns'&&local?.dnf?.[room.hole]?t('turns.limitReached'):ball?.hole?t('helpDone'):phase==='playing'
+    $('help').textContent=ball?.captureKind===6?t('meg.hold'):room.playStyle==='turns'&&local?.dnf?.[room.hole]?t('turns.limitReached'):ball?.hole?t('helpDone'):phase==='playing'
       ?t(touchControls?'helpTouch':'helpMouse')
       :phase==='settling'?t('helpSettling'):t(touchControls?'helpScoresTouch':'helpScoresMouse');
   }
@@ -357,6 +357,7 @@
       if(active&&now-aimLastSent<100||active&&key===aimLastKey&&now-aimLastSent<250||!active&&!aimWasActive)return;
       aimWasActive=active;aimLastKey=key;aimLastSent=now;send({type:'aim',match:room.match,hole:room.hole,sequence:++aimSequence,active,direction,power});
     },
+    releaseMeg(){if(connected&&phase==='playing'&&(room?.playStyle!=='turns'||room.turn===identity?.id))send({type:'meg',hole:room.hole,match:room.match});else call({type:'error'});},
     shot(direction,power){if(connected&&phase==='playing'&&(room?.playStyle!=='turns'||room.turn===identity?.id))send({type:'shot',direction,power,sequence:++sequence});else call({type:'error'});},
     cancelAim(){call({type:'cancel-aim'});},
     blocked(){return !!document.activeElement?.closest('.camera-zoom')||document.activeElement?.id==='toggle-match-info'||!document.getElementById('home').hidden||!$('connect').hidden||!$('level-selection').hidden||!$('solo-loading').hidden||document.getElementById('music-controls').open||online&&(loading||!connected||!$('scores').hidden||!$('adventure-modal').hidden||!$('lobby').hidden||!$('connect').hidden||!$('chat-panel').hidden||$('music-controls').open);}

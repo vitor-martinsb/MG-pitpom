@@ -1343,10 +1343,31 @@ static void _golf_ui_player_labels(void) {
     }
 }
 
+static bool _golf_ui_meg(void){
+    golf_player_t *p=golf_game_get_local_player();
+    static bool pressed;
+    if(p->ball.capture_kind!=GOLF_CAPTURE_MEG){pressed=false;return false;}
+    golf_wild_animal_t *meg=&game->mechanics.wildlife.animals[GOLF_MEG];vec2 center,top,bottom;
+    if(!golf_graphics_world_to_screen_visible(vec3_add(meg->pos,V3(0,.65f,0)),&center)||!golf_graphics_world_to_screen_visible(vec3_add(meg->pos,V3(0,1.32f,0)),&top)||!golf_graphics_world_to_screen_visible(meg->pos,&bottom))return false;
+    float height=fmaxf(36,fabsf(bottom.y-top.y)),width=height*.46f;
+    vec2 start=inputs->is_touch?inputs->touch_down_pos:inputs->mouse_down_pos;
+    vec2 current=inputs->is_touch?inputs->touch_pos:inputs->mouse_pos;
+    float sx=(start.x-center.x)/width,sy=(start.y-center.y)/(height*.55f),cx=(current.x-center.x)/width,cy=(current.y-center.y)/(height*.55f);
+    bool down=inputs->is_touch?inputs->touch_down:inputs->mouse_down[0],ended=inputs->is_touch?inputs->touch_ended:inputs->mouse_clicked[0];
+    if(down&&sx*sx+sy*sy<=1&&!igGetIO()->WantCaptureMouse)pressed=true;
+    golf_font_t *font=golf_data_get_font("data/font/poppins/Poppins-SemiBold.ttf");
+    _golf_ui_draw_text(font,V2(center.x,top.y-18),golf_clampf(17*_get_ui_scale(),12,20),V4(1,.96f,.79f,1),0,1,golf_i18n_t("meg.hold"),1);
+    bool consume=pressed;
+    if(ended&&sx*sx+sy*sy<=1&&!igGetIO()->WantCaptureMouse){if(cx*cx+cy*cy<=1&&!inputs->touch_cancelled)golf_game_release_meg();pressed=false;consume=true;}
+    else if(!down)pressed=false;
+    return consume;
+}
+
 static void _golf_ui_in_game(float dt) {
 
     _golf_ui_player_labels();
     if (golf_online_input_blocked()) return;
+    if (_golf_ui_meg()) return;
     if (golf_online_active()) {
         if (golf_online_input_blocked()) return;
         if (game->state == GOLF_GAME_STATE_AIMING && golf_online_can_shoot()) _golf_ui_in_game_aiming(dt);

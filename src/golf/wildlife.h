@@ -2,7 +2,12 @@
 #define GOLF_WILDLIFE_H
 #include "golf/navigation.h"
 #include "golf/player.h"
-#define GOLF_WILDLIFE_COUNT 4
+#define GOLF_WILDLIFE_COUNT 5
+#define GOLF_MEG 4
+#define GOLF_CAPTURE_MEG 6
+#define GOLF_EFFECT_MEG 15
+#define GOLF_MEG_PROTECTION 1.5f
+enum {MEG_IDLE,MEG_CAPTURING,MEG_HOLDING,MEG_RELEASING,MEG_COOLDOWN};
 #define GOLF_JUJU 3
 #define GOLF_EFFECT_JUJU 6
 #define GOLF_WIND_ZONES 8
@@ -30,6 +35,7 @@ typedef struct golf_wildlife {
     golf_puddle_t puddles[GOLF_PUDDLES];uint32_t accepted_shots,next_puddle;
     golf_mud_print_t mud_prints[GOLF_MUD_PRINTS];uint32_t next_mud_print;float print_distance;
     golf_wild_shot_t shots[GOLF_MAX_PLAYERS];
+    uint32_t meg_launches;
     int world,stage,course;
     float time;
     vec3 spawn,hole;
@@ -43,5 +49,7 @@ vec3 golf_wildlife_position(const golf_wild_animal_t *,float);
 bool golf_wildlife_safe(const golf_wildlife_t *,vec3,float);
 vec3 golf_wildlife_wind(const golf_wildlife_t *,vec3,float);
 float golf_wind_gust(const golf_wind_zone_t *,float);
+vec3 golf_meg_mouth(const golf_wildlife_t *);
+bool golf_meg_release(golf_wildlife_t *,golf_player_t *,golf_config_t *,float,uint32_t);
 void golf_wildlife_shot(golf_wildlife_t *,const golf_player_t *);
 #endif

@@ -1,4 +1,5 @@
 #include "golf/wildlife.h"
+#include "golf/physics.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -61,11 +62,12 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         if(!match)continue;
         w->course=index*4+1;w->world=index/2+1;w->stage=index%2*4+1;
         for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(!present[kind]) {
-            wanted[kind]=vec3_add(start,vec3_scale(vec3_sub(hole,start),.25f+kind*.25f));present[kind]=true;
+            wanted[kind]=vec3_add(start,vec3_scale(vec3_sub(hole,start),kind==GOLF_MEG?.6f:.25f+kind*.25f));present[kind]=true;
         }
         break;
     }
     if(!present[GOLF_JUJU]&&present[2]){wanted[GOLF_JUJU]=wanted[2];present[GOLF_JUJU]=true;}
+    if(!present[GOLF_MEG]&&(present[0]||present[1]||present[2]||present[3])){wanted[GOLF_MEG]=vec3_add(start,vec3_scale(vec3_sub(hole,start),.6f));present[GOLF_MEG]=true;}
     for(int i=0;i<w->portal_count;i++){
         golf_portal_t *portal=&w->portals[i];portal->active=golf_wildlife_safe(w,portal->pos,.26f);
         if(!portal->active){
@@ -89,6 +91,7 @@ void golf_wildlife_init(golf_wildlife_t *w,golf_level_t *level,golf_bvh_t *floor
         golf_wild_animal_t *a=&w->animals[kind];a->active=a->present=true;a->a=a->b=a->pos=nav->nodes[best].pos;
         a->forward=V3(0,0,-1);a->action_time=-100;a->clock=0;
         a->presence=1;a->patrol_period=8+kind*1.7f;
+        if(kind==GOLF_MEG)continue; /* Meg sits on a validated fairway location. */
         // Prefer a longer validated corridor; narrow fields retain their safe fallback.
         float route_length=0;
         for(int j=0;j<nav->count;j++) {
@@ -152,6 +155,7 @@ static void animate(golf_wildlife_t *w,float time) {
     for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++) {
         golf_wild_animal_t *a=&w->animals[kind];if(!a->active)continue;
         float age=time-a->action_time;
+        if(kind==GOLF_MEG){a->walking=false;a->speed=a->gait=0;if(a->action==MEG_RELEASING&&age>=.25f)a->action=MEG_COOLDOWN;if(a->action==MEG_COOLDOWN&&age>=GOLF_MEG_PROTECTION)a->action=MEG_IDLE;continue;}
         if(age>=0&&age<1.1f){a->walking=false;a->speed=0;a->gait*=expf(-dt*12);continue;}
         float old_clock=a->clock;a->clock+=dt;float period=a->patrol_period>0?a->patrol_period:8+kind*1.7f,p=fmodf(a->clock,period)/period;
         float t=p<.46f?p/.46f:p<.5f?1:p<.96f?1-(p-.5f)/.46f:0;
@@ -290,6 +294,11 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
     for(int i=0;i<count;i++) {
         golf_player_t *p=&players[i];golf_ball_t *b=&p->ball;
         if(!p->id||!p->connected||b->is_in_hole)continue;
+        if(b->capture_kind==GOLF_CAPTURE_MEG){
+            golf_wild_animal_t *meg=&w->animals[GOLF_MEG];
+            b->pos=b->draw_pos=golf_meg_mouth(w);b->vel=V3(0,0,0);b->captured=b->is_moving=true;b->capture_until=FLT_MAX;
+            meg->action=time-b->effect_time<.18f?MEG_CAPTURING:MEG_HOLDING;continue;
+        }
         if(b->capture_kind==5)continue;
         if(b->capture_kind) {
             if(time>=b->capture_until)release(b,time);
@@ -338,11 +347,14 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             golf_wild_animal_t *a=&w->animals[kind];if(!a->active||!a->present||a->presence<.95f)continue;
             float d=vec3_distance(b->pos,vec3_add(a->pos,V3(0,b->radius,0)));
             if(d>.82f)b->wildlife_contact&=~(1u<<kind);
-            if(d>.62f||time<b->wildlife_cooldown[kind]||(b->wildlife_contact&(1u<<kind)))continue;
+            if(d>(kind==GOLF_MEG?.75f:.62f)||time<b->wildlife_cooldown[kind]||(b->wildlife_contact&(1u<<kind)))continue;
             b->wildlife_contact|=1u<<kind;b->wildlife_cooldown[kind]=time+6;b->wildlife_hits[kind]++;
             a->action=kind+1;a->action_time=time;
             vec3 facing=vec3_sub(b->pos,a->pos);facing.y=0;if(vec3_length(facing)>.01f)a->forward=vec3_normalize(facing);
-            if(kind==0) {
+            if(kind==GOLF_MEG){
+                capture(b,GOLF_CAPTURE_MEG,golf_meg_mouth(w),time,0);b->capture_until=FLT_MAX;b->effect_kind=GOLF_EFFECT_MEG;
+                b->pos=b->draw_pos=golf_meg_mouth(w);b->resting_static=false;a->action=MEG_CAPTURING;
+            }else if(kind==0) {
                 puddle(w,a->pos);b->slow_shots=3;b->slow_born_stroke=p->stroke_count;
                 b->slow_until=time+1;b->vel=vec3_scale(b->vel,.55f);
                 if(!slow_applied){b->effect_kind=1;b->effect_time=time;b->effect_serial++;}
@@ -364,4 +376,19 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
     }
     finish_shots(w,players,count,time);
     // The puddle's lifetime is independent of each player's three-shot debuff.
+}
+
+/* A held ball has no expiry. Only this explicit interaction can launch it. */
+vec3 golf_meg_mouth(const golf_wildlife_t *w){return vec3_add(w->animals[GOLF_MEG].pos,V3(0,.84f,0));}
+bool golf_meg_release(golf_wildlife_t *w,golf_player_t *p,golf_config_t *config,float time,uint32_t seed){
+    if(!p||!p->connected||p->ball.is_in_hole||p->ball.capture_kind!=GOLF_CAPTURE_MEG||!p->ball.captured)return false;
+    golf_wild_animal_t *meg=&w->animals[GOLF_MEG];if(!meg->active||!meg->present)return false;
+    golf_ball_t *b=&p->ball;
+    float angle=(random_word(seed^(p->id*0x85ebca6bu)^(++w->meg_launches*0x9e3779b9u))/4294967296.0)*2*MF_PI;
+    b->pos=b->draw_pos=golf_meg_mouth(w);b->vel=V3(cosf(angle)*golf_physics_max_shot_speed(config),0,sinf(angle)*golf_physics_max_shot_speed(config));
+    b->captured=false;b->capture_kind=0;b->capture_until=0;b->is_moving=true;b->resting_static=false;b->time_going_slow=0;
+    b->wildlife_protection=time+GOLF_MEG_PROTECTION;b->wildlife_cooldown[GOLF_MEG]=time+GOLF_MEG_PROTECTION;
+    b->cat_cooldown=b->dog_cooldown=time+GOLF_MEG_PROTECTION;
+    b->effect_kind=GOLF_EFFECT_MEG;b->effect_time=time;b->effect_serial++;meg->action=MEG_RELEASING;meg->action_time=time;
+    return true;
 }
