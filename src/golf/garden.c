@@ -1,5 +1,6 @@
 #include "golf/garden.h"
 #include "golf/juju_pose.h"
+#include "golf/meg_pose.h"
 #include "golf/cat_pose.h"
 #include "golf/seasonal_pose.h"
 #include <float.h>
@@ -19,7 +20,7 @@
 #define WORLD_LIMIT 72000
 #define FX_LIMIT 8192
 // Detailed wildlife and the original mascots, including simultaneous actions.
-#define ACTOR_LIMIT 40960
+#define ACTOR_LIMIT 49152
 typedef struct garden_vertex { vec3 position, normal; vec4 color; } garden_vertex_t;
 typedef struct garden_mesh { garden_vertex_t *vertices; int count, capacity; } garden_mesh_t;
 static struct {
@@ -568,49 +569,53 @@ static void muddy_ball(garden_mesh_t *mesh,const golf_player_t *p,float time){
 static void meg(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time,golf_game_t *game){
     garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
     vec4 black=paint(.105f,.105f,.115f,0),soft=paint(.18f,.17f,.18f,0),gray=paint(.46f,.44f,.43f,0),white=paint(.96f,.92f,.85f,0),nose=paint(.045f,.04f,.04f,0);
+    const golf_wildlife_t *wildlife=&game->mechanics.wildlife;
+    float lie=golf_meg_lie(a,time);
+    float ground_y=wildlife->meg_ground.y-a->pos.y;
+    float head_shift=lie*(vec3_dot(vec3_sub(wildlife->meg_ground,a->pos),a->forward)-.50f);
     float breath=.008f*sinf(time*2.2f),age=time-a->action_time;
     float nod=a->action==MEG_CAPTURING?.035f*sinf(golf_clampf(age/.18f,0,1)*MF_PI):a->action==MEG_RELEASING?.045f*sinf(golf_clampf(age/.25f,0,1)*MF_PI):0;
-    oval(mesh,V3(0,.42f+breath,-.18f),V3(.32f,.36f,.44f),black,5,12);
+    oval(mesh,V3(0,.42f-.18f*lie+breath,-.18f-.07f*lie),V3(.32f,.36f-.16f*lie,.44f+.08f*lie),black,5,12);
     // Seated haunches, planted front legs and four paws remain joined to torso.
     for(int side=-1;side<=1;side+=2){
-        oval(mesh,V3(side*.27f,.20f,-.36f),V3(.18f,.20f,.25f),black,4,10);
-        oval(mesh,V3(side*.29f,.075f,-.27f),V3(.135f,.075f,.17f),soft,3,9);
-        branch(mesh,V3(side*.17f,.53f,.035f),V3(side*.20f,.09f,.18f),.09f,.07f,black);
-        oval(mesh,V3(side*.20f,.075f,.20f),V3(.115f,.075f,.16f),black,3,10);
-        for(int toe=0;toe<2;toe++)branch(mesh,V3(side*.20f+(toe?1:-1)*.035f,.065f,.326f),V3(side*.20f+(toe?1:-1)*.035f,.095f,.326f),.004f,.003f,soft);
+        oval(mesh,V3(side*.27f,.20f-.05f*lie,-.36f-.07f*lie),V3(.18f,.20f-.05f*lie,.25f),black,4,10);
+        oval(mesh,V3(side*.29f,.075f,-.27f-.10f*lie),V3(.135f,.075f,.17f),soft,3,9);
+        branch(mesh,V3(side*.17f,.53f-.28f*lie,.035f+.065f*lie),V3(side*.20f,.09f,.18f+.16f*lie),.09f,.07f,black);
+        oval(mesh,V3(side*.20f,.075f,.20f+.16f*lie),V3(.115f,.075f,.16f),black,3,10);
+        for(int toe=0;toe<2;toe++)branch(mesh,V3(side*.20f+(toe?1:-1)*.035f,.065f,.326f+.16f*lie),V3(side*.20f+(toe?1:-1)*.035f,.095f,.326f+.16f*lie),.004f,.003f,soft);
     }
-    oval(mesh,V3(0,.52f+breath,.265f),V3(.125f,.18f,.045f),white,4,10);
-    oval(mesh,V3(-.045f,.63f+breath,.225f),V3(.07f,.11f,.045f),white,3,8);
-    oval(mesh,V3(.02f,.37f+breath,.255f),V3(.055f,.085f,.035f),white,3,8);
-    float head=.94f+breath+nod;
-    oval(mesh,V3(0,head,.12f),V3(.275f,.255f,.255f),black,5,12);
+    oval(mesh,V3(0,.52f-.22f*lie+breath,.265f+.03f*lie),V3(.125f,.18f-.08f*lie,.045f),white,4,10);
+    oval(mesh,V3(-.045f,.63f-.28f*lie+breath,.225f+.03f*lie),V3(.07f,.11f-.06f*lie,.045f),white,3,8);
+    oval(mesh,V3(.02f,.37f-.17f*lie+breath,.255f+.03f*lie),V3(.055f,.085f-.04f*lie,.035f),white,3,8);
+    float head=.94f+lie*(ground_y+.15f-.94f)+breath+nod*(1-lie);
+    oval(mesh,V3(0,head,.12f+head_shift),V3(.275f,.255f,.255f),black,5,12);
     for(int side=-1;side<=1;side+=2){
-        oval(mesh,V3(side*.27f,head-.09f,.075f),V3(.13f,.28f,.13f),black,4,11);
-        oval(mesh,V3(side*.30f,head-.095f,.15f),V3(.08f,.21f,.06f),soft,3,9);
+        oval(mesh,V3(side*.27f,head-.09f+.05f*lie,.075f+head_shift),V3(.13f,.28f-.15f*lie,.13f),black,4,11);
+        oval(mesh,V3(side*.30f,head-.095f,.15f+head_shift),V3(.08f,.21f-.11f*lie,.06f),soft,3,9);
         float eye=fmodf(time,4.7f)<.13f?.007f:.077f;
-        oval(mesh,V3(side*.108f,head+.04f,.35f),V3(.062f,eye,.020f),white,3,9);
-        oval(mesh,V3(side*.108f,head+.04f,.370f),V3(.049f,eye*.9f,.015f),paint(.52f,.29f,.12f,0),3,9);
-        oval(mesh,V3(side*.108f,head+.045f,.386f),V3(.029f,eye*.78f,.010f),nose,3,8);
-        if(eye>.02f)oval(mesh,V3(side*.098f,head+.068f,.397f),V3(.012f,.016f,.006f),white,2,7);
-        oval(mesh,V3(side*.064f,head-.105f,.34f),V3(.105f,.075f,.105f),gray,4,10);
-        for(int dot=0;dot<3;dot++)oval(mesh,V3(side*(.065f+dot*.02f),head-.1f-dot%2*.02f,.437f),V3(.005f,.005f,.004f),black,2,5);
+        oval(mesh,V3(side*.108f,head+.04f,.35f+head_shift),V3(.062f,eye,.020f),white,3,9);
+        oval(mesh,V3(side*.108f,head+.04f,.370f+head_shift),V3(.049f,eye*.9f,.015f),paint(.52f,.29f,.12f,0),3,9);
+        oval(mesh,V3(side*.108f,head+.045f,.386f+head_shift),V3(.029f,eye*.78f,.010f),nose,3,8);
+        if(eye>.02f)oval(mesh,V3(side*.098f,head+.068f,.397f+head_shift),V3(.012f,.016f,.006f),white,2,7);
+        oval(mesh,V3(side*.064f,head-.105f,.34f+head_shift),V3(.105f,.075f,.105f),gray,4,10);
+        for(int dot=0;dot<3;dot++)oval(mesh,V3(side*(.065f+dot*.02f),head-.1f-dot%2*.02f,.437f+head_shift),V3(.005f,.005f,.004f),black,2,5);
     }
-    oval(mesh,V3(0,head-.04f,.445f),V3(.067f,.042f,.043f),nose,3,10);
-    oval(mesh,V3(-.02f,head-.027f,.479f),V3(.021f,.008f,.007f),soft,2,7);
-    oval(mesh,V3(0,head-.15f,.397f),V3(.08f,.045f,.055f),nose,3,9);
+    oval(mesh,V3(0,head-.04f,.445f+head_shift),V3(.067f,.042f,.043f),nose,3,10);
+    oval(mesh,V3(-.02f,head-.027f,.479f+head_shift),V3(.021f,.008f,.007f),soft,2,7);
+    oval(mesh,V3(0,head-.15f,.397f+head_shift),V3(.08f,.045f,.055f),nose,3,9);
     const golf_player_t *holder=NULL;
     for(int i=0;i<game->player_count;i++)if(game->players[i].connected&&game->players[i].ball.capture_kind==GOLF_CAPTURE_MEG){
         if(!holder||game->players[i].id==game->local_player_id)holder=&game->players[i];
         if(game->players[i].id==game->local_player_id)break;
     }
-    if(holder)oval(mesh,V3(0,.84f,.50f),V3(GOLF_BALL_RADIUS,GOLF_BALL_RADIUS,GOLF_BALL_RADIUS),paint(holder->color.x,holder->color.y,holder->color.z,0),5,12);
-    else oval(mesh,V3(.02f,head-.175f,.447f),V3(.042f,.065f,.018f),paint(.92f,.43f,.47f,0),3,9);
+    if(!holder)oval(mesh,V3(.02f,head-.175f,.447f+head_shift),V3(.042f,.065f,.018f),paint(.92f,.43f,.47f,0),3,9);
     // Fixed socket and bounded tail joints, with genuine thickness from all views.
     float wag=.10f*sinf(time*(a->action==MEG_HOLDING?13:5));
-    vec3 tail[]={V3(-.20f,.32f,-.43f),V3(-.36f,.34f,-.57f),V3(-.49f,.46f,-.60f),V3(-.47f+wag,.64f,-.55f)};
+    vec3 tail[]={V3(-.20f,.32f-.12f*lie,-.43f),V3(-.36f,.34f-.15f*lie,-.57f),V3(-.49f,.46f-.22f*lie,-.60f),V3(-.47f+wag,.64f-.30f*lie,-.55f)};
     for(int j=0;j<3;j++)branch(mesh,tail[j],tail[j+1],.065f-j*.014f,.05f-j*.014f,black);
     garden.transform=mat4_identity();
-    if(a->action==MEG_RELEASING&&age<.25f)for(int i=0;i<game->player_count;i++){
+    if(holder)oval(mesh,golf_meg_mouth_at(wildlife,time),V3(GOLF_BALL_RADIUS,GOLF_BALL_RADIUS,GOLF_BALL_RADIUS),paint(holder->color.x,holder->color.y,holder->color.z,0),5,12);
+    if(a->action==MEG_RELEASING||a->action==MEG_COOLDOWN)for(int i=0;i<game->player_count;i++){
         golf_player_t *p=&game->players[i];if(p->ball.effect_kind!=GOLF_EFFECT_MEG||p->ball.captured||time-p->ball.effect_time>.25f)continue;
         vec3 direction=vec3_normalize(p->ball.vel),from=vec3_sub(p->ball.draw_pos,vec3_scale(direction,.22f));
         branch(mesh,from,p->ball.draw_pos,.018f,.005f,paint(1,.88f,.56f,0));

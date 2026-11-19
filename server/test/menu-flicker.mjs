@@ -53,7 +53,7 @@ try{
     }
     bodies.push({node,id:node.closest('[data-pet]').dataset.pet,points:points.filter((_,i)=>i%Math.max(1,Math.floor(points.length/32))===0).slice(0,32),minimum:1});
    }
-   if(bodies.length!==7||bodies.some(b=>b.points.length<5))throw new Error('Need opaque interior samples from every actual animal body');
+   if(bodies.length!==svg.querySelectorAll('[data-pet]').length||bodies.some(b=>b.points.length<5))throw new Error('Need opaque interior samples from every actual animal body');
    window.__petSamples=bodies;
    const start=performance.now();let checks=0,previousFrames=-1;
    while(performance.now()-start<40000){

@@ -109,9 +109,10 @@ static void wildlife_json(const golf_wildlife_t *w) {
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
-        printf("%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g}",i?",":"",i,(a->active&&i==mechanics.third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time);
+        printf("%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.7g,%.7g,%.7g],\"forward\":[%.7g,0,%.7g],\"walking\":%s,\"clock\":%.7g,\"stride\":%.7g,\"speed\":%.7g,\"gait\":%.7g,\"action\":%d,\"actionTime\":%.7g,\"megPoseFrom\":%.7g}",i?",":"",i,(a->active&&i==mechanics.third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->forward.x,a->forward.z,a->walking?"true":"false",a->clock,a->stride,a->speed,a->gait,a->action,a->action_time,a->meg_pose_from);
     }
-    printf("],\"acceptedShots\":%u,\"puddles\":[",w->accepted_shots);
+    printf("],\"megGround\":[%.7g,%.7g,%.7g]",w->meg_ground.x,w->meg_ground.y,w->meg_ground.z);
+    printf(",\"acceptedShots\":%u,\"puddles\":[",w->accepted_shots);
     int count=0;for(int i=0;i<GOLF_PUDDLES;i++)if(w->puddles[i].active){
         const golf_puddle_t *p=&w->puddles[i];printf("%s{\"id\":%u,\"pos\":[%.7g,%.7g,%.7g],\"born\":%u,\"remaining\":%d}",count++?",":"",p->id,p->pos.x,p->pos.y,p->pos.z,p->born,p->remaining);
     }printf("],\"mudPrints\":[");
@@ -171,7 +172,7 @@ int main(int argc, char **argv) {
         } else if (cmd && !strcmp(cmd,"connected") && slot>=0 && slot<GOLF_MAX_PLAYERS) { players[slot].connected=json_object_get_boolean(o,"connected")==1; ok=true;
         } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { vec3 direction=golf_json_object_get_vec3(o,"direction");float power=(float)json_object_get_number(o,"power");ok=golf_physics_shoot(&world,&players[slot],direction,power);if(ok){golf_wildlife_shot(&mechanics.wildlife,&players[slot]);golf_bot_record(&bot_memory[slot],&players[slot],direction,power);event("shot",&players[slot],power);}
         } else if (cmd && !strcmp(cmd,"meg") && slot>=0 && slot<GOLF_MAX_PLAYERS && !planner_only) {
-            ok=golf_meg_release(&mechanics.wildlife,&players[slot],&config,world.time,mechanics.seed);if(ok)event("meg",&players[slot],1);
+            ok=golf_meg_release(&mechanics.wildlife,&players[slot],&config,world.time,mechanics.seed);
         } else if (cmd && !strcmp(cmd,"step")) {
             int ticks=(int)json_object_get_number(o,"ticks"); if (ticks<0 || ticks>1200) ticks=0;
             bool full_players=getenv("GOLF_PHYSICS_FULL_PLAYERS")!=NULL;
@@ -212,7 +213,7 @@ int main(int argc, char **argv) {
             printf(",\"catSpan\":%.9g,\"catCenter\":[%.9g,%.9g,%.9g],\"catAcross\":[%.9g,%.9g,%.9g]",mechanics.cat_span,mechanics.cat_center.x,mechanics.cat_center.y,mechanics.cat_center.z,mechanics.across.x,mechanics.across.y,mechanics.across.z);
             wildlife_json(&mechanics.wildlife);
             printf(",\"season\":{\"enabled\":%s,\"items\":[",mechanics.season.enabled?"true":"false");
-            for(int k=0;k<mechanics.season.count;k++){golf_season_item_t *q=&mechanics.season.items[k];printf("%s{\"kind\":%d,\"pos\":[%.7g,%.7g,%.7g],\"phase\":%.7g,\"actionTime\":%.7g}",k?",":"",q->kind,q->pos.x,q->pos.y,q->pos.z,q->phase,q->action_time);}
+            for(int k=0;k<mechanics.season.count;k++){golf_season_item_t *q=&mechanics.season.items[k];printf("%s{\"kind\":%d,\"pos\":[%.7g,%.7g,%.7g],\"phase\":%.7g,\"actionTime\":%.7g,\"megPoseFrom\":%.7g}",k?",":"",q->kind,q->pos.x,q->pos.y,q->pos.z,q->phase,q->action_time);}
             printf("]}");printf("},\"players\":[");
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {

@@ -304,7 +304,7 @@ export class Room {
     }finally{this.shotPending.delete(m.id);}
   }
   async releaseMeg(m:Member,message:any,refresh=true){
-    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==6||!m.ball.captured||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error('Interação com a Meg indisponível.');
+    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==6||!m.ball.captured||m.ball.captureUntil<1e30||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error('Interação com a Meg indisponível.');
     const physics=this.physics,generation=this.generation;if(!physics)throw Error('Interação com a Meg indisponível.');
     this.shotPending.add(m.id);
     try{
@@ -372,7 +372,7 @@ export class Room {
       this.rotateTurn();if(capped)this.publish();
       // A bot explicitly interacts through the same authorized command as a tap.
       let megBots=0;
-      for(const bot of this.members.values())if(bot.bot&&bot.ready&&bot.ball?.captureKind===6&&(this.playStyle!=='turns'||this.turn===bot.id)&&this.phase==='playing'&&!this.timedOut()){
+      for(const bot of this.members.values())if(bot.bot&&bot.ready&&bot.ball?.captureKind===6&&bot.ball.captureUntil>1e30&&(this.playStyle!=='turns'||this.turn===bot.id)&&this.phase==='playing'&&!this.timedOut()){
         await this.releaseMeg(bot,{hole:this.hole,match:this.match},false);megBots++;
       }
       if(megBots){

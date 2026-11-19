@@ -4,6 +4,7 @@
 #include "golf/ui.h"
 
 #include <assert.h>
+#include <float.h>
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include "cimgui/cimgui.h"
 #include "parson/parson.h"
@@ -1356,7 +1357,7 @@ static bool _golf_ui_meg(void){
     bool down=inputs->is_touch?inputs->touch_down:inputs->mouse_down[0],ended=inputs->is_touch?inputs->touch_ended:inputs->mouse_clicked[0];
     if(down&&sx*sx+sy*sy<=1&&!igGetIO()->WantCaptureMouse)pressed=true;
     golf_font_t *font=golf_data_get_font("data/font/poppins/Poppins-SemiBold.ttf");
-    _golf_ui_draw_text(font,V2(center.x,top.y-18),golf_clampf(17*_get_ui_scale(),12,20),V4(1,.96f,.79f,1),0,1,golf_i18n_t("meg.hold"),1);
+    _golf_ui_draw_text(font,V2(center.x,top.y-18),golf_clampf(17*_get_ui_scale(),12,20),V4(1,.96f,.79f,1),0,1,golf_i18n_t(p->ball.capture_until<FLT_MAX?"meg.releasing":"meg.hold"),1);
     bool consume=pressed;
     if(ended&&sx*sx+sy*sy<=1&&!igGetIO()->WantCaptureMouse){if(cx*cx+cy*cy<=1&&!inputs->touch_cancelled)golf_game_release_meg();pressed=false;consume=true;}
     else if(!down)pressed=false;

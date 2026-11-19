@@ -21,3 +21,17 @@ export async function captureMeg(room,members){
   for(const ball of frame.players)room.members.get(ball.id).ball=ball;
   room.snapshot(true);return frame;
 }
+
+// Stop at the exact authority tick that releases the ball, before friction or
+// another tick changes the initial launch velocity and ground contact.
+export async function finishMegRelease(room,members){
+ let frame;
+ for(let tick=0;tick<90;tick++){
+  frame=await room.physics.step(1);
+  room.worldTime=frame.time;room.mascots=frame.mascots;
+  for(const ball of frame.players)room.members.get(ball.id).ball=ball;
+  room.snapshot(true);
+  if(members.every(m=>frame.players.find(p=>p.id===m.id).captureKind!==6))return frame;
+ }
+ throw Error('Meg did not complete the explicitly authorized ground release');
+}

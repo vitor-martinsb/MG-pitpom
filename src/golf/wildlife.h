@@ -20,7 +20,7 @@ enum {MEG_IDLE,MEG_CAPTURING,MEG_HOLDING,MEG_RELEASING,MEG_COOLDOWN};
 typedef struct golf_wild_animal {
     bool active, walking, present;
     vec3 a,b,pos,forward,bend;
-    float clock,action_time,stride,speed,gait,presence,patrol_period;
+    float clock,action_time,stride,speed,gait,presence,patrol_period,meg_pose_from;
     int action;
 } golf_wild_animal_t;
 typedef struct golf_wind_zone { vec3 pos,size,direction; float strength,period,phase; bool mill; } golf_wind_zone_t;
@@ -35,6 +35,7 @@ typedef struct golf_wildlife {
     golf_puddle_t puddles[GOLF_PUDDLES];uint32_t accepted_shots,next_puddle;
     golf_mud_print_t mud_prints[GOLF_MUD_PRINTS];uint32_t next_mud_print;float print_distance;
     golf_wild_shot_t shots[GOLF_MAX_PLAYERS];
+    vec3 meg_ground;
     uint32_t meg_launches;
     int world,stage,course;
     float time;
@@ -50,6 +51,7 @@ bool golf_wildlife_safe(const golf_wildlife_t *,vec3,float);
 vec3 golf_wildlife_wind(const golf_wildlife_t *,vec3,float);
 float golf_wind_gust(const golf_wind_zone_t *,float);
 vec3 golf_meg_mouth(const golf_wildlife_t *);
+vec3 golf_meg_mouth_at(const golf_wildlife_t *,float);
 bool golf_meg_release(golf_wildlife_t *,golf_player_t *,golf_config_t *,float,uint32_t);
 void golf_wildlife_shot(golf_wildlife_t *,const golf_player_t *);
 #endif

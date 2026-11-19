@@ -1,5 +1,6 @@
 #include "golf/wildlife.h"
 #include "golf/physics.h"
+#include "golf/meg_pose.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -155,7 +156,7 @@ static void animate(golf_wildlife_t *w,float time) {
     for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++) {
         golf_wild_animal_t *a=&w->animals[kind];if(!a->active)continue;
         float age=time-a->action_time;
-        if(kind==GOLF_MEG){a->walking=false;a->speed=a->gait=0;if(a->action==MEG_RELEASING&&age>=.25f)a->action=MEG_COOLDOWN;if(a->action==MEG_COOLDOWN&&age>=GOLF_MEG_PROTECTION)a->action=MEG_IDLE;continue;}
+        if(kind==GOLF_MEG){a->walking=false;a->speed=a->gait=0;if(a->action==MEG_RELEASING&&age>=GOLF_MEG_LOWER_TIME)a->action=MEG_COOLDOWN;if(a->action==MEG_COOLDOWN&&age>=GOLF_MEG_PROTECTION)a->action=MEG_IDLE;continue;}
         if(age>=0&&age<1.1f){a->walking=false;a->speed=0;a->gait*=expf(-dt*12);continue;}
         float old_clock=a->clock;a->clock+=dt;float period=a->patrol_period>0?a->patrol_period:8+kind*1.7f,p=fmodf(a->clock,period)/period;
         float t=p<.46f?p/.46f:p<.5f?1:p<.96f?1-(p-.5f)/.46f:0;
@@ -296,8 +297,17 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
         if(!p->id||!p->connected||b->is_in_hole)continue;
         if(b->capture_kind==GOLF_CAPTURE_MEG){
             golf_wild_animal_t *meg=&w->animals[GOLF_MEG];
-            b->pos=b->draw_pos=golf_meg_mouth(w);b->vel=V3(0,0,0);b->captured=b->is_moving=true;b->capture_until=FLT_MAX;
-            meg->action=time-b->effect_time<.18f?MEG_CAPTURING:MEG_HOLDING;continue;
+            if(b->capture_until<FLT_MAX&&time>=b->capture_until&&time>=meg->action_time+GOLF_MEG_LOWER_TIME){
+                b->pos=b->draw_pos=w->meg_ground;b->vel=b->capture_target;
+                b->captured=false;b->capture_kind=0;b->capture_until=0;b->is_moving=true;b->resting_static=false;b->time_going_slow=0;
+                b->wildlife_protection=time+GOLF_MEG_PROTECTION;b->wildlife_cooldown[GOLF_MEG]=time+GOLF_MEG_PROTECTION;
+                b->cat_cooldown=b->dog_cooldown=time+GOLF_MEG_PROTECTION;
+                b->effect_kind=GOLF_EFFECT_MEG;b->effect_time=time;b->effect_serial++;
+            }else{
+                b->pos=b->draw_pos=golf_meg_mouth(w);b->vel=V3(0,0,0);b->captured=b->is_moving=true;
+                if(meg->action!=MEG_RELEASING&&meg->action!=MEG_COOLDOWN)meg->action=time-b->effect_time<.18f?MEG_CAPTURING:MEG_HOLDING;
+            }
+            continue;
         }
         if(b->capture_kind==5)continue;
         if(b->capture_kind) {
@@ -349,11 +359,14 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             if(d>.82f)b->wildlife_contact&=~(1u<<kind);
             if(d>(kind==GOLF_MEG?.75f:.62f)||time<b->wildlife_cooldown[kind]||(b->wildlife_contact&(1u<<kind)))continue;
             b->wildlife_contact|=1u<<kind;b->wildlife_cooldown[kind]=time+6;b->wildlife_hits[kind]++;
-            a->action=kind+1;a->action_time=time;
-            vec3 facing=vec3_sub(b->pos,a->pos);facing.y=0;if(vec3_length(facing)>.01f)a->forward=vec3_normalize(facing);
+            bool meg_posing=kind==GOLF_MEG&&(a->action==MEG_RELEASING||a->action==MEG_COOLDOWN);
+            if(!meg_posing){
+                a->action=kind+1;a->action_time=time;
+                vec3 facing=vec3_sub(b->pos,a->pos);facing.y=0;if(vec3_length(facing)>.01f)a->forward=vec3_normalize(facing);
+            }
             if(kind==GOLF_MEG){
                 capture(b,GOLF_CAPTURE_MEG,golf_meg_mouth(w),time,0);b->capture_until=FLT_MAX;b->effect_kind=GOLF_EFFECT_MEG;
-                b->pos=b->draw_pos=golf_meg_mouth(w);b->resting_static=false;a->action=MEG_CAPTURING;
+                b->pos=b->draw_pos=golf_meg_mouth(w);b->resting_static=false;if(!meg_posing)a->action=MEG_CAPTURING;
             }else if(kind==0) {
                 puddle(w,a->pos);b->slow_shots=3;b->slow_born_stroke=p->stroke_count;
                 b->slow_until=time+1;b->vel=vec3_scale(b->vel,.55f);
@@ -378,17 +391,32 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
     // The puddle's lifetime is independent of each player's three-shot debuff.
 }
 
-/* A held ball has no expiry. Only this explicit interaction can launch it. */
-vec3 golf_meg_mouth(const golf_wildlife_t *w){return vec3_add(vec3_add(w->animals[GOLF_MEG].pos,vec3_scale(w->animals[GOLF_MEG].forward,.50f)),V3(0,.84f,0));}
+/* Untouched holds have no deadline. A tap explicitly authorizes this wind-up. */
+vec3 golf_meg_mouth_at(const golf_wildlife_t *w,float time){
+    const golf_wild_animal_t *a=&w->animals[GOLF_MEG];
+    vec3 seated=vec3_add(vec3_add(a->pos,vec3_scale(a->forward,.50f)),V3(0,.84f,0));
+    return vec3_add(seated,vec3_scale(vec3_sub(w->meg_ground,seated),golf_meg_lie(a,time)));
+}
+vec3 golf_meg_mouth(const golf_wildlife_t *w){return golf_meg_mouth_at(w,w->time);}
+static bool meg_ground(const golf_wildlife_t *w,float radius,vec3 *result){
+    const golf_wild_animal_t *a=&w->animals[GOLF_MEG];
+    if(!w->floor)return false;
+    for(int step=0;step<=5;step++){
+        vec3 wanted=vec3_add(a->pos,vec3_scale(a->forward,.50f-step*.10f)),floor;
+        if(golf_nav_floor(w->floor,wanted,&floor,radius)&&fabsf(floor.y-a->pos.y)<.35f&&golf_nav_segment(w->floor,a->pos,floor,radius)){
+            *result=vec3_add(floor,V3(0,radius,0));return true;
+        }
+    }
+    return false;
+}
 bool golf_meg_release(golf_wildlife_t *w,golf_player_t *p,golf_config_t *config,float time,uint32_t seed){
-    if(!p||!p->connected||p->ball.is_in_hole||p->ball.capture_kind!=GOLF_CAPTURE_MEG||!p->ball.captured)return false;
+    if(!p||!p->connected||p->ball.is_in_hole||p->ball.capture_kind!=GOLF_CAPTURE_MEG||!p->ball.captured||p->ball.capture_until<FLT_MAX)return false;
     golf_wild_animal_t *meg=&w->animals[GOLF_MEG];if(!meg->active||!meg->present)return false;
+    vec3 ground;if(!meg_ground(w,p->ball.radius,&ground))return false;
     golf_ball_t *b=&p->ball;
     float angle=(random_word(seed^(p->id*0x85ebca6bu)^(++w->meg_launches*0x9e3779b9u))/4294967296.0)*2*MF_PI;
-    b->pos=b->draw_pos=golf_meg_mouth(w);b->vel=V3(cosf(angle)*golf_physics_max_shot_speed(config),0,sinf(angle)*golf_physics_max_shot_speed(config));
-    b->captured=false;b->capture_kind=0;b->capture_until=0;b->is_moving=true;b->resting_static=false;b->time_going_slow=0;
-    b->wildlife_protection=time+GOLF_MEG_PROTECTION;b->wildlife_cooldown[GOLF_MEG]=time+GOLF_MEG_PROTECTION;
-    b->cat_cooldown=b->dog_cooldown=time+GOLF_MEG_PROTECTION;
-    b->effect_kind=GOLF_EFFECT_MEG;b->effect_time=time;b->effect_serial++;meg->action=MEG_RELEASING;meg->action_time=time;
+    b->capture_target=V3(cosf(angle)*golf_physics_max_shot_speed(config),0,sinf(angle)*golf_physics_max_shot_speed(config));
+    b->capture_until=time+GOLF_MEG_LOWER_TIME;b->vel=V3(0,0,0);
+    meg->meg_pose_from=golf_meg_lie(meg,time);meg->action=MEG_RELEASING;meg->action_time=time;w->meg_ground=ground;
     return true;
 }

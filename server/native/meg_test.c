@@ -1,5 +1,7 @@
 #include "golf/mechanics.h"
 #include "golf/physics.h"
+#include "golf/meg_pose.h"
+#include <float.h>
 #undef NDEBUG
 #include <assert.h>
 #include <math.h>
@@ -18,7 +20,14 @@ int main(int argc,char **argv){
   assert(golf_wildlife_safe(&m.wildlife,meg->pos,.44f));assert(vec3_distance(meg->a,meg->b)<.001f);
   if(m.third_kind==GOLF_MEG){selected=true;assert(meg->present);break;}
  }
- assert(selected);if(argc>1){printf("Meg safe seated placement: %s\n",argv[1]);return 0;}
+ assert(selected);if(argc>1){
+  golf_player_t probe;golf_player_init(&probe,1,"Ground",V4(1,1,1,1),0);golf_player_start_level(&probe,golf_meg_mouth(&m.wildlife));
+  probe.stroke_count=1;probe.ball.captured=true;probe.ball.capture_kind=GOLF_CAPTURE_MEG;probe.ball.capture_until=FLT_MAX;
+  assert(golf_meg_release(&m.wildlife,&probe,&config,0,917));golf_wildlife_tick(&m.wildlife,&probe,1,.25f,917,true);
+  vec3 floor;assert(!probe.ball.captured&&probe.ball.vel.y==0);assert(golf_nav_floor(&fixed,probe.ball.pos,&floor,0));
+  assert(fabsf(probe.ball.pos.y-floor.y-probe.ball.radius)<.002f);assert(probe.stroke_count==1);
+  printf("Meg safe placement and grounded release: %s\n",argv[1]);return 0;
+ }
  golf_wildlife_t w=m.wildlife;w.wind_count=w.portal_count=0;
  for(int k=0;k<GOLF_WILDLIFE_COUNT;k++)w.animals[k].active=w.animals[k].present=k==GOLF_MEG;
  golf_wild_animal_t *meg=&w.animals[GOLF_MEG];meg->presence=1;vec3 ground=vec3_add(meg->pos,V3(0,GOLF_BALL_RADIUS,0));
@@ -31,34 +40,44 @@ int main(int argc,char **argv){
  for(int i=0;i<50;i++){assert(players[i].ball.captured&&players[i].ball.capture_kind==GOLF_CAPTURE_MEG);assert(vec3_distance(players[i].ball.pos,golf_meg_mouth(&w))<.0001f);assert(players[i].stroke_count==20);}
  assert(!golf_physics_shoot(&world,&players[0],V3(1,0,0),1));
  golf_ball_t other=players[1].ball;
- assert(golf_meg_release(&w,&players[0],&config,10000000,917));
+ assert(golf_meg_release(&w,&players[0],&config,10000,917));
+ assert(players[0].ball.captured&&vec3_length(players[0].ball.vel)==0);
+ assert(!golf_meg_release(&w,&players[0],&config,10000,917));
  assert(!memcmp(&other,&players[1].ball,sizeof(other)));assert(players[0].stroke_count==20);
+ golf_wildlife_tick(&w,players,50,10000.12f,917,true);
+ assert(players[0].ball.captured&&vec3_length(players[0].ball.vel)==0&&golf_meg_lie(meg,10000.12f)>.4f);
+ golf_wildlife_tick(&w,players,50,10000.25f,917,true);
  assert(!players[0].ball.captured&&!players[0].ball.capture_until&&players[0].ball.is_moving);
+ assert(players[0].ball.vel.y==0);vec3 floor;assert(golf_nav_floor(&fixed,players[0].ball.pos,&floor,0));
+ assert(fabsf(players[0].ball.pos.y-floor.y-players[0].ball.radius)<.002f);
+ for(int i=1;i<50;i++)assert(players[i].ball.captured&&players[i].ball.capture_until==FLT_MAX&&players[i].stroke_count==20);
  assert(fabsf(vec3_length(players[0].ball.vel)-golf_physics_max_shot_speed(&config))<.0001f);
  assert(!golf_meg_release(&w,&players[0],&config,10000000,917));
  // Protection is checked on real contact, while another player's hold remains.
  players[0].ball.pos=players[0].ball.draw_pos=ground;
- golf_wildlife_tick(&w,players,50,10000000.5f,917,true);assert(!players[0].ball.captured);
+ golf_wildlife_tick(&w,players,50,10000.5f,917,true);assert(!players[0].ball.captured);
  players[0].connected=false;players[0].ball.capture_kind=GOLF_CAPTURE_MEG;players[0].ball.captured=true;
- assert(!golf_meg_release(&w,&players[0],&config,10000001,917));players[0].connected=true;
+ assert(!golf_meg_release(&w,&players[0],&config,10001,917));players[0].connected=true;
  bool bins[16]={0};
  for(int trial=0;trial<96;trial++){
-  players[0].ball.capture_kind=GOLF_CAPTURE_MEG;players[0].ball.captured=true;players[0].ball.mud_shots=3;
-  assert(golf_meg_release(&w,&players[0],&config,20+trial,917));
+  players[0].ball.capture_kind=GOLF_CAPTURE_MEG;players[0].ball.captured=true;players[0].ball.capture_until=FLT_MAX;players[0].ball.mud_shots=3;
+  float time=10020+trial*2;assert(golf_meg_release(&w,&players[0],&config,time,917));golf_wildlife_tick(&w,players,1,time+.25f,917,true);
   vec3 v=players[0].ball.vel;assert(fabsf(vec3_length(v)-golf_physics_max_shot_speed(&config))<.0001f);
   int bin=(int)((atan2f(v.z,v.x)+MF_PI)/(2*MF_PI)*16);bins[bin%16]=true;assert(players[0].stroke_count==20);
  }
  int covered=0;for(int i=0;i<16;i++)covered+=bins[i];assert(covered>=12);
- // Release resumes the actual shared physics instead of teleporting to rest.
- float height=players[0].ball.pos.y;golf_physics_tick_player(&world,&players[0],1.f/120);assert(players[0].ball.pos.y<height);
+ // The ball begins rolling on the surface, without a drop or upward impulse.
+ float height=players[0].ball.pos.y;vec3 start=players[0].ball.pos;
+ for(int tick=0;tick<12;tick++){golf_physics_tick_player(&world,&players[0],1.f/120);assert(players[0].ball.pos.y<=height+.03f);}
+ assert(vec3_distance(players[0].ball.pos,start)>.05f);
  // The same release and physics path is used by an offline player.
- world.multiplayer=false;players[0].ball.capture_kind=GOLF_CAPTURE_MEG;players[0].ball.captured=true;
+ world.multiplayer=false;players[0].ball.capture_kind=GOLF_CAPTURE_MEG;players[0].ball.captured=true;players[0].ball.capture_until=FLT_MAX;
  assert(golf_meg_release(&w,&players[0],&config,200,917));assert(players[0].stroke_count==20);
  assert(meg->action==MEG_RELEASING);golf_wildlife_tick(&w,NULL,0,200.1f,917,true);assert(meg->action==MEG_RELEASING);
- golf_wildlife_tick(&w,NULL,0,200.3f,917,true);assert(meg->action==MEG_COOLDOWN);
+ golf_wildlife_tick(&w,players,1,200.3f,917,true);assert(meg->action==MEG_COOLDOWN&&!players[0].ball.captured&&players[0].ball.vel.y==0);
  golf_wildlife_tick(&w,NULL,0,202,917,true);assert(meg->action==MEG_IDLE);
  players[0].ball.pos=players[0].ball.draw_pos=ground;players[0].ball.wildlife_contact=0;
  golf_wildlife_tick(&w,players,1,202,917,true);assert(players[0].ball.capture_kind==GOLF_CAPTURE_MEG);
- puts("Meg: 50 independent indefinite holds, manual-only release, max force, 360-degree independent directions, unchanged strokes, recapture protection and resumed gravity passed.");
+ puts("Meg: 50 independent indefinite holds, manual-only release, max force, 360-degree independent directions, unchanged strokes, recapture protection and lying/grounded release without airborne motion passed.");
  return 0;
 }

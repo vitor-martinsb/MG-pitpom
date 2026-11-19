@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import type {WebSocket} from 'ws';
 import {Room,defaults} from '../src/room.js';
 // @ts-expect-error Shared browser/native fixture is intentionally plain JS.
-import {captureMeg} from './meg-fixture.mjs';
+import {captureMeg,finishMegRelease} from './meg-fixture.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s)),close(){},messages} as unknown as WebSocket&{messages:any[]};}
 async function fixture(style:'turns'|'simultaneous'){
@@ -31,13 +31,17 @@ for(const style of ['turns','simultaneous'] as const)test(`Meg ${style}: real ca
   await assert.rejects(room.releaseMeg(host,{...request,match:room.match+1}),/indisponível/);
   await assert.rejects(room.releaseMeg({...host,id:999},request),/indisponível/);
   await room.releaseMeg(host,{...request,player:guest.id,direction:[1,0,0],power:0});
+  assert.equal(host.ball!.captureKind,6);assert.equal(host.ball!.captured,true);assert.deepEqual(host.ball!.vel,[0,0,0]);
+  assert.ok(host.ball!.captureUntil<1e30);await assert.rejects(room.releaseMeg(host,request),/indisponível/);
+  await finishMegRelease(room,[host]);
   assert.equal(host.ball!.strokes,1);assert.equal(host.ball!.captureKind,0);assert.equal(host.ball!.moving,true);
   assert.ok(Math.abs(Math.hypot(...host.ball!.vel)-20)<.0001);
-  assert.deepEqual(guest.ball,before,'another participant keeps their own ball');
+  assert.equal(guest.ball!.captureKind,before!.captureKind,'another participant keeps their own hold');assert.equal(guest.ball!.strokes,before!.strokes);
+  assert.equal(host.ball!.vel[1],0);assert.ok(Math.abs(host.ball!.pos[1]-(-.375+ .12))<.002,'released at floor height plus the ball radius');
   assert.equal(host.lastSequence,originalSequence+1,'only the deliberately rejected shot consumes a shot sequence');
   assert.deepEqual(a.messages.findLast(m=>m.type==='snapshot').players,b.messages.findLast(m=>m.type==='snapshot').players);
   await assert.rejects(room.releaseMeg(host,request),/indisponível/);
-  if(style==='simultaneous'){await room.releaseMeg(guest,request);assert.equal(guest.ball!.strokes,1);assert.equal(guest.ball!.captureKind,0);}
+  if(style==='simultaneous'){await room.releaseMeg(guest,request);await finishMegRelease(room,[guest]);assert.equal(guest.ball!.strokes,1);assert.equal(guest.ball!.captureKind,0);}
  }finally{room.close();}
 });
 
@@ -48,7 +52,8 @@ test('a captured bot explicitly taps Meg through the same authority without anot
   const bot=[...room.members.values()].find(m=>m.bot)!;
   await room.start(host,1,'classic','simultaneous');room.ready(host,0);
   await captureMeg(room,[bot]);assert.equal(bot.ball!.captureKind,6);
-  await room.tick();assert.equal(bot.ball!.captureKind,0);assert.equal(bot.ball!.strokes,1);assert.equal(bot.ball!.moving,true);
+  await room.tick();assert.equal(bot.ball!.captureKind,6);await room.tick();assert.equal(bot.ball!.captureKind,6);
+  await finishMegRelease(room,[bot]);assert.equal(bot.ball!.captureKind,0);assert.equal(bot.ball!.strokes,1);assert.equal(bot.ball!.moving,true);
   assert.ok(Math.abs(Math.hypot(...bot.ball!.vel)-20)<.0001);
  }finally{room.close();}
 });

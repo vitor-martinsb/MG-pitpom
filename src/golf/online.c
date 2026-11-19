@@ -57,7 +57,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_online_diagnostics(void) {
 }
 
 bool golf_online_release_meg(void){
-    if(!online.active||!online.playing||online.loading||online.shot_pending||!online.has_snapshot||(online.turns&&online.turn_id!=online.local_id)||golf_game_get_local_player()->ball.capture_kind!=GOLF_CAPTURE_MEG)return false;
+    if(!online.active||!online.playing||online.loading||online.shot_pending||!online.has_snapshot||(online.turns&&online.turn_id!=online.local_id)||golf_game_get_local_player()->ball.capture_kind!=GOLF_CAPTURE_MEG||golf_game_get_local_player()->ball.capture_until<FLT_MAX)return false;
     online.shot_pending=true;online_send_meg();return true;
 }
 bool golf_online_active(void) { return online.active; }
@@ -177,11 +177,11 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
                 JSON_Object *o=json_array_get_object(animals,k);a->active=o&&json_object_get_boolean(o,"active")==1;
                 a->present=a->active&&(!json_object_has_value(o,"visible")||json_object_get_boolean(o,"visible")==1);
                 a->presence=json_object_has_value(o,"presence")?(float)json_object_get_number(o,"presence"):1;
-                if(a->active){a->pos=golf_json_object_get_vec3(o,"pos");a->forward=golf_json_object_get_vec3(o,"forward");a->walking=json_object_get_boolean(o,"walking")==1;a->clock=(float)json_object_get_number(o,"clock");a->stride=(float)json_object_get_number(o,"stride");a->speed=(float)json_object_get_number(o,"speed");a->gait=(float)json_object_get_number(o,"gait");a->action=(int)json_object_get_number(o,"action");a->action_time=(float)json_object_get_number(o,"actionTime");}
+                if(a->active){a->pos=golf_json_object_get_vec3(o,"pos");a->forward=golf_json_object_get_vec3(o,"forward");a->walking=json_object_get_boolean(o,"walking")==1;a->clock=(float)json_object_get_number(o,"clock");a->stride=(float)json_object_get_number(o,"stride");a->speed=(float)json_object_get_number(o,"speed");a->gait=(float)json_object_get_number(o,"gait");a->action=(int)json_object_get_number(o,"action");a->action_time=(float)json_object_get_number(o,"actionTime");a->meg_pose_from=(float)json_object_get_number(o,"megPoseFrom");}
             }
         }
         if(mascots){
-            golf_wildlife_t *w=&game->mechanics.wildlife;w->time=(float)json_object_get_number(o,"time");w->accepted_shots=(uint32_t)json_object_get_number(mascots,"acceptedShots");
+            golf_wildlife_t *w=&game->mechanics.wildlife;w->time=(float)json_object_get_number(o,"time");w->accepted_shots=(uint32_t)json_object_get_number(mascots,"acceptedShots");w->meg_ground=golf_json_object_get_vec3(mascots,"megGround");
             memset(w->mud_prints,0,sizeof(w->mud_prints));JSON_Array *prints=json_object_get_array(mascots,"mudPrints");
             for(size_t i=0;i<json_array_get_count(prints)&&i<GOLF_MUD_PRINTS;i++){
                 JSON_Object *q=json_array_get_object(prints,i);golf_mud_print_t *p=&w->mud_prints[i];
