@@ -71,8 +71,9 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);
     }
+    vec3 meg_forward=golf_garden_meg_forward();
     vec2 meg_screen=golf_graphics_world_to_screen(vec3_add(m->wildlife.animals[GOLF_MEG].pos,V3(0,.65f,0)));
-    snprintf(text+used,sizeof(text)-(size_t)used,"],\"megScreen\":[%.5g,%.5g],\"megLie\":%.5g,\"season\":{\"theme\":%s,\"enabled\":%s,\"items\":%d,\"vertices\":%d}}",meg_screen.x,meg_screen.y,golf_meg_lie(&m->wildlife.animals[GOLF_MEG],g->t),golf_season_settings(-1,0,0,0)?"true":"false",m->season.enabled?"true":"false",m->season.count,golf_season_vertex_count());return text;
+    snprintf(text+used,sizeof(text)-(size_t)used,"],\"megScreen\":[%.5g,%.5g],\"megForward\":[%.5g,%.5g,%.5g],\"megLie\":%.5g,\"season\":{\"theme\":%s,\"enabled\":%s,\"items\":%d,\"vertices\":%d}}",meg_screen.x,meg_screen.y,meg_forward.x,meg_forward.y,meg_forward.z,golf_meg_lie(&m->wildlife.animals[GOLF_MEG],g->t),golf_season_settings(-1,0,0,0)?"true":"false",m->season.enabled?"true":"false",m->season.count,golf_season_vertex_count());return text;
 }
 EMSCRIPTEN_KEEPALIVE void golf_course_skip(void) {golf_game_skip_presentation();}
 

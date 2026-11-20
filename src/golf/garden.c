@@ -29,7 +29,7 @@ static struct {
     sg_buffer world, effects, shadows, actors;
     unsigned vertex_count;
     unsigned actor_count;
-    vec3 cat_forward;
+    vec3 cat_forward,meg_forward;
     bool replaced[1024];
     mat4 transform;
     vec3 center;
@@ -565,9 +565,36 @@ static void muddy_ball(garden_mesh_t *mesh,const golf_player_t *p,float time){
     garden.transform=mat4_identity();
 }
 
-/* Meg uses the same volumetric actor mesh and fixed world heading as Pituca. */
+/* Pituca and Meg share world-space ball tracking, independent of the camera. */
+static vec3 pet_ball_facing(golf_game_t *game,vec3 origin,vec3 fallback) {
+    vec3 forward=fallback;
+    float nearest=FLT_MAX;bool following_incoming=false;
+    for(int i=0;i<game->player_count;i++) {
+        golf_player_t *p=&game->players[i];
+        if(!golf_game_player_visible(p)||p->ball.is_in_hole||p->ball.capture_until>0||
+           p->ball.is_out_of_bounds||p->ball.is_in_water)continue;
+        vec3 toward=vec3_sub(p->ball.draw_pos,origin);toward.y=0;
+        float distance=vec3_dot(toward,toward);
+        if(distance<.01f)continue;
+        bool incoming=p->ball.is_moving&&vec3_dot(toward,p->ball.vel)<0;
+        if((incoming&&!following_incoming)||(incoming==following_incoming&&distance<nearest)) {
+            forward=toward;nearest=distance;following_incoming=incoming;
+        }
+    }
+    forward.y=0;
+    return vec3_length(forward)>.01f?vec3_normalize(forward):fallback;
+}
 static void meg(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time,golf_game_t *game){
-    garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(a->forward.x,a->forward.z)));
+    const golf_player_t *holder=NULL;
+    for(int i=0;i<game->player_count;i++)if(game->players[i].connected&&game->players[i].ball.capture_kind==GOLF_CAPTURE_MEG){
+        if(!holder||game->players[i].id==game->local_player_id)holder=&game->players[i];
+        if(game->players[i].id==game->local_player_id)break;
+    }
+    // Track the ball like Pituca. Keep the mouth aligned with the authority
+    // while carrying/lowering a ball; after release follow it even lying down.
+    vec3 forward=holder||a->action==MEG_RELEASING?a->forward:pet_ball_facing(game,a->pos,a->forward);
+    garden.meg_forward=forward;
+    garden.transform=mat4_multiply(mat4_translation(a->pos),mat4_rotation_y(atan2f(forward.x,forward.z)));
     vec4 black=paint(.105f,.105f,.115f,0),soft=paint(.18f,.17f,.18f,0),gray=paint(.46f,.44f,.43f,0),white=paint(.96f,.92f,.85f,0),nose=paint(.045f,.04f,.04f,0);
     const golf_wildlife_t *wildlife=&game->mechanics.wildlife;
     float lie=golf_meg_lie(a,time);
@@ -603,11 +630,6 @@ static void meg(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time,golf_
     oval(mesh,V3(0,head-.04f,.445f+head_shift),V3(.067f,.042f,.043f),nose,3,10);
     oval(mesh,V3(-.02f,head-.027f,.479f+head_shift),V3(.021f,.008f,.007f),soft,2,7);
     oval(mesh,V3(0,head-.15f,.397f+head_shift),V3(.08f,.045f,.055f),nose,3,9);
-    const golf_player_t *holder=NULL;
-    for(int i=0;i<game->player_count;i++)if(game->players[i].connected&&game->players[i].ball.capture_kind==GOLF_CAPTURE_MEG){
-        if(!holder||game->players[i].id==game->local_player_id)holder=&game->players[i];
-        if(game->players[i].id==game->local_player_id)break;
-    }
     if(!holder)oval(mesh,V3(.02f,head-.175f,.447f+head_shift),V3(.042f,.065f,.018f),paint(.92f,.43f,.47f,0),3,9);
     // Fixed socket and bounded tail joints, with genuine thickness from all views.
     float wag=.10f*sinf(time*(a->action==MEG_HOLDING?13:5));
@@ -767,22 +789,9 @@ bool golf_garden_replaces_flag(const golf_entity_t *e) {
     return e->type==MODEL_ENTITY&&e->model.ignore_physics&&strstr(e->model.model_path,"/flag_");
 }
 static vec3 dog_facing(golf_game_t *game) {
-    vec3 forward=vec3_sub(game->mechanics.start,game->mechanics.dog);
-    float nearest=FLT_MAX;bool following_incoming=false;
-    for(int i=0;i<game->player_count;i++) {
-        golf_player_t *p=&game->players[i];
-        if(!golf_game_player_visible(p)||p->ball.is_in_hole||p->ball.capture_until>0||
-           p->ball.is_out_of_bounds||p->ball.is_in_water)continue;
-        vec3 toward=vec3_sub(p->ball.draw_pos,game->mechanics.dog);toward.y=0;
-        float distance=vec3_dot(toward,toward);
-        if(distance<.01f)continue;
-        bool incoming=p->ball.is_moving&&vec3_dot(toward,p->ball.vel)<0;
-        if((incoming&&!following_incoming)||(incoming==following_incoming&&distance<nearest)) {
-            forward=toward;nearest=distance;following_incoming=incoming;
-        }
-    }
-    forward.y=0;
-    return vec3_length(forward)>.01f?vec3_normalize(forward):vec3_scale(game->mechanics.direction,-1);
+    vec3 fallback=vec3_sub(game->mechanics.start,game->mechanics.dog);fallback.y=0;
+    if(vec3_length(fallback)<.01f)fallback=vec3_scale(game->mechanics.direction,-1);
+    return pet_ball_facing(game,game->mechanics.dog,fallback);
 }
 static void maritaca(garden_mesh_t *mesh,const golf_player_t *p,float time,bool detailed){
     const golf_ball_t *b=&p->ball;
@@ -930,4 +939,5 @@ float golf_garden_landscape_gap(void){return garden.landscape_gap;}
 
 #include "seasonal-render.inc"
 
+vec3 golf_garden_meg_forward(void){return garden.meg_forward;}
 vec3 golf_garden_cat_forward(void){return garden.cat_forward;}

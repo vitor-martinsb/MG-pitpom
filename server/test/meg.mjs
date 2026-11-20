@@ -50,5 +50,21 @@ try{
  assert.equal(room.members.get(2).ball.strokes,1);assert.equal(owner.ball.strokes,1);
  assert.ok(Math.abs(Math.hypot(...room.members.get(2).ball.vel)-20)<.0001);
  await guest.screenshot({path:'../out/meg/mobile-release.png'});
- assert.deepEqual(errors,[]);console.log('Meg: real collision capture, visible held ball, direct desktop click and mobile touch, outside-click rejection, independent owners, maximum speed and unchanged strokes passed.');
+ // Trusted render fixture: both free balls move around the resting Meg.
+ // Verify the actual rendered heading, including the lying recovery pose.
+ for(const pose of ['lying','idle'])for(const direction of [[1,0],[-1,0],[0,1],[0,-1]]){
+  const meg=room.mascots.wildlife[4];room.worldTime+=.05;
+  meg.action=pose==='lying'?4:0;meg.actionTime=room.worldTime-.4;
+  for(const member of room.members.values()){
+   member.ball.pos=[meg.pos[0]+direction[0]*3,meg.pos[1]+.12,meg.pos[2]+direction[1]*3];
+   member.ball.vel=[0,0,0];member.ball.moving=false;
+  }
+  room.snapshot(true);
+  for(const page of [host,guest])await page.waitForFunction(({direction,pose})=>{
+   const f=GolfCourse.inspect().frame,a=f?.wildlife[4],ball=f?.players.find(p=>p.id===f.local);
+   if(!a||!ball||f.megForward[0]*direction[0]+f.megForward[2]*direction[1]<.99)return false;
+   return pose==='lying'?f.megLie>.99:f.megLie===0;
+  },{direction,pose});
+ }
+ assert.deepEqual(errors,[]);console.log('Meg: real collision capture, visible held ball, direct desktop click and mobile touch, outside-click rejection, independent owners, maximum speed, unchanged strokes and ball tracking in four directions while lying/idle passed.');
 }catch(error){console.error(error);throw error;}finally{await browser?.close();app.close();}
