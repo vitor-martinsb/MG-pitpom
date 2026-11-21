@@ -15,7 +15,14 @@ try{
  const room=[...app.rooms.values()][0],owner=room.members.get(1);room.physicsSeed=6;room.configurePool(owner,'custom',[room.levels.indexOf('data/levels/level-3.level')]);room.configure(owner,1,'classic','simultaneous');
  await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Meg mobile'});
  await host.locator('#start').click();for(const page of [host,guest])await finishPresentation(page);
- await freezePhysics(room);await captureMeg(room,[...room.members.values()]);
+ for(const page of [host,guest])await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
+ await freezePhysics(room);await captureMeg(room,[...room.members.values()],async(member,shot)=>{
+  const page=member.id===owner.id?host:guest;
+  await page.evaluate(shot=>GolfOnline.shot(shot.direction,shot.power),shot);
+  const deadline=performance.now()+10000;
+  while(member.lastSequence!==1&&performance.now()<deadline)await page.waitForTimeout(25);
+  assert.equal(member.lastSequence,1,'the real browser sequence must include the capture shot');
+ });
  for(const page of [host,guest])await page.waitForFunction(()=>{const f=GolfCourse.inspect().frame;return f?.players.find(p=>p.id===f.local)?.captureKind===6&&f.wildlife[4].visible;});
  // Let the existing snapshot interpolation and camera settle before inspecting
  // the held illustration or calculating a direct tap on its visible body.
@@ -50,6 +57,42 @@ try{
  assert.equal(room.members.get(2).ball.strokes,1);assert.equal(owner.ball.strokes,1);
  assert.ok(Math.abs(Math.hypot(...room.members.get(2).ball.vel)-20)<.0001);
  await guest.screenshot({path:'../out/meg/mobile-release.png'});
+ // Complete the real launch instead of ending the test at release velocity.
+ // Both owners must regain aim and submit a real second shot through the UI.
+ for(let tick=0;tick<80;tick++){
+  const f=await room.physics.step(60);room.worldTime=f.time;room.mascots=f.mascots;
+  for(const ball of f.players)room.members.get(ball.id).ball=ball;room.snapshot(true);
+  if([...room.members.values()].every(m=>!m.ball.moving))break;
+ }
+ for(const [page,member] of [[host,owner],[guest,room.members.get(2)]]){
+  assert.equal(member.ball.moving,false);assert.equal(member.ball.captureKind,0);assert.equal(member.ball.strokes,1);
+  await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
+  await page.locator('#canvas').focus();
+  await page.waitForFunction(()=>{
+   const screen=JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).screen,previous=window.__megAimScreen;
+   window.__megAimScreen=screen;return previous&&Math.hypot(screen[0]-previous[0],screen[1]-previous[1])<.1;
+  });
+  const [x,y]=await page.evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).screen);
+  if(page===host){
+   await page.mouse.move(x,y);await page.mouse.down();await page.waitForTimeout(150);
+   await page.mouse.move(x,y+80,{steps:10});await page.waitForTimeout(150);await page.mouse.up();
+  }else{
+   const cdp=await page.context().newCDPSession(page).catch(()=>null);
+   if(cdp){
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await page.waitForTimeout(150);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+80}]});await page.waitForTimeout(150);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
+   }else{
+    // Playwright WebKit's touchscreen only exposes taps; the same pointer
+    // path still proves a real second shot on its mobile viewport.
+    await page.mouse.move(x,y);await page.mouse.down();await page.waitForTimeout(150);
+    await page.mouse.move(x,y+80,{steps:10});await page.waitForTimeout(150);await page.mouse.up();
+   }
+  }
+  const deadline=performance.now()+10000;
+  while(member.ball.strokes!==2&&performance.now()<deadline)await page.waitForTimeout(25);
+  assert.equal(member.ball.strokes,2,'a real follow-up shot must be accepted after tapping Meg: '+member.nickname+' '+await page.evaluate(()=>Module.ccall('golf_online_diagnostics','string',[],[])));
+ }
  // Trusted render fixture: both free balls move around the resting Meg.
  // Verify the actual rendered heading, including the lying recovery pose.
  for(const pose of ['lying','idle'])for(const direction of [[1,0],[-1,0],[0,1],[0,-1]]){
@@ -66,5 +109,5 @@ try{
    return pose==='lying'?f.megLie>.99:f.megLie===0;
   },{direction,pose});
  }
- assert.deepEqual(errors,[]);console.log('Meg: real collision capture, visible held ball, direct desktop click and mobile touch, outside-click rejection, independent owners, maximum speed, unchanged strokes and ball tracking in four directions while lying/idle passed.');
+ assert.deepEqual(errors,[]);console.log('Meg: real collision capture, visible held ball, direct desktop click and mobile touch, outside-click rejection, independent owners, maximum speed, follow-up shots after settling on desktop/mobile and ball tracking in four directions while lying/idle passed.');
 }catch(error){console.error(error);throw error;}finally{await browser?.close();app.close();}

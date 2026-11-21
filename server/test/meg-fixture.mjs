@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 
 // A real shot on the unmodified third map reaches Meg. No teleport or test-only
 // worker command is used; this also exercises the actual capture collision.
-export async function captureMeg(room,members){
+export async function captureMeg(room,members,fire=(member,shot)=>room.shot(member,shot)){
   const physics=room.physics;
   const initial=await physics.step(0),meg=initial.mascots.wildlife[4];
   assert.equal(initial.mascots.thirdKind,4);assert.ok(meg.active);
   for(const member of members){
     const ball=initial.players.find(p=>p.id===member.id),dx=meg.pos[0]-ball.pos[0],dz=meg.pos[2]-ball.pos[2],length=Math.hypot(dx,dz);
-    await room.shot(member,{sequence:1,direction:[dx/length,0,dz/length],power:.15});
+    await fire(member,{sequence:1,direction:[dx/length,0,dz/length],power:.15});
   }
   let frame;
   for(let tick=0;tick<40;tick++){
