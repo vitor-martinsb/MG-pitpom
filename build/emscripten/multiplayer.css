@@ -516,13 +516,13 @@ body:is([data-home=splash],[data-home=menu]) .music-controls summary{background:
 #home #continue-home{animation:none}
 @keyframes home-controls-in{from{opacity:0}to{opacity:1}}
 @media(orientation:portrait){
- #home-art-floor{bottom:calc(max(3%,calc(16px + var(--safe-bottom))) + 208px)}
+ /* Only the welcome action needs footer clearance; menu controls sit above the field. */
+ #home-art-floor{bottom:calc(76px + var(--safe-bottom))}
  #home .home-brand h1{font-size:clamp(2.5rem,11vw,4.5rem)}
  #home-controls{width:min(360px,calc(100% - 24px - var(--safe-left) - var(--safe-right)))}
  #home[data-screen] #main-menu{grid-template-columns:repeat(2,minmax(0,1fr))}
  #home-controls #main-menu>#open-tutorial{grid-column:1/-1}
 }
-@media(orientation:portrait) and (max-height:760px),(orientation:portrait) and (min-aspect-ratio:2/3){#home-art-floor{bottom:calc(max(3%,calc(16px + var(--safe-bottom))) + 158px)}}
 @media(orientation:portrait) and (max-height:680px){
  #home[data-screen] .home-brand{top:max(8px,var(--safe-top))}
  #home .home-brand h1{font-size:clamp(2rem,10vw,3rem)}

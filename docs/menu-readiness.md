@@ -29,7 +29,11 @@ reconnection on desktop and mobile. Both checks run in the validation workflow.
 
 The home artwork now uses a dedicated, viewport-relative `home-art-floor`,
 matching the established menu composition and independent of either button
-layout. Opening or closing the menu cannot change the character group matrix
+layout. Portrait layouts reserve only 76 CSS pixels plus the bottom safe area
+for the welcome action. The obsolete 158/208-pixel menu footer reservation is
+removed, keeping the pets on the green beside the flag instead of lifting them
+towards the landscape. Landscape/desktop placement is unchanged.
+Opening or closing the menu cannot change the character group matrix
 or the shared painter bounds. The three primary actions sit below the measured
 brand/subtitle; Settings and Exit share a smaller secondary row. The original
 Settings element moves into that row on the menu and returns to its game
