@@ -189,13 +189,14 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         }
         if(mascots){
             JSON_Object *companions=json_object_get_object(mascots,"companions");
-            const char *names[]={"benedita","smanata"};
-            for(int i=0;i<2;i++){
-                golf_companion_t *a=i?&game->mechanics.wildlife.companions.smanata:&game->mechanics.wildlife.companions.benedita;
+            const char *names[]={"benedita","smanata","alfredo"};
+            golf_companion_t *animals[]={&game->mechanics.wildlife.companions.benedita,&game->mechanics.wildlife.companions.smanata,&game->mechanics.wildlife.companions.alfredo};
+            for(int i=0;i<3;i++){
+                golf_companion_t *a=animals[i];
                 JSON_Object *c=json_object_get_object(companions,names[i]);bool was_active=a->active;vec3 previous=a->draw_pos;
                 a->active=c&&json_object_get_boolean(c,"active")==1;
                 if(!a->active)continue;
-                a->state=(int)json_object_get_number(c,"state");a->player=(uint32_t)json_object_get_number(c,"player");
+                a->cycles=(uint32_t)json_object_get_number(c,"beats");a->state=(int)json_object_get_number(c,"state");a->player=(uint32_t)json_object_get_number(c,"player");
                 a->pos=golf_json_object_get_vec3(c,"pos");a->home=golf_json_object_get_vec3(c,"home");a->forward=golf_json_object_get_vec3(c,"forward");a->look=golf_json_object_get_vec3(c,"look");
                 a->until=(float)json_object_get_number(c,"until");a->cooldown=(float)json_object_get_number(c,"cooldown");a->clock=(float)json_object_get_number(c,"clock");a->stride=(float)json_object_get_number(c,"stride");a->speed=(float)json_object_get_number(c,"speed");
                 a->draw_pos=was_active&&vec3_distance(previous,a->pos)<3?previous:a->pos;
@@ -274,8 +275,8 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
 
 void golf_online_update(float dt) {
     golf_companions_t *companions=&golf_game_get()->mechanics.wildlife.companions;
-    golf_companion_t *pets[]={&companions->benedita,&companions->smanata};
-    for(int i=0;i<2;i++)if(pets[i]->active)pets[i]->draw_pos=vec3_add(pets[i]->draw_pos,vec3_scale(vec3_sub(pets[i]->pos,pets[i]->draw_pos),1-expf(-18*dt)));
+    golf_companion_t *pets[]={&companions->benedita,&companions->smanata,&companions->alfredo};
+    for(int i=0;i<3;i++)if(pets[i]->active)pets[i]->draw_pos=vec3_add(pets[i]->draw_pos,vec3_scale(vec3_sub(pets[i]->pos,pets[i]->draw_pos),1-expf(-18*dt)));
 
     /* Leaving during asynchronous loading must not strand the offline client
        in IN_GAME when the outstanding level finishes on a later frame. */

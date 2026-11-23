@@ -363,7 +363,10 @@
     "smanata.carrying": "Samanta is finding a safe spot…",
     "benedita.gaze": "Benedita’s gaze: a three-second pause.",
     "effect.benedita": "Benedita’s gaze",
-    "effect.smanata": "Samanta is carrying your ball"
+    "effect.smanata": "Samanta is carrying your ball",
+    "pet.alfredo.name": "Alfredo",
+    "pet.alfredo.description": "Our calm tabby juggles your ball three times, then kicks it into a surprise aerial shot!",
+    "alfredo.juggling": "Alfredo is juggling the ball…"
   },
   "pt-BR": {
     "meg.releasing": "Meg está se deitando para soltar a bolinha…",
@@ -729,7 +732,10 @@
     "smanata.carrying": "Samanta está procurando um lugar seguro…",
     "benedita.gaze": "Olhar da Benedita: pausa de três segundos.",
     "effect.benedita": "Olhar da Benedita",
-    "effect.smanata": "Samanta está com sua bolinha"
+    "effect.smanata": "Samanta está com sua bolinha",
+    "pet.alfredo.name": "Alfredo",
+    "pet.alfredo.description": "Nosso gatinho rajado faz três embaixadinhas e chuta a bolinha pelo ar numa direção surpresa!",
+    "alfredo.juggling": "Alfredo está fazendo embaixadinhas…"
   },
   "es": {
     "meg.releasing": "Meg se está acostando para soltar la pelota…",
@@ -1095,6 +1101,9 @@
     "smanata.carrying": "Samanta está buscando un lugar seguro…",
     "benedita.gaze": "Mirada de Benedita: pausa de tres segundos.",
     "effect.benedita": "Mirada de Benedita",
-    "effect.smanata": "Samanta lleva tu pelota"
+    "effect.smanata": "Samanta lleva tu pelota",
+    "pet.alfredo.name": "Alfredo",
+    "pet.alfredo.description": "¡Nuestro gatito atigrado da tres toques y lanza la bola por el aire en una dirección sorpresa!",
+    "alfredo.juggling": "Alfredo está jugando con la bola…"
   }
 }

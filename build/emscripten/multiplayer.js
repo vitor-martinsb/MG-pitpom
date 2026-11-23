@@ -315,7 +315,7 @@
     if(!room)return;speedLabel.hidden=(room.simulationSpeed??1)<2||!['playing','settling'].includes(phase);speedLabel.textContent=t('botSpeed');const list=sorted();let visible=list.slice(0,5);const local=list.find(p=>p.id===identity?.id);if(local&&!visible.includes(local))visible.push(local);
     $('summary').replaceChildren(...visible.map(p=>{const row=playerRow(p),b=lastBalls.get(p.id);row.append(text('span',`${t('points',{count:p.total})} · ${b?.hole&&!p.dnf?.[room.hole]?'✓':t(room.strokeLimit?'turns.strokes':(b?.strokes??0)===1?'strokes.one':'strokes.other',{count:b?.strokes??0,limit:room.strokeLimit})}${p.dnf?.[room.hole]?' · DNF':''}`));return row;}));
     const ball=lastBalls.get(identity?.id);
-    $('help').textContent=ball?.captureKind===8?t(room.companions?.smanata?.state===3?'smanata.hold':'smanata.carrying'):ball?.captureKind===7?t('benedita.gaze'):ball?.captureKind===6?t(ball.captureUntil<1e30?'meg.releasing':'meg.hold'):room.playStyle==='turns'&&local?.dnf?.[room.hole]?t('turns.limitReached'):ball?.hole?t('helpDone'):phase==='playing'
+    $('help').textContent=ball?.captureKind===9?t('alfredo.juggling'):ball?.captureKind===8?t(room.companions?.smanata?.state===3?'smanata.hold':'smanata.carrying'):ball?.captureKind===7?t('benedita.gaze'):ball?.captureKind===6?t(ball.captureUntil<1e30?'meg.releasing':'meg.hold'):room.playStyle==='turns'&&local?.dnf?.[room.hole]?t('turns.limitReached'):ball?.hole?t('helpDone'):phase==='playing'
       ?t(touchControls?'helpTouch':'helpMouse')
       :phase==='settling'?t('helpSettling'):t(touchControls?'helpScoresTouch':'helpScoresMouse');
   }

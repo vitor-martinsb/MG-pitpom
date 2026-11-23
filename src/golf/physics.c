@@ -1,4 +1,5 @@
 #include "golf/physics.h"
+#include "golf/alfredo.h"
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
@@ -103,7 +104,8 @@ static bool moving_contact(golf_physics_world_t *world,const golf_ball_t *ball){
     return count>0;
 }
 void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player, float dt) {
-    if (player->ball.is_in_hole || player->ball.capture_until>0) return;
+    if (player->ball.is_in_hole || (player->ball.capture_until>0 &&
+        !(player->ball.capture_kind==GOLF_CAPTURE_ALFREDO&&!player->ball.captured))) return;
     golf_ball_t *ball=&player->ball;
     static int full_rest=-1;if(full_rest<0)full_rest=getenv("GOLF_PHYSICS_FULL_REST")!=NULL;
     if(ball->resting_static&&dt==ball->resting_dt&&!ball->is_moving&&!ball->is_in_water&&!ball->is_out_of_bounds&&
@@ -392,7 +394,7 @@ void golf_physics_tick_player(golf_physics_world_t *world, golf_player_t *player
     }
     player->ball.time_since_impact_sound += dt;
 
-    float gravity = -9.8f;
+    float gravity = -GOLF_PHYSICS_GRAVITY;
     bv = vec3_add(bv, V3(0, gravity * dt, 0));
     bp = vec3_add(bp, vec3_scale(bv, dt));
 

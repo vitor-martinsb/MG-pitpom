@@ -13,7 +13,7 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const D=Date;globalThis.Date=class extends D{constructor(...a){super(...(a.length?a:['2026-10-24T15:00:00-03:00']));}};});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});
-  assert.equal(await page.locator('[data-pet]').count(),10,'six atlas pets, the existing bird, Meg, Benedita and Smanata');
+  assert.equal(await page.locator('[data-pet]').count(),11,'all ten existing pets plus Alfredo');
   assert.equal(await page.locator('[data-pet=meg]').getAttribute('data-source-art'),'menu-pet-meg.png');
   const megArt=fs.readFileSync('../build/emscripten/art/menu-pet-meg.png'),megServed=Buffer.from(await (await fetch(url+'/art/menu-pet-meg.png')).arrayBuffer());
   assert.equal(createHash('sha256').update(megServed).digest('hex'),createHash('sha256').update(megArt).digest('hex'));

@@ -1,4 +1,5 @@
 #include "golf/garden.h"
+#include "golf/alfredo.h"
 #include "golf/juju_pose.h"
 #include "golf/meg_pose.h"
 #include "golf/cat_pose.h"
@@ -831,6 +832,7 @@ static void maritaca(garden_mesh_t *mesh,const golf_player_t *p,float time,bool 
     if(season_theme){branch(mesh,V3(0,.36f,.16f),V3(0,.63f,.16f),.15f,.001f,paint(.13f,.42f,.25f,0));for(int bulb=0;bulb<3;bulb++)oval(mesh,V3((bulb-1)*.07f,.39f,.22f),V3(.025f,.025f,.02f),paint(.97f,.75f,.24f,0),2,4);}
     garden.transform=mat4_identity();
 }
+#include "alfredo-render.inc"
 #include "companions-render.inc"
 
 void golf_garden_draw_feedback(float time) {
@@ -847,6 +849,7 @@ void golf_garden_draw_feedback(float time) {
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
         }
         companions_draw(&actor,game,time);
+        alfredo_draw(&actor,game,time);
         campaign_obstacles(&actor,&game->mechanics.wildlife,time);
         for(int i=0;i<GOLF_MUD_PRINTS;i++){
             const golf_mud_print_t *p=&game->mechanics.wildlife.mud_prints[i];if(!p->active)continue;

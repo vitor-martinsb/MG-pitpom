@@ -44,7 +44,7 @@ compact rows, with one row of modes on short phones; all actions retain at least
 Settings panel keep controls inside the viewport.
 
 The readiness regression also checks identical welcome/menu character matrices,
-no control overlap with any of the ten pet targets, no page scrolling, and the
+no control overlap with any of the eleven pet targets, no page scrolling, and the
 Settings panel bounds at six desktop/phone/tablet sizes. The seasonal regression
 checks the unchanged animal artwork and composition with the Christmas subtitle
 and decorations across daytime, sunset and night.

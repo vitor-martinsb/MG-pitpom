@@ -13,7 +13,8 @@ typedef struct golf_companion {
     float until,cooldown,clock,stride,speed;
 } golf_companion_t;
 typedef struct golf_companions {
-    golf_companion_t benedita,smanata;
+    golf_companion_t benedita,smanata,alfredo;
+    uint32_t alfredo_launches;
     unsigned char dog_nodes[GOLF_NAV_NODES],dog_edges[GOLF_NAV_NODES];
     short path[GOLF_NAV_NODES];int path_count,path_index;
     vec3 goal;float time;

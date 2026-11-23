@@ -21,6 +21,7 @@
   // The supplied six-character RGBA atlas is retained byte for byte. Crops and
   // transparent gutters are composed at runtime, never re-encoded or recolored.
   const referenceRigs={
+    alfredo:{bounds:[0,0,1122,1402],feet:550,head:[560,350,380,310],ears:[],eyes:[]},
     smanata:{bounds:[50,10,760,880],feet:440,head:[470,260,230,210],ears:[],eyes:[]},
     benedita:{bounds:[1060,35,1730,880],feet:1390,head:[1390,310,230,210],ears:[],eyes:[]},
     meg:{bounds:[135,16,1135,1215],feet:700,head:[720,280,270,250],ears:[],eyes:[],tail:[205,785,190,344],pivot:[394,1100]},
@@ -188,7 +189,7 @@
   layouts.portrait.pets.push({id:'meg',anchor:[196,1224],head:[196,1069,85,70],ears:[],eyes:[]});
   // Independent intact sprites retain their own breathing and descriptions.
   // A transparent atlas gutter and separate anchors keep the two friends apart.
-  for(const [id,landscapeX,portraitX]of [['smanata',650,300],['benedita',970,640]]){
+  for(const [id,landscapeX,portraitX]of [['smanata',650,220],['benedita',970,500],['alfredo',1290,780]]){
     layouts.landscape.pets.push({id,anchor:[landscapeX,1040],head:[landscapeX,840,150,15],ears:[],eyes:[]});
     layouts.portrait.pets.push({id,anchor:[portraitX,1430],head:[portraitX,1240,150,15],ears:[],eyes:[]});
   }
@@ -360,7 +361,7 @@
       const pets=el('g',{'visibility':'hidden','data-pet-rig':'motion-only'});petGroup=pets;root.append(pets);painter=petPainter(root,d);
       const characterBounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
       for(const [index,template]of d.pets.entries()){
-        const sourceArt=['benedita','smanata'].includes(template.id)?'menu-companions-separated.png':template.id==='meg'?'menu-pet-meg.png':referenceRigs[template.id]?'menu-cast-reference.png':original;
+        const sourceArt=['benedita','smanata'].includes(template.id)?'menu-companions-separated.png':template.id==='alfredo'?'menu-pet-alfredo.png':template.id==='meg'?'menu-pet-meg.png':referenceRigs[template.id]?'menu-cast-reference.png':original;
         const source=referenceRigs[template.id]?referenceSprite(originals[sourceArt],template):birdSprite(originals[original],template,contours[layout][template.id].path);
         help.add(template.id,source);
         characterBounds.left=Math.min(characterBounds.left,source.x);characterBounds.top=Math.min(characterBounds.top,source.y);
@@ -382,7 +383,7 @@
         }
         // Keep Meg's head, ears and paws in one intact illustration. Only the
         // anchored tail window flexes, using the same fixed-boundary painter.
-        if(['meg','benedita','smanata'].includes(p.id)){cut(rectangle,animal,'body',source);continue;}
+        if(['meg','benedita','smanata','alfredo'].includes(p.id)){cut(rectangle,animal,'body',source);continue;}
         cut(rectangle,animal,'body',without(source,[oval(p.head),...p.ears.map(oval)]));
         const head=cut(oval(p.head),animal,'head',without(source,p.ears.map(oval)));
         head.style.transformOrigin=`${p.head[0]}px ${p.head[1]+p.head[3]*.7}px`;
@@ -438,7 +439,7 @@
     const observer=new MutationObserver(()=>{visibility();fitPets();help.layout();});observer.observe(home,{attributes:true,attributeFilter:['hidden','data-screen']});
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
-    const images=['menu-companions-separated.png','menu-pet-meg.png','menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
+    const images=['menu-pet-alfredo.png','menu-companions-separated.png','menu-pet-meg.png','menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
     return Object.freeze({ready,holdPets,get diagnostics(){return {layout:current,loaded,petsHeld,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,petFrames:painter?.frames??0,petRenderer:'canvas-2d',lastClock};}});
   }

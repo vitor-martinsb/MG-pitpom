@@ -3,6 +3,7 @@
 #include "golf/online.h"
 #include "golf/physics.h"
 #include "golf/game.h"
+#include "golf/alfredo.h"
 #include "golf/garden.h"
 
 #include <assert.h>
@@ -530,6 +531,7 @@ void golf_game_update(float dt) {
             // Keep the camera above the course while a ball falls; no sky flash
             // or plunge below the landscape before the maritaca arrives.
             vec3 focus=player->ball.draw_pos;
+            if(player->ball.capture_kind==GOLF_CAPTURE_ALFREDO)focus=vec3_add(game.mechanics.wildlife.companions.alfredo.draw_pos,V3(0,.30f,0));
             if(player->ball.capture_kind==GOLF_CAPTURE_SMANATA)focus=vec3_add(game.mechanics.wildlife.companions.smanata.draw_pos,V3(0,.30f,0));
             if(player->ball.capture_kind==GOLF_CAPTURE_MEG)focus=vec3_add(game.mechanics.wildlife.animals[GOLF_MEG].pos,V3(0,.30f,0));
             focus.y=fmaxf(focus.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f);

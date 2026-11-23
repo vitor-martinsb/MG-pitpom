@@ -1,4 +1,5 @@
 #include "golf/wildlife.h"
+#include "golf/alfredo.h"
 #include <float.h>
 #include <string.h>
 static uint32_t random_word(uint32_t n){n^=n>>16;n*=0x7feb352du;n^=n>>15;n*=0x846ca68bu;return n^(n>>16);}
@@ -67,6 +68,7 @@ void golf_companions_init(golf_wildlife_t *w,vec3 cat,vec3 dog){
             if(j>=0&&c->dog_nodes[j]&&passage(w,n->nodes[i].pos,n->nodes[j].pos)){c->dog_edges[i]|=1u<<k;c->dog_edges[j]|=1u<<(7-k);}
         }
     }
+    golf_alfredo_init(w,cat,dog);
 }
 vec3 golf_smanata_mouth(const golf_companion_t *a,bool draw){return vec3_add(vec3_add(draw?a->draw_pos:a->pos,vec3_scale(a->forward,.39f)),V3(0,.52f,0));}
 static void thaw(golf_player_t *p){

@@ -1,5 +1,6 @@
 #include "golf/physics.h"
 #include "golf/mechanics.h"
+#include "golf/alfredo.h"
 #include "bot.h"
 #include "common/json.h"
 #include "parson/parson.h"
@@ -106,10 +107,10 @@ static void collision_sound(const char *name,const char *path,float volume,bool 
     (void)path;(void)loop;(void)restart;if(sound_player&&(!strcmp(name,"wood")||!strcmp(name,"stone")))event(name,sound_player,volume);
 }
 static void companion_json(const golf_companion_t *a){
-    printf("{\"active\":%s,\"state\":%d,\"player\":%u,\"pos\":[%.9g,%.9g,%.9g],\"home\":[%.9g,%.9g,%.9g],\"forward\":[%.7g,%.7g,%.7g],\"look\":[%.7g,%.7g,%.7g],\"until\":%.9g,\"cooldown\":%.9g,\"clock\":%.9g,\"stride\":%.7g,\"speed\":%.7g}",a->active?"true":"false",a->state,a->player,a->pos.x,a->pos.y,a->pos.z,a->home.x,a->home.y,a->home.z,a->forward.x,a->forward.y,a->forward.z,a->look.x,a->look.y,a->look.z,a->until,a->cooldown,a->clock,a->stride,a->speed);
+    printf("{\"active\":%s,\"state\":%d,\"player\":%u,\"pos\":[%.9g,%.9g,%.9g],\"home\":[%.9g,%.9g,%.9g],\"forward\":[%.7g,%.7g,%.7g],\"look\":[%.7g,%.7g,%.7g],\"until\":%.9g,\"cooldown\":%.9g,\"clock\":%.9g,\"stride\":%.7g,\"speed\":%.7g,\"beats\":%u}",a->active?"true":"false",a->state,a->player,a->pos.x,a->pos.y,a->pos.z,a->home.x,a->home.y,a->home.z,a->forward.x,a->forward.y,a->forward.z,a->look.x,a->look.y,a->look.z,a->until,a->cooldown,a->clock,a->stride,a->speed,a->cycles);
 }
 static void wildlife_json(const golf_wildlife_t *w) {
-    printf(",\"companions\":{\"benedita\":");companion_json(&w->companions.benedita);printf(",\"smanata\":");companion_json(&w->companions.smanata);printf("}");
+    printf(",\"companions\":{\"benedita\":");companion_json(&w->companions.benedita);printf(",\"smanata\":");companion_json(&w->companions.smanata);printf(",\"alfredo\":");companion_json(&w->companions.alfredo);printf("}");
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
@@ -205,7 +206,7 @@ int main(int argc, char **argv) {
                     if(players[i].ball.effect_serial!=effects[i]){
                         const char *kinds[]={"","romeu","luna","frida","portal","capture","juju"};
                         int effect=players[i].ball.effect_kind;
-                        event(effect==GOLF_EFFECT_SMANATA?"meg":effect==GOLF_EFFECT_BENEDITA?"christmas":effect==GOLF_EFFECT_MEG?"meg":effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
+                        event(effect==GOLF_EFFECT_ALFREDO?"impact":effect==GOLF_EFFECT_SMANATA?"meg":effect==GOLF_EFFECT_BENEDITA?"christmas":effect==GOLF_EFFECT_MEG?"meg":effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
                     }
                     else if(players[i].ball.cat_hits!=hits[i])event("slap",&players[i],1);
                     else if(!captures[i]&&players[i].ball.capture_until)event("capture",&players[i],1);
