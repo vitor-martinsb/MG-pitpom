@@ -13,7 +13,7 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const D=Date;globalThis.Date=class extends D{constructor(...a){super(...(a.length?a:['2026-10-24T15:00:00-03:00']));}};});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});
-  assert.equal(await page.locator('[data-pet]').count(),9,'six atlas pets, the existing bird, Meg and the supplied new pair');
+  assert.equal(await page.locator('[data-pet]').count(),10,'six atlas pets, the existing bird, Meg, Benedita and Smanata');
   assert.equal(await page.locator('[data-pet=meg]').getAttribute('data-source-art'),'menu-pet-meg.png');
   const megArt=fs.readFileSync('../build/emscripten/art/menu-pet-meg.png'),megServed=Buffer.from(await (await fetch(url+'/art/menu-pet-meg.png')).arrayBuffer());
   assert.equal(createHash('sha256').update(megServed).digest('hex'),createHash('sha256').update(megArt).digest('hex'));
@@ -49,10 +49,13 @@ try {
   const fitted=await page.evaluate(()=>{
    const surface=document.querySelector('[data-pet-surface]').getBoundingClientRect(),actions=document.getElementById('main-menu').getBoundingClientRect();
    const clipped=[...document.querySelectorAll('[data-pet] [data-motion=body] image')].filter(e=>{const r=e.getBoundingClientRect();return r.left<surface.left-2||r.right>surface.right+2||r.top<surface.top-2||r.bottom>surface.bottom+2;}).map(e=>e.closest('[data-pet]').dataset.pet);
-   const r=document.querySelector('[data-pet="benedita-smanata"] [data-motion=body] image').getBoundingClientRect();
-   return {clipped,overlap:r.right>actions.left&&r.left<actions.right&&r.bottom>actions.top&&r.top<actions.bottom};
+   const dogs=['smanata','benedita'].map(id=>document.querySelector(`[data-pet="${id}"] [data-motion=body] image`).getBoundingClientRect());
+   const overlap=dogs.some(r=>r.right>actions.left&&r.left<actions.right&&r.bottom>actions.top&&r.top<actions.bottom);
+   return {clipped,overlap,gap:dogs[1].left-dogs[0].right};
   });
-  assert.deepEqual(fitted.clipped,[],`${name}: fitting the new row cannot clip existing heads or paws`);assert.equal(fitted.overlap,false,'menu controls never cover the supplied pair');
+  assert.deepEqual(fitted.clipped,[],`${name}: fitting the new row cannot clip existing heads or paws`);assert.equal(fitted.overlap,false,'menu controls never cover the new dogs');
+  assert.ok(fitted.gap>20,`${name}: Benedita and Smanata have separate sprites and visible spacing (${fitted.gap}px)`);
+
   const scene=page.locator('.living-scene'),still=await scene.screenshot();await page.waitForTimeout(100);
   assert.equal(Buffer.compare(still,await scene.screenshot()),0,'frozen frames must not accumulate trails');
   const frames=[];

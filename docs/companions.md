@@ -12,7 +12,7 @@ O transporte da Smanata tem prioridade sobre o olhar da Benedita. A transferênc
 
 O worker nativo possui a autoridade no multiplayer. Snapshots incluem as duas posições, orientações, estados, donos e relógios. O cliente interpola a caminhada e calcula a mesma boca 3D. O comando `smanata` reutiliza as validações e a publicação da interação da Meg: dono pelo socket, mapa/partida atuais, estado correto e turno. `pet_pending` é independente da confirmação de tacada, evitando manter a mira bloqueada depois da liberação. O gesto é consumido pela personagem e não vira uma tacada.
 
-O menu mantém seus oito animais e acrescenta a dupla fornecida, inteira, em `art/menu-benedita-smanata.png`. O recurso RGBA tem fundo removido e não separa cabeças, joias ou patas. Uma nova fileira e o ajuste do conjunto reservam o espaço dos botões em celular e desktop. Iluminação de dia, fim de tarde e noite, Natal, título e continuar usam os sistemas existentes. O buffer de atores reserva 73.728 vértices para os personagens adicionais e efeitos em partidas de 50 participantes.
+O menu mantém seus oito animais e acrescenta Benedita e Smanata como sprites individuais em `art/menu-companions-separated.png`, com espaço entre elas. Cada personagem mantém cabeça, joias, patas e contorno íntegros, com respiração e descrição próprias. O atlas RGBA usa um corredor transparente para impedir recortes da personagem vizinha. Uma nova fileira e o ajuste do conjunto reservam o espaço dos botões em celular e desktop. Iluminação de dia, fim de tarde e noite, Natal, título e continuar usam os sistemas existentes. O buffer de atores reserva 73.728 vértices para os personagens adicionais e efeitos em partidas de 50 participantes.
 
 ## Validação
 

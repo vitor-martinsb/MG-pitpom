@@ -1,3 +1,5 @@
+Recurso original de referência. O menu atual usa menu-companions-separated.png, com as duas personagens em recortes independentes.
+
 Benedita e Smanata: referência oficial fornecida pelo usuário nesta conversa.
 A ferramenta image_gen removeu o fundo para integração RGBA, mantendo a dupla
 completa, as cores, expressões e as joias rosas centralizadas da Benedita.
