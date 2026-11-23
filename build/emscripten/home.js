@@ -6,9 +6,24 @@
   const lobbyChat=document.createElement('button');lobbyChat.id='lobby-open-chat';lobbyChat.className='secondary';lobbyChat.dataset.i18n='chat';lobbyChat.textContent=GolfI18n.t('chat');$('lobby-leave').before(lobbyChat);
   const trail=$('lobby-adventure'),journey=document.createElement('details'),journeyTitle=document.createElement('summary');
   journey.className='room-route';journeyTitle.dataset.i18n='adventure';journeyTitle.textContent=GolfI18n.t('adventure');trail.before(journey);journey.append(journeyTitle,trail);trail.hidden=false;
+  const settingsHome=document.createComment("settings game position");
+  $("music-controls").before(settingsHome);
+  function layoutControls(){
+    const bottom=home.querySelector(".home-brand").getBoundingClientRect().bottom-home.getBoundingClientRect().top;
+    home.style.setProperty("--home-controls-top",`${bottom+8}px`);
+    layoutSettings();
+  }
+  new ResizeObserver(layoutControls).observe(home.querySelector(".home-brand"));
+  window.addEventListener("resize",layoutControls);
+  function layoutSettings(){
+    if(route==='menu'&&$("music-controls").open)home.style.setProperty("--home-settings-top",`${$("music-controls").querySelector("summary").getBoundingClientRect().bottom+8}px`);
+  }
+  $("music-controls").addEventListener("toggle",layoutSettings);
   function roomPhase(phase){
     document.body.dataset.roomPhase=phase;
     const settings=$('music-controls');
+    if(route==='menu'){if(settings.parentElement!==$('home-settings-slot'))$('home-settings-slot').append(settings);}
+    else if(settings.previousSibling!==settingsHome)settingsHome.after(settings);
     settings.hidden=!(route==='menu'||route==='game'&&!['lobby','loading'].includes(phase));
     if(settings.hidden)settings.open=false;
   }
@@ -29,7 +44,7 @@
   function finishBoot(){
     if(bootComplete||!ready||!nativeReady||!assetsReady)return;
     bootComplete=true;
-    for(const button of $('main-menu').querySelectorAll('button'))button.disabled=false;
+    for(const button of $('home-controls').querySelectorAll('button'))button.disabled=false;
     requestAnimationFrame(()=>{$('home-loading').hidden=true;show('splash',false);});
   }
   $('home-pets').hidden=true;
@@ -39,6 +54,8 @@
     route=next;home.hidden=!['splash','menu','multiplayer'].includes(next);home.dataset.screen=next;
     roomPhase(next==='game'?(document.body.dataset.roomPhase??''):'');
     document.body.dataset.home=next;
+    $('home-controls').hidden=next!=='menu';
+    layoutControls();
     $('main-menu').hidden=next!=='menu';$('continue-home').hidden=next!=='splash';
     $('connect').hidden=next!=='multiplayer';
     if(!home.hidden){window.GolfAudio?.phase('menu');$('music-controls').open=false;}
@@ -46,7 +63,7 @@
     if(next==='campaign')window.GolfOnline?.editSoloProfile();
     if(focus)requestAnimationFrame(()=>{(next==='menu'?$('offline'):next==='splash'?$('continue-home'):next==='multiplayer'?$('create'):null)?.focus({preventScroll:true});});
   }
-  function proceed(){if(!bootComplete||route!=='splash')return;window.GolfAudio?.play('ui');show('menu');}
+  function proceed(){if(!bootComplete||route!=='splash')return;window.GolfAudio?.play('ui');animation.holdPets(240);show('menu');}
   home.addEventListener('click',e=>{if(route==='splash'&&!e.target.closest('summary,input,select')&&(!e.target.closest('button')||e.target.closest('button').id==='continue-home'))proceed();});
   window.addEventListener('keydown',e=>{
     if(home.hidden||e.target.closest?.('input,select,summary'))return;
@@ -61,7 +78,7 @@
   $('open-multiplayer').onclick=()=>{show('multiplayer');window.GolfOnline?.resume();};
   $('back-main').onclick=()=>show('menu');
   $('exit-game').onclick=()=>show('splash');
-  for(const button of $('main-menu').querySelectorAll('button'))button.addEventListener('pointerenter',()=>window.GolfAudio?.play('ui',.15));
+  for(const button of $('home-controls').querySelectorAll('button'))button.addEventListener('pointerenter',()=>window.GolfAudio?.play('ui',.15));
   window.GolfHome={
     get scene(){return animation.diagnostics;},
     get route(){return route;},

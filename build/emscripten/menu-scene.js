@@ -261,15 +261,22 @@
   }
   function mount(container,home){
     let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
-    let petGroup,ensembleBounds;
+    let petGroup,ensembleBounds,petsHeld=false,holdTimer,heldPets=[];
+    function holdPets(duration){
+      clearTimeout(holdTimer);petsHeld=true;
+      const held=animations.filter(a=>petGroup?.contains(a.effect.target)&&(a.playState==='running'||heldPets.includes(a)));
+      heldPets=held;
+      const times=held.map(a=>a.currentTime);
+      held.forEach((a,i)=>{a.pause();a.currentTime=times[i];});
+      holdTimer=setTimeout(()=>{petsHeld=false;heldPets=[];held.forEach((a,i)=>{if(!home.hidden&&!document.hidden&&a.playState==='paused'&&a.currentTime===times[i])a.play();});},duration);
+    }
     const help=petHelp(home,()=>petGroup??root);
     function fitPets(){
       const m=root?.getScreenCTM(),b=ensembleBounds;if(!m||!b||!petGroup)return;
       const left=-m.e/m.a+8/m.a,right=(innerWidth-m.e)/m.a-8/m.a;
-      const actions=home.dataset.screen==='menu'?document.getElementById('main-menu'):document.getElementById('continue-home');
-      const actionRect=actions?.getBoundingClientRect();
-      const actionTop=actionRect?.height>0&&actionRect.top>0&&(home.dataset.screen!=='menu'||current==='portrait')?actionRect.top:innerHeight;
-      const bottom=(Math.min(innerHeight-4,actionTop-14)-m.f)/m.d;
+      // The artwork has its own fixed floor, independent of visible controls.
+      const floor=document.getElementById('home-art-floor').getBoundingClientRect().bottom;
+      const bottom=(Math.min(innerHeight-4,floor)-m.f)/m.d;
       const scale=Math.max(.1,Math.min(1,(right-left)/(b.right-b.left),(bottom-(b.top-(current==='portrait'?160:0)))/(b.bottom-b.top))),targetBottom=Math.min(b.bottom,bottom),cx=(b.left+b.right)/2;
       const center=Math.max(left+(b.right-b.left)*scale/2,Math.min(right-(b.right-b.left)*scale/2,cx));
       petGroup.setAttribute('transform',`translate(${center} ${targetBottom}) scale(${scale}) translate(${-cx} ${-b.bottom})`);
@@ -277,12 +284,14 @@
       // foreground row can move older heads outside the original paint area.
       painter?.bounds({x:center+(b.left-cx)*scale-32,y:targetBottom+(b.top-b.bottom)*scale-80,w:(b.right-b.left)*scale+64,h:(b.bottom-b.top)*scale+112});
     }
-    new ResizeObserver(()=>{fitPets();help.layout();}).observe(container);
+    const fitObserver=new ResizeObserver(()=>{fitPets();help.layout();});
+    fitObserver.observe(container);fitObserver.observe(document.getElementById('home-art-floor'));
     const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)'),tails=new Map();
     const tailFrames=swing=>[{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'},{transform:`rotate(${swing}deg)`,offset:.5,easing:'ease-in-out'},{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'}];
     function image(file,w,h){return el('image',{href:`art/${file}`,width:w,height:h});}
     function build(){
       const layout=portrait.matches?'portrait':'landscape';if(current===layout)return;
+      clearTimeout(holdTimer);petsHeld=false;heldPets=[];
       current=layout;loaded=false;help.reset();painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];tails.clear();
       const d=layouts[layout],suffix=layout==='portrait'?'-portrait':'',original=`menu-garden${suffix}.png`;
       root=el('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'xMidYMid slice','aria-hidden':'true',class:'living-menu-art'});
@@ -420,7 +429,7 @@
         const tail=tails.get(a);
         if(tail&&tail.reduced!==motion.matches){tail.reduced=motion.matches;a.effect.setKeyframes(tailFrames(tail.swing*(motion.matches?.32:1)));}
         a.updatePlaybackRate(tail?(motion.matches?.65:1):(motion.matches?.3:1));
-        if(run&&a.playState!=='running')a.play();else if(!run&&a.playState==='running')a.pause();
+        if(run&&!(petsHeld&&petGroup?.contains(a.effect.target))&&a.playState!=='running')a.play();else if(!run&&a.playState==='running')a.pause();
       }
       home.dataset.motion=motion.matches?'gentle':'full';
       clearInterval(tick);tick=undefined;
@@ -431,7 +440,7 @@
     // Decode once. The established static illustration remains as a load fallback.
     const images=['menu-companions-separated.png','menu-pet-meg.png','menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
-    return Object.freeze({ready,get diagnostics(){return {layout:current,loaded,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,petFrames:painter?.frames??0,petRenderer:'canvas-2d',lastClock};}});
+    return Object.freeze({ready,holdPets,get diagnostics(){return {layout:current,loaded,petsHeld,motion:home.dataset.motion,animations:animations.length,running:animations.filter(a=>a.playState==='running').length,petFrames:painter?.frames??0,petRenderer:'canvas-2d',lastClock};}});
   }
   window.GolfMenuScene=Object.freeze({mount});
 })();

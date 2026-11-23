@@ -47,7 +47,7 @@ try {
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));
   const painted=await page.evaluate(()=>GolfHome.scene.petFrames);await page.waitForFunction(n=>GolfHome.scene.petFrames>n+2,painted);
   const fitted=await page.evaluate(()=>{
-   const surface=document.querySelector('[data-pet-surface]').getBoundingClientRect(),actions=document.getElementById('main-menu').getBoundingClientRect();
+   const surface=document.querySelector('[data-pet-surface]').getBoundingClientRect(),actions=document.getElementById('home-controls').getBoundingClientRect();
    const clipped=[...document.querySelectorAll('[data-pet] [data-motion=body] image')].filter(e=>{const r=e.getBoundingClientRect();return r.left<surface.left-2||r.right>surface.right+2||r.top<surface.top-2||r.bottom>surface.bottom+2;}).map(e=>e.closest('[data-pet]').dataset.pet);
    const dogs=['smanata','benedita'].map(id=>document.querySelector(`[data-pet="${id}"] [data-motion=body] image`).getBoundingClientRect());
    const overlap=dogs.some(r=>r.right>actions.left&&r.left<actions.right&&r.bottom>actions.top&&r.top<actions.bottom);

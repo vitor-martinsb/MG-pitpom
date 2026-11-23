@@ -17,7 +17,7 @@ try {
   function sample(){
    const buttons=[...document.querySelectorAll('#main-menu button')];
    const visible=buttons.filter(b=>b.getClientRects().length);
-   if(visible.length&& (visible.length!==4||visible.some(b=>b.disabled)))window.partialMenus.push(visible.length);
+   if(visible.length&& (visible.length!==3||visible.some(b=>b.disabled)))window.partialMenus.push(visible.length);
    requestAnimationFrame(sample);
   }requestAnimationFrame(sample);
  });
@@ -34,8 +34,11 @@ try {
   assert.equal(createHash('sha256').update(served).digest('hex'),createHash('sha256').update(original).digest('hex'));
  }
  fs.mkdirSync('../out/menu-readiness',{recursive:true});
- for(const [width,height]of [[1280,800],[390,844],[320,740],[768,1024],[844,390]]){
+ for(const [width,height]of [[1280,800],[390,844],[320,740],[320,568],[768,1024],[844,390]]){
   await page.setViewportSize({width,height});
+  await page.evaluate(mobile=>{
+   for(const [edge,value]of Object.entries({top:mobile?24:0,bottom:mobile?24:0,left:0,right:0}))document.documentElement.style.setProperty(`--safe-${edge}`,`${value}px`);
+  },width===390);
   await page.waitForFunction(portrait=>{const img=document.querySelector('.home-art');return img.complete&&img.currentSrc.endsWith(portrait?'menu-garden-portrait.png':'menu-garden.png');},height>width);
   await page.waitForFunction(layout=>GolfHome.scene.loaded&&GolfHome.scene.layout===layout,height>width?'portrait':'landscape');
   assert.equal(await page.locator('.home-art').evaluate(e=>getComputedStyle(e).objectFit),'cover');
@@ -47,16 +50,38 @@ try {
    assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=width&&r.y+r.height<=height);
   }
   const covered=await page.evaluate(()=>{
-   const m=document.getElementById('main-menu').getBoundingClientRect();return [...document.querySelectorAll('[data-pet-help]')].filter(p=>{const r=p.getBoundingClientRect();return r.left<m.right&&r.right>m.left&&r.top<m.bottom&&r.bottom>m.top;}).map(p=>p.dataset.petHelp);
+   const m=document.getElementById('home-controls').getBoundingClientRect();return [...document.querySelectorAll('[data-pet-help]')].filter(p=>{const r=p.getBoundingClientRect();return r.left<m.right&&r.right>m.left&&r.top<m.bottom&&r.bottom>m.top;}).map(p=>p.dataset.petHelp);
   });assert.deepEqual(covered,[],`menu buttons must not cover pet bodies at ${width}x${height}`);
+  const geometry=()=>page.evaluate(()=>{
+   const group=document.querySelector('[data-pet-rig]'),svg=document.querySelector('.living-menu-art');
+   return {pets:group.getAttribute('transform'),scene:[svg.getScreenCTM().a,svg.getScreenCTM().d,svg.getScreenCTM().e,svg.getScreenCTM().f]};
+  });
+  const menuGeometry=await geometry();
+  assert.ok(await page.evaluate(()=>{
+   const brand=document.querySelector('.home-brand').getBoundingClientRect(),controls=document.getElementById('home-controls').getBoundingClientRect();
+   return controls.top>=brand.bottom&&document.documentElement.scrollHeight===innerHeight;
+  }),'controls follow the title without page scrolling');
   await page.screenshot({path:`../out/menu-readiness/menu-${width}x${height}.png`});
   assert.equal(await page.locator('#music-controls').isVisible(),true,'settings are available on the main menu');await page.locator('#exit-game').click();
+  assert.deepEqual(await geometry(),menuGeometry,'welcome preserves the exact animal composition');
   assert.equal(await page.locator('#continue-home').isVisible(),true);assert.equal(await page.locator('#music-controls').isHidden(),true,'welcome screen has no settings');
   assert.equal(await page.locator('#main-menu').isHidden(),true);
   const button=await page.locator('#continue-home').boundingBox();
   assert.ok(button.x>=0&&button.y>=0&&button.x+button.width<=width&&button.y+button.height<=height);
   await page.screenshot({path:`../out/menu-readiness/welcome-${width}x${height}.png`});
   await page.locator('#continue-home').click();
+  assert.deepEqual(await geometry(),menuGeometry,'opening the menu never moves or scales animals');
+  assert.ok(await page.evaluate(()=>document.getElementById('home-controls').getAnimations().every(a=>a.effect.getKeyframes().every(k=>!('transform' in k)))),'the menu fades without transforms');
+  await page.evaluate(()=>{
+   document.getElementById('exit-game').click();document.getElementById('continue-home').click();
+   document.getElementById('exit-game').click();document.getElementById('continue-home').click();
+  });
+  await page.waitForFunction(()=>!GolfHome.scene.petsHeld);
+  assert.ok(await page.evaluate(()=>GolfHome.scene.running)>35,'rapid menu toggles never leave the pets paused');
+  await page.locator('#music-controls summary').click();
+  const panel=await page.locator('#music-controls .music-panel').boundingBox();
+  assert.ok(panel.x>=0&&panel.y>=0&&panel.x+panel.width<=width&&panel.y+panel.height<=height,'settings remain within the viewport');
+  await page.locator('#music-controls summary').click();
  }
  await page.locator('#offline').click();await page.locator('#level-selection').waitFor({state:'visible'});
  const scene=()=>page.locator('.campaign-world .map-decoration').evaluateAll(nodes=>nodes.map(e=>({matrix:[e.getCTM().a,e.getCTM().b,e.getCTM().c,e.getCTM().d,e.getCTM().e,e.getCTM().f],animation:getComputedStyle(e).animationName})));
@@ -69,5 +94,5 @@ try {
  await page.locator('#back-main').click();await page.locator('#exit-game').click();
  assert.equal(await page.locator('#continue-home').isVisible(),true);
  assert.deepEqual(await page.evaluate(()=>window.partialMenus),[]);assert.deepEqual(errors,[]);
- console.log('Menu readiness: delayed artwork gate, simultaneous enabled buttons, clean responsive artwork, full viewport and uncovered pets in five resolutions, separate welcome button, static campaign decorations, moving mill/water and multiplayer/back/exit passed.');
+ console.log('Menu readiness: delayed artwork gate, simultaneous enabled buttons, clean responsive artwork, full viewport and uncovered pets in six resolutions with stable welcome/menu character geometry, opacity-only controls and compact settings, separate welcome button, static campaign decorations, moving mill/water and multiplayer/back/exit passed.');
 } finally {await browser?.close();app.close();}

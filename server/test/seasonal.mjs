@@ -23,8 +23,12 @@ try{
    for(const p of document.querySelectorAll('[data-pet-help]')){const r=p.getBoundingClientRect();for(let y=Math.max(0,Math.ceil(r.top*d));y<Math.min(c.height,Math.floor(r.bottom*d));y++)for(let x=Math.max(0,Math.ceil(r.left*d));x<Math.min(c.width,Math.floor(r.right*d));x++)if(pixels[(y*c.width+x)*4+3])overPets++;}
    return {visible,overPets};
   });
- for(const [width,height]of [[1280,800],[390,844],[320,900],[768,1024],[844,390],[1920,1080]]){
+ for(const [width,height]of [[1280,800],[390,844],[320,568],[320,900],[768,1024],[844,390],[1920,1080]]){
   await page.setViewportSize({width,height});
+  await page.evaluate(small=>{
+   document.documentElement.style.setProperty('--safe-top',small?'24px':'0px');
+   document.documentElement.style.setProperty('--safe-bottom',small?'24px':'0px');
+  },height===568);
   await page.waitForFunction(key=>GolfHome.scene.layout===key&&GolfHome.scene.loaded,height>=width?'portrait':'landscape');
   await page.locator('#music-controls summary').click();await page.locator('#season-theme').selectOption('original');await page.locator('#music-controls summary').click();
   await page.waitForFunction(()=>Module.ccall('golf_season_settings','number',['number'],[-1])===0);
@@ -43,6 +47,11 @@ try{
   assert.equal(await page.locator('#christmas-menu-art').count(),0,'no alternative art renderer');
   assert.equal(await page.locator('.season-subtitle').isVisible(),true);
   const decor=await coverage();
+  assert.deepEqual(await page.evaluate(()=>{
+   const menu=document.getElementById('home-controls').getBoundingClientRect();
+   return [...document.querySelectorAll('[data-pet-help]')].filter(p=>{const r=p.getBoundingClientRect();return r.left<menu.right&&r.right>menu.left&&r.top<menu.bottom&&r.bottom>menu.top;}).map(p=>p.dataset.petHelp);
+  }),[],`Christmas controls never cover animals at ${width}x${height}`);
+  assert.ok(await page.evaluate(()=>document.getElementById('home-controls').getBoundingClientRect().top>=document.querySelector('.season-subtitle').getBoundingClientRect().bottom),'Christmas title stays above the controls');
   assert.equal(await page.locator('#season-atmosphere').evaluate(c=>c.parentElement.id),'home','menu scenery is composited inside the home layer');
   assert.ok(await page.evaluate(()=>Number(getComputedStyle(document.getElementById('season-atmosphere')).zIndex)<Number(getComputedStyle(document.getElementById('main-menu')).zIndex)),'decorations stay behind every menu button');
   const bounds=await page.evaluate(()=>GolfSeason.diagnostics().treeBounds);assert.ok(bounds.left>=7.9&&bounds.right<=width-7.9,'the whole tree stays inside the viewport');
@@ -61,7 +70,7 @@ try{
  }
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>GolfHome.show('menu',false));await page.waitForFunction(()=>GolfHome.scene.layout==='portrait'&&GolfHome.scene.loaded);
  assert.equal(treeRequests.length,1,'responsive layouts reuse one decoration sprite');
- if(process.argv.includes('--menu-only')){assert.deepEqual(errors,[]);console.log('Christmas menu: integrated tree art, morning/afternoon/sunset/night lighting, unchanged pets, six responsive layouts and original-theme restoration passed.');process.exitCode=0;}
+ if(process.argv.includes('--menu-only')){assert.deepEqual(errors,[]);console.log('Christmas menu: integrated tree art, morning/afternoon/sunset/night lighting, unchanged pets, seven responsive layouts and original-theme restoration passed.');process.exitCode=0;}
  else {
  assert.equal(artRequests.length,0,'neither theme downloads discarded artwork');
  await page.setViewportSize({width:390,height:844});
