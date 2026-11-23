@@ -38,21 +38,21 @@ static void companions_draw(garden_mesh_t *mesh,golf_game_t *game,float time){
         garden.transform=mat4_identity();
     }
     if(s->active){
-        float gait=golf_clampf(s->speed/3,0,1),bob=.012f*gait*sinf(s->stride*2);
+        float stride=golf_online_active()?s->draw_stride:s->stride;
+        float gait=golf_clampf(s->draw_speed/3,0,1),bob=.012f*gait*sinf(stride*2);
         mat4 base=mat4_multiply(mat4_translation(s->draw_pos),mat4_rotation_y(atan2f(s->forward.x,s->forward.z)));garden.transform=base;
         vec4 coat=paint(.17f,.12f,.11f,0),gold=paint(.91f,.57f,.24f,0);
         oval(mesh,V3(0,.35f+bob,-.10f),V3(.24f,.23f,.37f),coat,4,10);
         oval(mesh,V3(0,.38f+bob,.18f),V3(.16f,.19f,.07f),gold,3,8);
         for(int side=-1;side<=1;side+=2)for(int back=0;back<2;back++){
-            float z=back?-.34f:.16f,step=sinf(s->stride+(side>0?MF_PI:0)+back*MF_PI)*.08f*gait;
-            vec3 hip=V3(side*.17f,.36f+bob,z),knee=V3(side*.18f,.18f,z+step*.5f),paw=V3(side*.18f,.055f+fmaxf(0,step)*.45f,z+step);
+            float z=back?-.34f:.16f,step=sinf(stride+(side>0?MF_PI:0)+back*MF_PI)*.17f*gait;
+            vec3 hip=V3(side*.17f,.36f+bob,z),knee=V3(side*.18f,.18f,z+step*.5f),paw=V3(side*.18f,.055f+fmaxf(0,step)*.55f,z+step);
             branch(mesh,hip,knee,.075f,.055f,coat);branch(mesh,knee,paw,.055f,.045f,gold);oval(mesh,paw,V3(.08f,.055f,.10f),gold,3,8);
         }
         vec3 tail[]={V3(-.08f,.43f,-.40f),V3(-.20f,.52f,-.51f),V3(-.22f+.08f*sinf(time*9),.64f,-.48f)};
         branch(mesh,tail[0],tail[1],.065f,.05f,coat);branch(mesh,tail[1],tail[2],.05f,.025f,gold);
         garden.transform=mat4_multiply(base,mat4_translation(V3(0,.64f+bob,.21f)));companion_face(mesh,time,false,false);
         garden.transform=mat4_identity();
-        for(int i=0;i<game->player_count;i++)if(game->players[i].id==s->player&&game->players[i].ball.capture_kind==GOLF_CAPTURE_SMANATA){golf_player_t *p=&game->players[i];oval(mesh,golf_smanata_mouth(s,true),V3(p->ball.radius,p->ball.radius,p->ball.radius),paint(p->color.x,p->color.y,p->color.z,0),4,10);break;}
     }
     garden.transform=mat4_identity();
     for(int i=0;i<game->player_count;i++)if(game->players[i].ball.capture_kind==GOLF_CAPTURE_BENEDITA){

@@ -68,7 +68,7 @@
     worldLabel.textContent=world?`${world.names[GolfI18n.language]??world.names.en} · ${GolfI18n.courseName(window.GOLF_CAMPAIGN?.courses[frame.level])}`:'';
     const local=frame.players.find(p=>p.id===frame.local);
     const effect=local&&(local.captureKind||local.slowUntil>frame.time&&1);
-    effectLabel.textContent=[effect?GolfI18n.t(effect===6?'meg.hold':effect===7?'benedita.gaze':effect===8?'smanata.hold':effect===9?'alfredo.juggling':effect>=7?'season.obstacles':'effect.'+effectNames[effect]):'',local?.mudShots>0?GolfI18n.t('juju.muddy.'+(local.mudShots===1?'one':'other'),{count:local.mudShots}):''].filter(Boolean).join(' · ');
+    effectLabel.textContent=[effect?GolfI18n.t(effect===6?'meg.hold':effect===7?'benedita.gaze':effect===8?'smanata.hold':effect===9?'alfredo.juggling':effect>=7?'season.obstacles':'effect.'+effectNames[effect]):'',local?.salivaShots>0?GolfI18n.t('samanta.saliva',{count:local.salivaShots}):'',local?.mudShots>0?GolfI18n.t('juju.muddy.'+(local.mudShots===1?'one':'other'),{count:local.mudShots}):''].filter(Boolean).join(' · ');
   }
   function update(now){
     requestAnimationFrame(update);if(now-last<100||!window.Module?.ccall||!window.GolfCourse?.initialized)return;last=now;

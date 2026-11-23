@@ -11,6 +11,7 @@ typedef struct golf_companion {
     bool active;int state;uint32_t player,cycles;
     vec3 home,pos,draw_pos,forward,look;
     float until,cooldown,clock,stride,speed;
+    float draw_stride,draw_speed; /* Presentation interpolation, never authoritative physics. */
 } golf_companion_t;
 typedef struct golf_companions {
     golf_companion_t benedita,smanata,alfredo;

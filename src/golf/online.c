@@ -229,6 +229,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             p->ball.capture_until=(float)json_object_get_number(b,"captureUntil");
             p->ball.slow_until=(float)json_object_get_number(b,"slowUntil");
             p->ball.mud_shots=(int)json_object_get_number(b,"mudShots");
+            p->ball.saliva_shots=(int)json_object_get_number(b,"salivaShots");
             p->ball.mud_fade_until=(float)json_object_get_number(b,"mudFadeUntil");
             p->ball.slow_shots=(int)json_object_get_number(b,"slowShots");
             p->ball.capture_kind=(int)json_object_get_number(b,"captureKind");
@@ -276,7 +277,12 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
 void golf_online_update(float dt) {
     golf_companions_t *companions=&golf_game_get()->mechanics.wildlife.companions;
     golf_companion_t *pets[]={&companions->benedita,&companions->smanata,&companions->alfredo};
-    for(int i=0;i<3;i++)if(pets[i]->active)pets[i]->draw_pos=vec3_add(pets[i]->draw_pos,vec3_scale(vec3_sub(pets[i]->pos,pets[i]->draw_pos),1-expf(-18*dt)));
+    for(int i=0;i<3;i++)if(pets[i]->active){
+        golf_companion_t *a=pets[i];
+        a->draw_pos=vec3_add(a->draw_pos,vec3_scale(vec3_sub(a->pos,a->draw_pos),1-expf(-18*dt)));
+        a->draw_speed+=(a->speed-a->draw_speed)*(1-expf(-14*dt));
+        a->draw_stride+=a->draw_speed*8*dt;
+    }
 
     /* Leaving during asynchronous loading must not strand the offline client
        in IN_GAME when the outstanding level finishes on a later frame. */

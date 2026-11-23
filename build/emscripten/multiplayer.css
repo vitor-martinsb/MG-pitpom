@@ -557,3 +557,6 @@ body[data-tutorial] #camera-zoom{right:calc(min(360px,100vw - 24px) + 24px + var
 @media(orientation:portrait){.tutorial-card{left:calc(12px + var(--safe-left));right:calc(12px + var(--safe-right));width:auto;max-height:55dvh}.tutorial-toolbar h2{font-size:.9rem}body[data-tutorial] #camera-zoom{right:calc(12px + var(--safe-right));bottom:calc(var(--tutorial-card-height,230px) + 24px + var(--safe-bottom));flex-direction:column;gap:4px}body[data-tutorial] #camera-zoom button{width:44px;height:44px}}
 @media(orientation:landscape) and (max-height:550px){.tutorial-toolbar{right:auto;max-width:calc(100vw - 24px);padding:5px 8px}.tutorial-card{width:300px;max-height:calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom))}body[data-tutorial] #camera-zoom{right:calc(324px + var(--safe-right));bottom:calc(12px + var(--safe-bottom))}}
 @media(max-width:340px){.tutorial-card{padding:10px}.tutorial-toolbar{gap:5px}.tutorial-toolbar h2{font-size:.8rem}.tutorial-card button{font-size:.7rem;padding:6px}}
+
+/* Keep each pet name intact in the responsive menu description. */
+.menu-pet-tooltip strong{white-space:nowrap;word-break:normal;letter-spacing:normal}

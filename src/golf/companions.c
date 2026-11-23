@@ -90,7 +90,9 @@ static bool drop(golf_wildlife_t *w,golf_player_t *p,float time){
 bool golf_smanata_release(golf_wildlife_t *w,golf_player_t *p,float time){
     golf_companion_t *a=&w->companions.smanata;
     if(!p||!p->connected||p->ball.is_in_hole||p->ball.capture_kind!=GOLF_CAPTURE_SMANATA||!p->ball.captured||!a->active||a->state!=SMANATA_HOLDING||a->player!=p->id)return false;
-    if(!drop(w,p,time))return false;return_home(w,time);return true;
+    if(!drop(w,p,time))return false;
+    p->ball.saliva_shots=3;p->ball.saliva_born_stroke=p->stroke_count;
+    return_home(w,time);return true;
 }
 static bool move(golf_wildlife_t *w,vec3 target,float dt){
     golf_companion_t *a=&w->companions.smanata;vec3 d=vec3_sub(target,a->pos);float distance=vec3_length(d),step=fminf(distance,4.2f*dt);

@@ -30,6 +30,7 @@ try{
         assert.equal(await tooltip.locator('strong').textContent(),expected[0]);assert.equal(await tooltip.locator('span').textContent(),expected[1]);
         assert.equal(await button.getAttribute('aria-label'),expected[0]);assert.equal(await button.getAttribute('aria-describedby'),'menu-pet-tooltip');
         const box=await tooltip.boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width&&box.y+box.height<=height,`${pet} tooltip stays in the viewport`);
+        if(pet==='smanata'){assert.equal(expected[0],'Samanta');assert.equal(await tooltip.locator('strong').evaluate(e=>getComputedStyle(e).whiteSpace),'nowrap');}
         if(pet==='maritaca')assert.equal(expected[0],'Cocota');
         if(pet==='juju')await page.screenshot({path:`../out/menu-pet-help/${device}-${language}.png`});
         if(touch){await button.tap(options);await tooltip.waitFor({state:'hidden'});}

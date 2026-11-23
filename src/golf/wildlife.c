@@ -224,6 +224,7 @@ static void finish_shots(golf_wildlife_t *w,golf_player_t *players,int count,flo
             if(p->ball.mud_shots>0&&s->stroke>p->ball.mud_born_stroke){
                 if(--p->ball.mud_shots==0)p->ball.mud_fade_until=time+.65f;
             }
+            if(p->ball.saliva_shots>0&&s->stroke>p->ball.saliva_born_stroke)--p->ball.saliva_shots;
             for(int k=0;k<GOLF_PUDDLES;k++){
                 golf_puddle_t *q=&w->puddles[k];
                 if(q->active&&s->sequence>q->born&&s->sequence<=q->born+3&&--q->remaining==0)q->active=false;

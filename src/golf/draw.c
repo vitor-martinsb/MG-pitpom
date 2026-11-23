@@ -42,7 +42,7 @@ static void _draw_player_balls(const char *pipeline_name) {
     sg_apply_bindings(&bindings);
     for(int pass=0;pass<2;pass++)for (int i = 0; i < game->player_count; i++) {
         golf_player_t *player = &game->players[i];
-        if (!golf_game_player_visible(player)) continue;
+        if (!golf_game_player_visible(player)&&!(player->connected&&player->ball.capture_kind==GOLF_CAPTURE_SMANATA)) continue;
         bool protected=game->mechanics.impact&&!player->ball.first_shot_complete&&!player->ball.is_in_hole;
         if(protected!=(pass==1))continue;
         sg_apply_pipeline(golf_shader_get_pipeline(shader,protected?"ball_protected":pipeline_name)->sg_pipeline);

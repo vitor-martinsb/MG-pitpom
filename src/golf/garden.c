@@ -546,6 +546,11 @@ static void juju(garden_mesh_t *mesh,const golf_wild_animal_t *a,float time){
 static float mud_amount(const golf_ball_t *b,float time){return b->mud_shots>0?b->mud_shots/3.f:golf_clampf((b->mud_fade_until-time)/.65f,0,1)/3;}
 vec3 golf_garden_ball_position(const golf_player_t *p,float time){
     vec3 pos=p->ball.draw_pos;float mud=mud_amount(&p->ball,time);
+    if(p->ball.capture_kind==GOLF_CAPTURE_SMANATA){
+        const golf_companion_t *s=&golf_game_get()->mechanics.wildlife.companions.smanata;
+        float phase=golf_online_active()?s->draw_stride:s->stride;
+        pos=golf_smanata_mouth(s,true);pos.y+=.012f*golf_clampf(s->draw_speed/3,0,1)*sinf(phase*2);
+    }
     if(mud>0&&p->ball.is_moving&&!p->ball.capture_until&&!p->ball.is_in_water){
         float speed=hypotf(p->ball.vel.x,p->ball.vel.z),blend=golf_clampf(speed/1.5f,0,1)*mud;
         pos.y+=.014f*powf(fmaxf(0,sinf(time*13+p->id)),6)*blend;
@@ -887,6 +892,17 @@ void golf_garden_draw_feedback(float time) {
         if(p->connected&&p->ball.capture_kind==5&&p->ball.capture_until>time)maritaca(&actor,p,time,p->id==game->local_player_id);
     }
     for(int i=0;i<game->player_count;i++)if(golf_game_player_visible(&game->players[i])&&!game->players[i].ball.is_in_hole)muddy_ball(&actor,&game->players[i],time);
+    /* Clear droplets sit on top of the original ball color, never replace it. */
+    for(int i=0;i<game->player_count;i++){
+        golf_player_t *p=&game->players[i];
+        if(!golf_game_player_visible(p)||p->ball.is_in_hole||p->ball.saliva_shots<=0)continue;
+        vec3 center=golf_garden_ball_position(p,time);
+        garden.transform=mat4_multiply(mat4_translation(center),mat4_from_quat(p->ball.orientation));
+        for(int j=0;j<p->ball.saliva_shots;j++){
+            float angle=j*2.4f;oval(&actor,V3(cosf(angle)*.085f,.07f,sinf(angle)*.085f),V3(.024f,.015f,.024f),paint(.70f,.94f,1,0),2,6);
+        }
+        garden.transform=mat4_identity();
+    }
     garden.actor_count=(unsigned)actor.count;
     if(season_theme||game->mechanics.season.enabled)season_draw(time);
     if(actor.count){sg_update_buffer(garden.actors,&(sg_range){actors,(size_t)actor.count*sizeof(garden_vertex_t)});render(garden.actors,actor.count,time,false,V4(1,1,0,0));}

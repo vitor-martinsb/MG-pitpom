@@ -10,7 +10,7 @@ void golf_bot_cpu_share(double share){bot_cpu_share_override=isfinite(share)&&sh
 static const int dx[]={-1,0,1,-1,1,-1,0,1},dz[]={-1,-1,-1,0,0,1,1,1};
 #define BOT_LINKS 16384
 enum {WARM_PLANS=128};
-static struct {const golf_level_t *level;vec3 pos,direction;float power;uint32_t owner,seed;int slow;} warm[WARM_PLANS];
+static struct {const golf_level_t *level;vec3 pos,direction;float power;uint32_t owner,seed;float shot_scale;} warm[WARM_PLANS];
 static unsigned warm_next;
 static void prime_route(golf_physics_world_t *,const golf_mechanics_t *,const golf_navigation_t *);
 typedef struct bot_link {short from,to;float cost,speed;bool portal;vec3 aim;} bot_link_t;
@@ -318,7 +318,7 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     int suggestions[3]={-1,-1,-1};float distances[3]={9,9,9};
     if(bot_budget.enabled)for(unsigned n=0;n<WARM_PLANS;n++){
         unsigned i=(warm_next-1-n)%WARM_PLANS;
-        if(warm[i].level!=world->level||warm[i].owner==p->id||warm[i].seed!=m->seed||warm[i].slow!=p->ball.slow_shots)continue;
+        if(warm[i].level!=world->level||warm[i].owner==p->id||warm[i].seed!=m->seed||warm[i].shot_scale!=golf_ball_shot_scale(&p->ball))continue;
         vec3 delta=vec3_sub(warm[i].pos,p->ball.pos);float distance=vec3_dot(delta,delta);
         for(int k=0;k<3;k++)if(distance<distances[k]){
             for(int j=2;j>k;j--){distances[j]=distances[j-1];suggestions[j]=suggestions[j-1];}
@@ -393,7 +393,7 @@ golf_bot_plan_t golf_bot_plan_adaptive(golf_physics_world_t *world,const golf_me
     if(!reused&&bot_budget.enabled&&plan.safe&&plan.wait==0&&best<initial_cost-shared_progress){
         unsigned at=warm_next++%WARM_PLANS;
         warm[at].level=world->level;warm[at].pos=p->ball.pos;warm[at].direction=plan.direction;warm[at].power=plan.power;
-        warm[at].owner=p->id;warm[at].seed=m->seed;warm[at].slow=p->ball.slow_shots;
+        warm[at].owner=p->id;warm[at].seed=m->seed;warm[at].shot_scale=golf_ball_shot_scale(&p->ball);
     }
     bot_budget_yield();
     uint32_t seed=hash(m->seed^p->id^(p->stroke_count*0x9e3779b9u));

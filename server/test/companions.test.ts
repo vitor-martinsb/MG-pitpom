@@ -24,6 +24,7 @@ for(const style of ['simultaneous','turns'] as const)test(`Benedita/Smanata ${st
   assert.deepEqual(a.messages.findLast(m=>m.type==='snapshot').mascots,b.messages.findLast(m=>m.type==='snapshot').mascots);
   await room.releaseSmanata(host,{...request,player:guest.id});
   assert.equal(host.ball!.captured,false);assert.equal(host.ball!.captureKind,0);assert.equal(host.ball!.captureUntil,0);assert.equal(host.ball!.moving,false);assert.equal(host.ball!.strokes,1);
+  assert.equal(host.ball!.salivaShots,3);assert.equal(guest.ball!.salivaShots,0);
   assert.deepEqual(host.ball!.vel,[0,0,0]);assert.ok(Math.abs(host.ball!.pos[0]!-animal.pos[0]!)<.0002&&Math.abs(host.ball!.pos[2]!-animal.pos[2]!)<.0002);
   assert.equal(guest.ball!.strokes,other!.strokes);assert.equal(guest.ball!.captureKind,other!.captureKind);
   await assert.rejects(room.releaseSmanata(host,request),/indisponível/);

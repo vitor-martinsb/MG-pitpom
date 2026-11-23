@@ -393,7 +393,8 @@
     "tutorial.lesson4.touch": "Aim for the flag and make the ball fall into the cup. Every shot counts as one stroke. Use ↺ to restart as often as you want.",
     "tutorial.lesson5.title": "Ready to play!",
     "tutorial.lesson5.mouse": "Multiplayer has simultaneous and turn play. Turns allow 20 strokes with no timer. DNF adds 12. Practice never changes campaign progress.",
-    "tutorial.lesson5.touch": "Multiplayer has simultaneous and turn play. Turns allow 20 strokes with no timer. DNF adds 12. Practice never changes campaign progress."
+    "tutorial.lesson5.touch": "Multiplayer has simultaneous and turn play. Turns allow 20 strokes with no timer. DNF adds 12. Practice never changes campaign progress.",
+    "samanta.saliva": "Saliva: ball 20% faster for {count} shot(s)"
   },
   "pt-BR": {
     "meg.releasing": "Meg está se deitando para soltar a bolinha…",
@@ -789,7 +790,8 @@
     "tutorial.lesson4.touch": "Leve a bolinha à bandeira e faça-a cair no buraco. Cada lançamento conta uma tacada. Use ↺ para recomeçar sem limite.",
     "tutorial.lesson5.title": "Pronto para jogar!",
     "tutorial.lesson5.mouse": "Multijogador: simultâneo ou por turnos. Por turnos: até 20 tacadas, sem cronômetro. DNF: +12. O treino não altera a campanha.",
-    "tutorial.lesson5.touch": "Multijogador: simultâneo ou por turnos. Por turnos: até 20 tacadas, sem cronômetro. DNF: +12. O treino não altera a campanha."
+    "tutorial.lesson5.touch": "Multijogador: simultâneo ou por turnos. Por turnos: até 20 tacadas, sem cronômetro. DNF: +12. O treino não altera a campanha.",
+    "samanta.saliva": "Saliva: bola 20% mais rápida por {count} tacada(s)"
   },
   "es": {
     "meg.releasing": "Meg se está acostando para soltar la pelota…",
@@ -1185,6 +1187,7 @@
     "tutorial.lesson4.touch": "Lleva la bola hasta la bandera y haz que caiga en el hoyo. Cada lanzamiento cuenta un golpe. Usa ↺ para reiniciar sin límite.",
     "tutorial.lesson5.title": "¡Listo para jugar!",
     "tutorial.lesson5.mouse": "Multijugador: simultáneo o por turnos. Por turnos: 20 golpes, sin reloj. DNF suma 12. La práctica no cambia la campaña.",
-    "tutorial.lesson5.touch": "Multijugador: simultáneo o por turnos. Por turnos: 20 golpes, sin reloj. DNF suma 12. La práctica no cambia la campaña."
+    "tutorial.lesson5.touch": "Multijugador: simultáneo o por turnos. Por turnos: 20 golpes, sin reloj. DNF suma 12. La práctica no cambia la campaña.",
+    "samanta.saliva": "Saliva: pelota un 20% más rápida durante {count} golpe(s)"
   }
 }

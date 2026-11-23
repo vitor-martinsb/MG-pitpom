@@ -26,6 +26,7 @@ typedef struct golf_ball {
     float slow_until,wildlife_protection,wildlife_cooldown[5],portal_cooldown;
     int slow_shots,slow_born_stroke;
     int mud_shots,mud_born_stroke;
+    int saliva_shots,saliva_born_stroke;
     float mud_fade_until;
     bool puddle_contact, mud_print_contact;
     uint32_t wildlife_hits[5],wildlife_contact,effect_serial;
@@ -43,7 +44,7 @@ typedef struct golf_ball {
 
 /* The legacy solo launcher and authoritative shots share temporary modifiers. */
 static inline float golf_ball_shot_scale(const golf_ball_t *b){
-    return (b->slow_shots>0?.65f:1)*(b->mud_shots>0?GOLF_MUD_SPEED:1);
+    return (b->slow_shots>0?.65f:1)*(b->mud_shots>0?GOLF_MUD_SPEED:1)*(b->saliva_shots>0?1.2f:1);
 }
 
 typedef struct golf_player {

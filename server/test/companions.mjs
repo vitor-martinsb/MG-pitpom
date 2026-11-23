@@ -31,6 +31,11 @@ try{
   for(let i=0;i<100&&owner.ball.captureKind!==8;i++)await companionFrame(room);
   assert.equal(owner.ball.captureKind,8);assert.equal(owner.ball.strokes,1);
   await page.waitForFunction(id=>GolfCourse.inspect().frame.players.find(p=>p.id===id)?.captureKind===8,owner.id);
+  if(room.mascots.companions.smanata.speed>1){
+   await page.waitForFunction(()=>GolfCourse.inspect().frame.smanataSpeed>1);
+   const phase=await page.evaluate(()=>GolfCourse.inspect().frame.smanataStride);
+   await page.waitForFunction(phase=>GolfCourse.inspect().frame.smanataStride>phase+.3,phase);
+  }
   await page.screenshot({path:`../out/companions/${device}-smanata-running.png`});
   for(let i=0;i<100&&room.mascots.companions.smanata.state!==3;i++)await companionFrame(room);
   assert.equal(room.mascots.companions.smanata.state,3);
@@ -41,6 +46,7 @@ try{
   const screen=await page.evaluate(()=>GolfCourse.inspect().frame.smanataScreen),drop=[...room.mascots.companions.smanata.pos];
   if(device==='mobile')await page.touchscreen.tap(...screen);else await page.mouse.click(...screen);
   await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
+  for(const p of [host,guest])await p.waitForFunction(id=>GolfCourse.inspect().frame.players.find(p=>p.id===id)?.salivaShots===3,owner.id);
   assert.equal(owner.ball.captureKind,0);assert.equal(owner.ball.moving,false);assert.equal(owner.ball.strokes,1);assert.deepEqual(owner.ball.vel,[0,0,0]);
   assert.ok(Math.abs(owner.ball.pos[0]-drop[0])<.0002&&Math.abs(owner.ball.pos[2]-drop[2])<.0002);
   await page.waitForFunction(()=>{const s=JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).screen,old=window.__companionScreen;window.__companionScreen=s;return old&&Math.hypot(old[0]-s[0],old[1]-s[1])<.1;});

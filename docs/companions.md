@@ -21,3 +21,9 @@ O menu mantém seus oito animais e acrescenta Benedita e Samanta como sprites in
 - `server/test/companions.test.ts`: tacada real passando pelas duas habilidades nos modos simultâneo e por turnos, permissões, snapshots iguais, próxima jogada e retorno.
 - `server/test/companions.mjs`: dois clientes, efeitos/estados visíveis, clique no desktop, toque no celular e uma tacada real depois da soltura; imagens em `out/companions`.
 - Regressões da Meg, física, Juju, pegadas, Natal, servidor, capacidade de atores, arte/transparência, descrições e responsividade do menu.
+
+## Saliva e apresentação da Samanta
+
+A soltura manual aplica saliva somente à bola devolvida: as próximas três tacadas recebem 20% de velocidade inicial adicional pelo multiplicador compartilhado da física. Cada tacada concluída consome uma carga; capturas, espera, recusas e snapshots repetidos não consomem cargas. O reset do campo limpa o estado. Gotas discretas diminuem a cada carga e a interface informa quantas restam. O worker publica o contador para todos os clientes, inclusive no modo por turnos. O cache do planejador de bots respeita o multiplicador de efeitos da bola.
+
+A bola carregada usa o mesmo material, cor e personalização sazonal da bola em jogo, posicionada na boca desenhada. As pernas mantêm o vínculo ao tronco; o passo é mais visível e sua fase é interpolada entre snapshots multiplayer. O nome Samanta permanece inteiro no tooltip do menu.

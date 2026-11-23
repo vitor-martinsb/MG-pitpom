@@ -52,12 +52,33 @@ int main(int argc,char **argv){
   assert(golf_smanata_release(w,&p,time));assert(!golf_smanata_release(w,&p,time));
   assert(!p.ball.captured&&!p.ball.capture_kind&&!p.ball.capture_until&&!p.ball.is_moving&&close3(p.ball.vel,V3(0,0,0)));
   assert(fabsf(p.ball.pos.y-stopped.y-p.ball.radius)<.0002f&&p.stroke_count==1);
+  assert(p.ball.saliva_shots==3&&p.ball.saliva_born_stroke==1);
+  assert(fabsf(golf_ball_shot_scale(&p.ball)-1.2f)<.0001f);
+  assert(!golf_physics_shoot(&world,&p,V3(1,0,0),-1)&&p.ball.saliva_shots==3);
+  golf_player_t clean=p;clean.ball.saliva_shots=0;assert(golf_physics_shoot(&world,&clean,V3(1,0,0),.1f));
   assert(golf_physics_shoot(&world,&p,V3(1,0,0),.1f)&&p.stroke_count==2);
+  assert(fabsf(vec3_length(p.ball.vel)/vec3_length(clean.ball.vel)-1.2f)<.0001f);
   // Do not let the next test shot alter her independent return trajectory.
   p.ball.is_in_hole=true;
   for(int k=0;k<3000&&s->state!=SMANATA_COOLDOWN;k++){time+=1.f/120;step(w,&p,time);assert(golf_wildlife_safe(w,s->pos,.30f));}
   if(s->state!=SMANATA_COOLDOWN||!close3(s->pos,s->home))fprintf(stderr,"return stuck: state=%d pos=%g,%g,%g home=%g,%g,%g path=%d/%d goal=%g,%g,%g\n",s->state,s->pos.x,s->pos.y,s->pos.z,s->home.x,s->home.y,s->home.z,w->companions.path_index,w->companions.path_count,w->companions.goal.x,w->companions.goal.y,w->companions.goal.z);
   assert(s->state==SMANATA_COOLDOWN&&close3(s->pos,s->home)&&s->cooldown>time+4.99f);
+  // Isolate stroke accounting from a field gust restarting the simulated ball.
+  w->wind_count=w->portal_count=0;
+  // Count only completed accepted shots, not capture/drop, elapsed time or duplicates.
+  golf_wildlife_shot(w,&p);golf_wildlife_shot(w,&p);
+  golf_wildlife_tick(w,&p,1,time,927,false);assert(p.ball.saliva_shots==2);
+  p.ball.is_in_hole=false;
+  for(int remaining=2;remaining>0;remaining--){
+   p.ball.is_moving=false;p.ball.capture_until=0;
+   assert(golf_physics_shoot(&world,&p,V3(1,0,0),.1f));
+   golf_wildlife_shot(w,&p);assert(p.ball.saliva_shots==remaining);
+   p.ball.is_moving=false;golf_wildlife_tick(w,&p,1,time,927,false);
+   assert(p.ball.saliva_shots==remaining-1);
+   golf_wildlife_tick(w,&p,1,time,927,false);assert(p.ball.saliva_shots==remaining-1);
+  }
+  assert(golf_ball_shot_scale(&p.ball)==1);
+  golf_player_t reset=p;reset.ball.saliva_shots=3;golf_player_start_level(&reset,w->spawn);assert(!reset.ball.saliva_shots);
   step(w,&p,s->cooldown-.01f);assert(s->state==SMANATA_COOLDOWN);step(w,&p,s->cooldown+.01f);assert(s->state==SMANATA_IDLE);
  }
  if(argc==1){
