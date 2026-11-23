@@ -12,7 +12,7 @@ try{
  const errors=[],host=await browser.newPage({viewport:{width:1280,height:800}}),guest=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  for(const page of [host,guest]){page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));}
  await visitMultiplayer(host,url);await createLobby(host,{nickname:'Meg desktop'});
- const room=[...app.rooms.values()][0],owner=room.members.get(1);room.physicsSeed=6;room.configurePool(owner,'custom',[room.levels.indexOf('data/levels/level-3.level')]);room.configure(owner,1,'classic','simultaneous');
+ const room=[...app.rooms.values()][0],owner=room.members.get(1);room.physicsSeed=16;room.configurePool(owner,'custom',[room.levels.indexOf('data/levels/level-2.level')]);room.configure(owner,1,'classic','simultaneous');
  await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Meg mobile'});
  await host.locator('#start').click();for(const page of [host,guest])await finishPresentation(page);
  for(const page of [host,guest])await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);
@@ -28,7 +28,7 @@ try{
  // the held illustration or calculating a direct tap on its visible body.
  for(const page of [host,guest])await page.waitForTimeout(500);
  fs.mkdirSync('../out/meg',{recursive:true});
- const actorVertices=await host.evaluate(()=>GolfCourse.inspect().frame.actorVertices);assert.ok(actorVertices>0&&actorVertices<49152,'Meg stays inside the existing actor buffer');
+ const actorVertices=await host.evaluate(()=>GolfCourse.inspect().frame.actorVertices);assert.ok(actorVertices>0&&actorVertices<73728,'Meg stays inside the existing actor buffer');
  assert.equal(await host.evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot),false);
  await host.screenshot({path:'../out/meg/desktop-holding.png'});await guest.screenshot({path:'../out/meg/mobile-holding.png'});
  const angle=await host.evaluate(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).cameraAngle);

@@ -292,6 +292,7 @@ vec3 golf_wildlife_wind(const golf_wildlife_t *w,vec3 pos,float time){
 }
 void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,float time,uint32_t seed,bool enabled) {
     animate(w,time);
+    golf_companions_tick(w,players,count,time,seed,enabled);
     for(int i=0;i<count;i++) {
         golf_player_t *p=&players[i];golf_ball_t *b=&p->ball;
         if(!p->id||!p->connected||b->is_in_hole)continue;
@@ -309,7 +310,7 @@ void golf_wildlife_tick(golf_wildlife_t *w,golf_player_t *players,int count,floa
             }
             continue;
         }
-        if(b->capture_kind==5)continue;
+        if(b->capture_kind==5||b->capture_kind==GOLF_CAPTURE_BENEDITA||b->capture_kind==GOLF_CAPTURE_SMANATA)continue;
         if(b->capture_kind) {
             if(time>=b->capture_until)release(b,time);
             continue;

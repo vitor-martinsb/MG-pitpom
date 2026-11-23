@@ -90,6 +90,10 @@ test('interactive search budget still completes straight, curved and moving-obst
       await p.configure(false,12345);await p.add(0,2);await p.prepareBots();let frame=await p.step(120);
       for(let i=0;i<300&&!frame.players[0]!.hole&&frame.players[0]!.strokes<48;i++){
         const ball=frame.players[0]!;
+        // This direct-worker harness acts as the bot controller, like Room.tick.
+        // Holding companions require an explicit interaction, never a timeout.
+        if(ball.captureKind===8&&frame.mascots.companions?.smanata.state===3)await p.releaseSmanata(0);
+        else if(ball.captureKind===6&&ball.captureUntil>1e30)await p.releaseMeg(0);
         if(!ball.moving&&!ball.captureUntil){const plan=await p.plan(0,'hard');assert.equal(plan.ok,true);assert.ok(plan.direction.every(Number.isFinite));assert.equal(await p.shot(0,plan.direction,plan.power),true);}
         frame=await p.step(1200);
       }

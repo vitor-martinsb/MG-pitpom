@@ -13,7 +13,7 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const D=Date;globalThis.Date=class extends D{constructor(...a){super(...(a.length?a:['2026-10-24T15:00:00-03:00']));}};});
   await page.goto(url);await page.locator('#home-loading').waitFor({state:'hidden',timeout:90000});
-  assert.equal(await page.locator('[data-pet]').count(),8,'six atlas pets, the existing bird and Meg');
+  assert.equal(await page.locator('[data-pet]').count(),9,'six atlas pets, the existing bird, Meg and the supplied new pair');
   assert.equal(await page.locator('[data-pet=meg]').getAttribute('data-source-art'),'menu-pet-meg.png');
   const megArt=fs.readFileSync('../build/emscripten/art/menu-pet-meg.png'),megServed=Buffer.from(await (await fetch(url+'/art/menu-pet-meg.png')).arrayBuffer());
   assert.equal(createHash('sha256').update(megServed).digest('hex'),createHash('sha256').update(megArt).digest('hex'));
@@ -45,6 +45,14 @@ try {
   await page.locator('#main-menu').waitFor({state:'visible'});
   // Inspect the scene independently from the static title and controls.
   await page.evaluate(()=>document.querySelector('.living-menu-art').getAnimations({subtree:true}).forEach(a=>{a.pause();a.effect.updateTiming({delay:0});a.currentTime=0;}));
+  const painted=await page.evaluate(()=>GolfHome.scene.petFrames);await page.waitForFunction(n=>GolfHome.scene.petFrames>n+2,painted);
+  const fitted=await page.evaluate(()=>{
+   const surface=document.querySelector('[data-pet-surface]').getBoundingClientRect(),actions=document.getElementById('main-menu').getBoundingClientRect();
+   const clipped=[...document.querySelectorAll('[data-pet] [data-motion=body] image')].filter(e=>{const r=e.getBoundingClientRect();return r.left<surface.left-2||r.right>surface.right+2||r.top<surface.top-2||r.bottom>surface.bottom+2;}).map(e=>e.closest('[data-pet]').dataset.pet);
+   const r=document.querySelector('[data-pet="benedita-smanata"] [data-motion=body] image').getBoundingClientRect();
+   return {clipped,overlap:r.right>actions.left&&r.left<actions.right&&r.bottom>actions.top&&r.top<actions.bottom};
+  });
+  assert.deepEqual(fitted.clipped,[],`${name}: fitting the new row cannot clip existing heads or paws`);assert.equal(fitted.overlap,false,'menu controls never cover the supplied pair');
   const scene=page.locator('.living-scene'),still=await scene.screenshot();await page.waitForTimeout(100);
   assert.equal(Buffer.compare(still,await scene.screenshot()),0,'frozen frames must not accumulate trails');
   const frames=[];

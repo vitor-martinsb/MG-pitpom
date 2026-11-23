@@ -270,6 +270,10 @@ static trial_t simulate(golf_physics_world_t *world,golf_bvh_t *dynamic,const go
         // flag. Imaginary maritaca flights are neither valid landings nor work.
         if(t.player.ball.is_out_of_bounds){danger=true;break;}
         golf_mechanics_tick(&t.mechanics,&t.player,1,w.time);
+        // A virtual bot taps only its own copied companion after arrival.
+        // This forecast never releases or mutates an authoritative ball.
+        if(t.player.ball.capture_kind==GOLF_CAPTURE_SMANATA&&t.mechanics.wildlife.companions.smanata.state==SMANATA_HOLDING)
+            golf_smanata_release(&t.mechanics.wildlife,&t.player,w.time);
         t.peak=fmaxf(t.peak,t.player.ball.pos.y);
         if(t.player.ball.is_in_hole)break;
         if(t.player.ball.is_in_water)water_ticks++;

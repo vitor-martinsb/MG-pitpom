@@ -4,6 +4,7 @@
 bool golf_online_active(void);
 bool golf_online_can_shoot(void);
 bool golf_online_release_meg(void);
+bool golf_online_release_smanata(void);
 bool golf_online_input_blocked(void);
 bool golf_online_overview(void);
 bool golf_online_remote_aim(golf_player_t **player,vec3 *direction,float *power);

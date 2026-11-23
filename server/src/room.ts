@@ -303,12 +303,14 @@ export class Room {
       this.send(m,{type:'shot',sequence:seq,accepted:true});
     }finally{this.shotPending.delete(m.id);}
   }
-  async releaseMeg(m:Member,message:any,refresh=true){
-    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==6||!m.ball.captured||m.ball.captureUntil<1e30||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error('Interação com a Meg indisponível.');
-    const physics=this.physics,generation=this.generation;if(!physics)throw Error('Interação com a Meg indisponível.');
+  async releaseMeg(m:Member,message:any,refresh=true){return this.releasePet(m,message,6,refresh);}
+  async releaseSmanata(m:Member,message:any,refresh=true){return this.releasePet(m,message,8,refresh);}
+  private async releasePet(m:Member,message:any,kind:6|8,refresh=true){
+    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==kind||!m.ball.captured||m.ball.captureUntil<1e30||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error(kind===6?'Interação com a Meg indisponível.':'Interação com a Smanata indisponível.');
+    const physics=this.physics,generation=this.generation;if(!physics)throw Error(kind===6?'Interação com a Meg indisponível.':'Interação com a Smanata indisponível.');
     this.shotPending.add(m.id);
     try{
-      if(!await physics.releaseMeg(m.slot))throw Error('A Meg não está segurando sua bola.');
+      if(!await (kind===6?physics.releaseMeg(m.slot):physics.releaseSmanata(m.slot)))throw Error('A personagem não está pronta para soltar sua bola.');
       if(!refresh)return;
       const frame=await physics.step(0);if(generation!==this.generation||physics!==this.physics)return;
       for(const ball of frame.players){const member=this.members.get(ball.id);if(member)member.ball=ball;}
@@ -374,6 +376,9 @@ export class Room {
       let megBots=0;
       for(const bot of this.members.values())if(bot.bot&&bot.ready&&bot.ball?.captureKind===6&&bot.ball.captureUntil>1e30&&(this.playStyle!=='turns'||this.turn===bot.id)&&this.phase==='playing'&&!this.timedOut()){
         await this.releaseMeg(bot,{hole:this.hole,match:this.match},false);megBots++;
+      }
+      for(const bot of this.members.values())if(bot.bot&&bot.ready&&bot.ball?.captureKind===8&&this.mascots?.companions?.smanata.state===3&&(this.playStyle!=='turns'||this.turn===bot.id)&&this.phase==='playing'&&!this.timedOut()){
+        await this.releaseSmanata(bot,{hole:this.hole,match:this.match},false);megBots++;
       }
       if(megBots){
         const released=await physics.step(0);if(generation!==this.generation||physics!==this.physics)return;

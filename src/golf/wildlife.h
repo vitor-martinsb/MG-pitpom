@@ -2,6 +2,7 @@
 #define GOLF_WILDLIFE_H
 #include "golf/navigation.h"
 #include "golf/player.h"
+#include "golf/companions.h"
 #define GOLF_WILDLIFE_COUNT 5
 #define GOLF_MEG 4
 #define GOLF_CAPTURE_MEG 6
@@ -35,6 +36,7 @@ typedef struct golf_wildlife {
     golf_puddle_t puddles[GOLF_PUDDLES];uint32_t accepted_shots,next_puddle;
     golf_mud_print_t mud_prints[GOLF_MUD_PRINTS];uint32_t next_mud_print;float print_distance;
     golf_wild_shot_t shots[GOLF_MAX_PLAYERS];
+    golf_companions_t companions;
     vec3 meg_ground;
     uint32_t meg_launches;
     int world,stage,course;

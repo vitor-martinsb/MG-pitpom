@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-// A real shot on the unmodified third map reaches Meg. No teleport or test-only
+// A real shot on the unmodified second map reaches Meg. No teleport or test-only
 // worker command is used; this also exercises the actual capture collision.
 export async function captureMeg(room,members,fire=(member,shot)=>room.shot(member,shot)){
   const physics=room.physics;

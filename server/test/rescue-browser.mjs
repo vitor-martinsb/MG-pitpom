@@ -68,10 +68,10 @@ try{
       assert.doesNotMatch(await page.locator('#wildlife-effect').innerText(),/undefined|effect\./);
     }
     assert.equal(room.busy,true,'the room stays frozen throughout the renderer fixture');
-    // Juju already expanded the production actor buffer to 40960 vertices.
-    assert.ok(frame.actorVertices>0&&frame.actorVertices<40960,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
+    // Juju already expanded the production actor buffer to 73728 vertices.
+    assert.ok(frame.actorVertices>0&&frame.actorVertices<73728,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
     await page.screenshot({path:`../out/campaign-validation/maritaca-fifty-${name}.png`});
-    console.log(`${name}: 50 simultaneous maritaca rescues and six pets: ${frame.actorVertices}/40960 vertices.`);
+    console.log(`${name}: 50 simultaneous maritaca rescues and six pets: ${frame.actorVertices}/73728 vertices.`);
   }
   assert.deepEqual(errors,[]);
 }finally{for(const socket of clients)socket.terminate();await browser?.close();app.close();}

@@ -170,6 +170,14 @@
       }
       ctx.restore();
     }}
+    // Foreground pets occlude scenery decorations in either welcome/menu layout.
+    // Follow the fitted ensemble instead of relying on a fixed eight-pet layout.
+    if(home){
+      const nodes=document.querySelectorAll($('home').dataset.screen==='menu'?'[data-pet-help]':'.living-menu-art [data-pet]');
+      ctx.save();ctx.setTransform(d,0,0,d,0,0);
+      for(const node of nodes){const r=node.getBoundingClientRect();if(r.width&&r.height)ctx.clearRect(Math.floor(r.left)-2,Math.floor(r.top)-2,Math.ceil(r.width)+4,Math.ceil(r.height)+4);}
+      ctx.restore();
+    }
     // Native snow is depth-tested during play. Screen snow is for UI only.
     if(!home&&(entry||!$('lobby').hidden||!$('loading').hidden||!$('home-loading').hidden||!$('level-selection').hidden||!$('scores').hidden)){for(let i=0;i<(w<600?32:56);i++){const x=((i*.61803398875*w+Math.sin(time*.4+i)*12)%w+w)%w,y=(i*79+time*(12+i%9))%(h+20)-10;ctx.fillStyle='#f8fcffe0';ctx.beginPath();ctx.arc(x,y,1+i%3*.45,0,Math.PI*2);ctx.fill();}}
     if(now<burstUntil){const age=(1-(burstUntil-now)/4200);for(let i=0;i<42;i++){const x=w*.5+Math.cos(i*2.4)*age*w*.55,y=h*.38+Math.sin(i*2.4)*age*h*.35+age*age*h*.22;ctx.fillStyle=['#ed6253','#ffe39b','#87bd86'][i%3];ctx.save();ctx.translate(x,y);ctx.rotate(i+age*3);if(i%3===0){ctx.fillRect(-4,-4,8,8);ctx.fillStyle='#fff0b1';ctx.fillRect(-1,-4,2,8);ctx.fillRect(-4,-1,8,2);}

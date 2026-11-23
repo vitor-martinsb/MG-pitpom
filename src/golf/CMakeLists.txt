@@ -22,6 +22,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Android)
         draw.c
         garden.c
         seasonal.c
+        companions.c
         wildlife.c
         mechanics.c
         navigation.c
@@ -47,6 +48,7 @@ else()
         draw.c
         garden.c
         seasonal.c
+        companions.c
         wildlife.c
         mechanics.c
         navigation.c

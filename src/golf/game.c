@@ -530,6 +530,7 @@ void golf_game_update(float dt) {
             // Keep the camera above the course while a ball falls; no sky flash
             // or plunge below the landscape before the maritaca arrives.
             vec3 focus=player->ball.draw_pos;
+            if(player->ball.capture_kind==GOLF_CAPTURE_SMANATA)focus=vec3_add(game.mechanics.wildlife.companions.smanata.draw_pos,V3(0,.30f,0));
             if(player->ball.capture_kind==GOLF_CAPTURE_MEG)focus=vec3_add(game.mechanics.wildlife.animals[GOLF_MEG].pos,V3(0,.30f,0));
             focus.y=fmaxf(focus.y,fminf(player->ball.start_pos.y,game.mechanics.bounds_min.y)-.35f);
             vec3 wanted_pos = vec3_add(focus, cam_delta);
@@ -689,6 +690,11 @@ void golf_game_start_level(void) {
     graphics->cam_dir = game.begin_camera_animation.cam_dir0;
 }
 
+bool golf_game_release_smanata(void){
+    if(game.begin_camera_animation.active||game.state==GOLF_GAME_STATE_PAUSED)return false;
+    if(golf_online_active())return golf_online_release_smanata();
+    return golf_smanata_release(&game.mechanics.wildlife,golf_game_get_local_player(),game.t);
+}
 bool golf_game_release_meg(void){
     if(game.begin_camera_animation.active||game.state==GOLF_GAME_STATE_PAUSED)return false;
     if(golf_online_active())return golf_online_release_meg();

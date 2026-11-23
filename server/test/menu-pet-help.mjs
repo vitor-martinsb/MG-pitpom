@@ -4,7 +4,7 @@ import {chromium} from '@playwright/test';
 import {createServer} from '../dist/index.js';
 
 const app=createServer(),errors=[];let browser;
-const pets=['luna','romeu','frida','maritaca','pituca','pompom','juju','meg'];
+const pets=['luna','romeu','frida','maritaca','pituca','pompom','juju','meg','benedita-smanata'];
 try{
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   const url=`http://127.0.0.1:${app.server.address().port}`;
@@ -14,7 +14,7 @@ try{
     const context=await browser.newContext({viewport:{width,height},isMobile:touch,hasTouch:touch}),page=await context.newPage();
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto(url);await page.locator('#continue-home').click({timeout:90000});await page.locator('#main-menu').waitFor({state:'visible'});
-    assert.equal(await page.locator('[data-pet-help]').count(),8);
+    assert.equal(await page.locator('[data-pet-help]').count(),9);
     assert.equal(await page.locator('#main-menu button').count(),4);
     const tooltip=page.locator('#menu-pet-tooltip');assert.equal(await tooltip.isHidden(),true);
     for(const language of ['en','pt-BR','es']){
@@ -48,7 +48,7 @@ try{
       await page.setViewportSize({width:844,height:390});
       await page.waitForFunction(()=>GolfHome.scene.layout==='landscape');
       await page.setViewportSize({width,height});await page.waitForFunction(()=>GolfHome.scene.layout==='portrait');
-      assert.equal(await page.locator('[data-pet-help]').count(),8);
+      assert.equal(await page.locator('[data-pet-help]').count(),9);
       await page.locator('[data-pet-help="juju"]').tap();await tooltip.waitFor({state:'visible'});assert.equal(await tooltip.locator('strong').textContent(),'Juju');
     }
     await page.locator('#exit-game').click();await page.locator('#continue-home').waitFor({state:'visible'});await tooltip.waitFor({state:'hidden'});
@@ -56,5 +56,5 @@ try{
     await context.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('Eight animal descriptions: desktop hover, mobile touch, EN/PT/ES, live translation, keyboard/Escape, viewport bounds, rotation and multiplayer/exit navigation passed. Cocota named in every language.');
+  console.log('All animal descriptions, including Benedita and Smanata: desktop hover, mobile touch, EN/PT/ES, live translation, keyboard/Escape, viewport bounds, rotation and multiplayer/exit navigation passed. Cocota named in every language.');
 }finally{await browser?.close();app.close();}

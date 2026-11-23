@@ -14,6 +14,7 @@
 #ifdef GOLF_PLATFORM_EMSCRIPTEN
 #include <emscripten.h>
 EM_JS(void, online_ready, (int hole), { if (window.GolfOnline) window.GolfOnline.ready(hole); });
+EM_JS(void, online_send_smanata, (), {if(window.GolfOnline)window.GolfOnline.releaseSmanata();});
 EM_JS(void, online_send_meg, (), {if(window.GolfOnline)window.GolfOnline.releaseMeg();});
 EM_JS(void, online_send_shot, (float x, float z, float power), { if (window.GolfOnline) window.GolfOnline.shot([x,0,z],power); });
 EM_JS(void, online_send_aim, (float x,float z,float power,int active), { if(window.GolfOnline)window.GolfOnline.aim([x,0,z],power,!!active); });
@@ -22,6 +23,7 @@ EM_JS(void, online_preview, (), { if(window.GolfOnline)window.GolfOnline.preview
 #else
 static void online_ready(int hole) { (void)hole; }
 static void online_send_meg(void) {}
+static void online_send_smanata(void) {}
 static void online_send_shot(float x, float z, float power) { (void)x; (void)z; (void)power; }
 static void online_send_aim(float x,float z,float power,int active) {(void)x;(void)z;(void)power;(void)active;}
 static int online_blocked(void) { return 0; }
@@ -30,7 +32,7 @@ static void online_preview(void) {}
 #endif
 
 static struct {
-    bool active, playing, turns, aim_cancelled, shot_pending, meg_pending, loading, has_snapshot, awaiting_ready, impact, returning_to_menu;
+    bool active, playing, turns, aim_cancelled, shot_pending, pet_pending, loading, has_snapshot, awaiting_ready, impact, returning_to_menu;
     int requested_level, hole, stroke_limit;
     uint32_t local_id, camera_id, turn_id;
     float age, interval, time, aim_age, aim_power;
@@ -57,8 +59,13 @@ EMSCRIPTEN_KEEPALIVE const char *golf_online_diagnostics(void) {
 }
 
 bool golf_online_release_meg(void){
-    if(!online.active||!online.playing||online.loading||online.shot_pending||online.meg_pending||!online.has_snapshot||(online.turns&&online.turn_id!=online.local_id)||golf_game_get_local_player()->ball.capture_kind!=GOLF_CAPTURE_MEG||golf_game_get_local_player()->ball.capture_until<FLT_MAX)return false;
-    online.meg_pending=true;online_send_meg();return true;
+    if(!online.active||!online.playing||online.loading||online.shot_pending||online.pet_pending||!online.has_snapshot||(online.turns&&online.turn_id!=online.local_id)||golf_game_get_local_player()->ball.capture_kind!=GOLF_CAPTURE_MEG||golf_game_get_local_player()->ball.capture_until<FLT_MAX)return false;
+    online.pet_pending=true;online_send_meg();return true;
+}
+bool golf_online_release_smanata(void){
+    golf_game_t *game=golf_game_get();golf_companion_t *s=&game->mechanics.wildlife.companions.smanata;
+    if(!online.active||!online.playing||online.loading||online.shot_pending||online.pet_pending||!online.has_snapshot||(online.turns&&online.turn_id!=online.local_id)||game->players[0].ball.capture_kind!=GOLF_CAPTURE_SMANATA||s->player!=online.local_id||s->state!=SMANATA_HOLDING)return false;
+    online.pet_pending=true;online_send_smanata();return true;
 }
 bool golf_online_active(void) { return online.active; }
 bool golf_online_overview(void) {return online.active&&online.playing&&online.turns&&online.turn_id!=online.local_id&&!online.loading;}
@@ -78,7 +85,7 @@ bool golf_online_remote_aim(golf_player_t **player,vec3 *direction,float *power)
 }
 bool golf_online_can_shoot(void) {
     golf_player_t *p=golf_game_get_local_player();
-    return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && (!online.stroke_limit||p->stroke_count<online.stroke_limit) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && !online.meg_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
+    return online.active && online.playing && (!online.turns||online.turn_id==online.local_id) && (!online.stroke_limit||p->stroke_count<online.stroke_limit) && !online.loading && !golf_game_get()->begin_camera_animation.active && !online.shot_pending && !online.pet_pending && online.has_snapshot && p->connected && !p->ball.is_moving && !p->ball.is_in_hole && !p->ball.capture_until;
 }
 golf_player_t *golf_online_camera_player(void) {
     if(online.turns&&online.playing){
@@ -139,7 +146,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         }
     } else if (!strcmp(type,"load") && online.active) {
         online.requested_level=(int)json_object_get_number(o,"level"); online.hole=(int)json_object_get_number(o,"hole");
-        online.loading=true; online.has_snapshot=false; online.shot_pending=false; online.meg_pending=false;
+        online.loading=true; online.has_snapshot=false; online.shot_pending=false; online.pet_pending=false;
         online.awaiting_ready=false;
     } else if (!strcmp(type,"snapshot") && online.active && (int)json_object_get_number(o,"hole")==online.hole) {
         float time=(float)json_object_get_number(o,"time");
@@ -181,6 +188,18 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             }
         }
         if(mascots){
+            JSON_Object *companions=json_object_get_object(mascots,"companions");
+            const char *names[]={"benedita","smanata"};
+            for(int i=0;i<2;i++){
+                golf_companion_t *a=i?&game->mechanics.wildlife.companions.smanata:&game->mechanics.wildlife.companions.benedita;
+                JSON_Object *c=json_object_get_object(companions,names[i]);bool was_active=a->active;vec3 previous=a->draw_pos;
+                a->active=c&&json_object_get_boolean(c,"active")==1;
+                if(!a->active)continue;
+                a->state=(int)json_object_get_number(c,"state");a->player=(uint32_t)json_object_get_number(c,"player");
+                a->pos=golf_json_object_get_vec3(c,"pos");a->home=golf_json_object_get_vec3(c,"home");a->forward=golf_json_object_get_vec3(c,"forward");a->look=golf_json_object_get_vec3(c,"look");
+                a->until=(float)json_object_get_number(c,"until");a->cooldown=(float)json_object_get_number(c,"cooldown");a->clock=(float)json_object_get_number(c,"clock");a->stride=(float)json_object_get_number(c,"stride");a->speed=(float)json_object_get_number(c,"speed");
+                a->draw_pos=was_active&&vec3_distance(previous,a->pos)<3?previous:a->pos;
+            }
             golf_wildlife_t *w=&game->mechanics.wildlife;w->time=(float)json_object_get_number(o,"time");w->accepted_shots=(uint32_t)json_object_get_number(mascots,"acceptedShots");w->meg_ground=golf_json_object_get_vec3(mascots,"megGround");
             memset(w->mud_prints,0,sizeof(w->mud_prints));JSON_Array *prints=json_object_get_array(mascots,"mudPrints");
             for(size_t i=0;i<json_array_get_count(prints)&&i<GOLF_MUD_PRINTS;i++){
@@ -214,7 +233,7 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
             p->ball.capture_kind=(int)json_object_get_number(b,"captureKind");
             /* Only the local authoritative capture transition acknowledges a
                Meg tap. It must not consume the separate shot confirmation. */
-            if(p->id==online.local_id&&(p->ball.capture_kind!=GOLF_CAPTURE_MEG||p->ball.capture_until<FLT_MAX))online.meg_pending=false;
+            if(p->id==online.local_id&&((p->ball.capture_kind!=GOLF_CAPTURE_MEG&&p->ball.capture_kind!=GOLF_CAPTURE_SMANATA)||p->ball.capture_until<FLT_MAX))online.pet_pending=false;
             p->ball.rescue_started=(float)json_object_get_number(b,"rescueStarted");
             p->ball.rescue_from=golf_json_object_get_vec3(b,"rescueFrom");
             p->ball.effect_kind=(int)json_object_get_number(b,"effectKind");
@@ -237,11 +256,11 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
         online.aim_cancelled=true;
         if (game->state==GOLF_GAME_STATE_AIMING) game->state=GOLF_GAME_STATE_WAITING_FOR_AIM;
         game->aim_line.power=0;
-    } else if (!strcmp(type,"error")) { online.shot_pending=false; online.meg_pending=false;
+    } else if (!strcmp(type,"error")) { online.shot_pending=false; online.pet_pending=false;
     } else if (!strcmp(type,"spectate")) {
         golf_player_t *local=golf_game_get_local_player();
         if(local->ball.is_in_hole || !online.playing) online.camera_id=(uint32_t)json_object_get_number(o,"id");
-    } else if (!strcmp(type,"disconnected")) { online.playing=false; online.shot_pending=false; online.meg_pending=false;
+    } else if (!strcmp(type,"disconnected")) { online.playing=false; online.shot_pending=false; online.pet_pending=false;
     } else if (!strcmp(type,"leave")) {
         online.active=false; online.playing=false;
         online.loading=false; online.awaiting_ready=false; online.requested_level=-1;
@@ -254,6 +273,10 @@ EMSCRIPTEN_KEEPALIVE void golf_online_receive(const char *json) {
 }
 
 void golf_online_update(float dt) {
+    golf_companions_t *companions=&golf_game_get()->mechanics.wildlife.companions;
+    golf_companion_t *pets[]={&companions->benedita,&companions->smanata};
+    for(int i=0;i<2;i++)if(pets[i]->active)pets[i]->draw_pos=vec3_add(pets[i]->draw_pos,vec3_scale(vec3_sub(pets[i]->pos,pets[i]->draw_pos),1-expf(-18*dt)));
+
     /* Leaving during asynchronous loading must not strand the offline client
        in IN_GAME when the outstanding level finishes on a later frame. */
     if(online.returning_to_menu){

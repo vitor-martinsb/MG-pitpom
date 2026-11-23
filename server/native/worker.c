@@ -105,7 +105,11 @@ static void event(const char *kind,golf_player_t *p,float strength){
 static void collision_sound(const char *name,const char *path,float volume,bool loop,bool restart){
     (void)path;(void)loop;(void)restart;if(sound_player&&(!strcmp(name,"wood")||!strcmp(name,"stone")))event(name,sound_player,volume);
 }
+static void companion_json(const golf_companion_t *a){
+    printf("{\"active\":%s,\"state\":%d,\"player\":%u,\"pos\":[%.9g,%.9g,%.9g],\"home\":[%.9g,%.9g,%.9g],\"forward\":[%.7g,%.7g,%.7g],\"look\":[%.7g,%.7g,%.7g],\"until\":%.9g,\"cooldown\":%.9g,\"clock\":%.9g,\"stride\":%.7g,\"speed\":%.7g}",a->active?"true":"false",a->state,a->player,a->pos.x,a->pos.y,a->pos.z,a->home.x,a->home.y,a->home.z,a->forward.x,a->forward.y,a->forward.z,a->look.x,a->look.y,a->look.z,a->until,a->cooldown,a->clock,a->stride,a->speed);
+}
 static void wildlife_json(const golf_wildlife_t *w) {
+    printf(",\"companions\":{\"benedita\":");companion_json(&w->companions.benedita);printf(",\"smanata\":");companion_json(&w->companions.smanata);printf("}");
     printf(",\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",w->world,w->stage,w->course);
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         const golf_wild_animal_t *a=&w->animals[i];
@@ -171,8 +175,8 @@ int main(int argc, char **argv) {
             golf_player_init(&players[slot],(uint32_t)json_object_get_number(o,"id"),"",V4(1,1,1,1),0); golf_player_start_level(&players[slot],spawn);memset(&bot_memory[slot],0,sizeof(bot_memory[slot]));ok=true;
         } else if (cmd && !strcmp(cmd,"connected") && slot>=0 && slot<GOLF_MAX_PLAYERS) { players[slot].connected=json_object_get_boolean(o,"connected")==1; ok=true;
         } else if (cmd && !strcmp(cmd,"shot") && slot>=0 && slot<GOLF_MAX_PLAYERS) { vec3 direction=golf_json_object_get_vec3(o,"direction");float power=(float)json_object_get_number(o,"power");ok=golf_physics_shoot(&world,&players[slot],direction,power);if(ok){golf_wildlife_shot(&mechanics.wildlife,&players[slot]);golf_bot_record(&bot_memory[slot],&players[slot],direction,power);event("shot",&players[slot],power);}
-        } else if (cmd && !strcmp(cmd,"meg") && slot>=0 && slot<GOLF_MAX_PLAYERS && !planner_only) {
-            ok=golf_meg_release(&mechanics.wildlife,&players[slot],&config,world.time,mechanics.seed);
+        } else if (cmd && (!strcmp(cmd,"meg")||!strcmp(cmd,"smanata")) && slot>=0 && slot<GOLF_MAX_PLAYERS && !planner_only) {
+            ok=!strcmp(cmd,"meg")?golf_meg_release(&mechanics.wildlife,&players[slot],&config,world.time,mechanics.seed):golf_smanata_release(&mechanics.wildlife,&players[slot],world.time);
         } else if (cmd && !strcmp(cmd,"step")) {
             int ticks=(int)json_object_get_number(o,"ticks"); if (ticks<0 || ticks>1200) ticks=0;
             bool full_players=getenv("GOLF_PHYSICS_FULL_PLAYERS")!=NULL;
@@ -201,7 +205,7 @@ int main(int argc, char **argv) {
                     if(players[i].ball.effect_serial!=effects[i]){
                         const char *kinds[]={"","romeu","luna","frida","portal","capture","juju"};
                         int effect=players[i].ball.effect_kind;
-                        event(effect==GOLF_EFFECT_MEG?"meg":effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
+                        event(effect==GOLF_EFFECT_SMANATA?"meg":effect==GOLF_EFFECT_BENEDITA?"christmas":effect==GOLF_EFFECT_MEG?"meg":effect==7?"present":effect==9?"portal":effect>=7?"christmas":kinds[effect],&players[i],1);
                     }
                     else if(players[i].ball.cat_hits!=hits[i])event("slap",&players[i],1);
                     else if(!captures[i]&&players[i].ball.capture_until)event("capture",&players[i],1);
@@ -213,7 +217,7 @@ int main(int argc, char **argv) {
             printf(",\"catSpan\":%.9g,\"catCenter\":[%.9g,%.9g,%.9g],\"catAcross\":[%.9g,%.9g,%.9g]",mechanics.cat_span,mechanics.cat_center.x,mechanics.cat_center.y,mechanics.cat_center.z,mechanics.across.x,mechanics.across.y,mechanics.across.z);
             wildlife_json(&mechanics.wildlife);
             printf(",\"season\":{\"enabled\":%s,\"items\":[",mechanics.season.enabled?"true":"false");
-            for(int k=0;k<mechanics.season.count;k++){golf_season_item_t *q=&mechanics.season.items[k];printf("%s{\"kind\":%d,\"pos\":[%.7g,%.7g,%.7g],\"phase\":%.7g,\"actionTime\":%.7g,\"megPoseFrom\":%.7g}",k?",":"",q->kind,q->pos.x,q->pos.y,q->pos.z,q->phase,q->action_time);}
+            for(int k=0;k<mechanics.season.count;k++){golf_season_item_t *q=&mechanics.season.items[k];printf("%s{\"kind\":%d,\"pos\":[%.7g,%.7g,%.7g],\"phase\":%.7g,\"actionTime\":%.7g}",k?",":"",q->kind,q->pos.x,q->pos.y,q->pos.z,q->phase,q->action_time);}
             printf("]}");printf("},\"players\":[");
             bool comma=false;
             for (int i=0;i<GOLF_MAX_PLAYERS;i++) if (players[i].id) {

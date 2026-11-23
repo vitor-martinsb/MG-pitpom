@@ -63,9 +63,9 @@ try{
     });
     assert.equal(frame.mode,'impact');assert.equal(frame.players.length,50);
     assert.equal(room.busy,true,'the room stays frozen throughout the renderer fixture');
-    assert.ok(frame.actorVertices>0&&frame.actorVertices<49152,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
+    assert.ok(frame.actorVertices>0&&frame.actorVertices<73728,`${name} complete actors fit the reserved capacity: ${frame.actorVertices}`);
     await page.screenshot({path:`../out/campaign-validation/wildlife-fifty-${name}.png`});
-    console.log(`${name}: 50 Impact players and simultaneous wildlife actions: ${frame.actorVertices}/49152 vertices.`);
+    console.log(`${name}: 50 Impact players and simultaneous wildlife actions: ${frame.actorVertices}/73728 vertices.`);
   }
   assert.deepEqual(errors,[]);
 }finally{for(const socket of clients)socket.terminate();await browser?.close();app.close();}

@@ -9,8 +9,8 @@ import {captureMeg,finishMegRelease} from './meg-fixture.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 function socket(){const messages:any[]=[];return {readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s)),close(){},messages} as unknown as WebSocket&{messages:any[]};}
 async function fixture(style:'turns'|'simultaneous'){
- const room=new Room('MEG',root,['data/levels/level-3.level'],defaults,()=>0),a=socket(),b=socket();
- (room as any).physicsSeed=6;
+ const room=new Room('MEG',root,['data/levels/level-2.level'],defaults,()=>0),a=socket(),b=socket();
+ (room as any).physicsSeed=16;
  const host=room.join(a,'Host','#ffffff',0),guest=room.join(b,'Guest','#ff0000',1);
  await room.start(host,1,'classic',style);room.ready(host,0);room.ready(guest,0);
  return {room,host,guest,a,b};
@@ -46,9 +46,9 @@ for(const style of ['turns','simultaneous'] as const)test(`Meg ${style}: real ca
 });
 
 test('a captured bot explicitly taps Meg through the same authority without another stroke or stalled planning',async()=>{
- const room=new Room('MEGBOT',root,['data/levels/level-3.level'],defaults,()=>0),host=room.join(socket(),'Host','#ffffff',0);
+ const room=new Room('MEGBOT',root,['data/levels/level-2.level'],defaults,()=>0),host=room.join(socket(),'Host','#ffffff',0);
  try{
-  (room as any).physicsSeed=6;room.botSettings(host,'add',null,{difficulty:'medium'});
+  (room as any).physicsSeed=16;room.botSettings(host,'add',null,{difficulty:'medium'});
   const bot=[...room.members.values()].find(m=>m.bot)!;
   await room.start(host,1,'classic','simultaneous');room.ready(host,0);
   await captureMeg(room,[bot]);assert.equal(bot.ball!.captureKind,6);

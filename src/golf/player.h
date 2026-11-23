@@ -32,6 +32,7 @@ typedef struct golf_ball {
     int capture_kind,effect_kind;
     float effect_time;
     vec3 capture_target;
+    vec3 gaze_velocity,gaze_rotation;float gaze_spin;
     /* Maritaca rescue is simulated by the authority, never by a client timer. */
     vec3 rescue_from;
     float rescue_started;

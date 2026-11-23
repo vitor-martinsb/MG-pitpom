@@ -196,6 +196,7 @@ void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
         m->wildlife.animals[k].clock=((key>>(k*5))%100)/10.f;
         m->wildlife.animals[k].patrol_period=4.8f+((key>>(k*7))%45)/10.f;
     }
+    golf_companions_init(&m->wildlife,m->cat_center,m->dog);
     golf_wildlife_tick(&m->wildlife,NULL,0,0,m->seed,false);
     golf_mechanics_animate(m,0);
 }

@@ -34,7 +34,7 @@ try{
    await page.waitForFunction(({kind,time})=>{const f=JSON.parse(Module.ccall('golf_course_frame','string',[],[]));return f.time>=time&&f.time<time+.4&&f.wildlife[kind].visible&&f.actorVertices>0;},{kind,time},{timeout:30000});
    await page.waitForTimeout(350);
    const f=await page.evaluate(()=>JSON.parse(Module.ccall('golf_course_frame','string',[],[])));
-   assert.ok(f.actorVertices>1000&&f.actorVertices<40960);assert.equal(f.season.theme,true);
+   assert.ok(f.actorVertices>1000&&f.actorVertices<73728);assert.equal(f.season.theme,true);
    if(pose!=='rest')assert.ok(f.catForward.reduce((n,x,i)=>n+x*s.mascots.catAcross[i]*(crossing%2?-1:1),0)>.99,'Pompom faces the actual walking direction');
    await page.screenshot({path:`../out/pet-outfits/${kind===1?'luna':'frida'}-${pose}-${width}x${height}.png`});
   }

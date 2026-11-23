@@ -20,7 +20,7 @@
 #define WORLD_LIMIT 72000
 #define FX_LIMIT 8192
 // Detailed wildlife and the original mascots, including simultaneous actions.
-#define ACTOR_LIMIT 49152
+#define ACTOR_LIMIT 73728
 typedef struct garden_vertex { vec3 position, normal; vec4 color; } garden_vertex_t;
 typedef struct garden_mesh { garden_vertex_t *vertices; int count, capacity; } garden_mesh_t;
 static struct {
@@ -831,6 +831,8 @@ static void maritaca(garden_mesh_t *mesh,const golf_player_t *p,float time,bool 
     if(season_theme){branch(mesh,V3(0,.36f,.16f),V3(0,.63f,.16f),.15f,.001f,paint(.13f,.42f,.25f,0));for(int bulb=0;bulb<3;bulb++)oval(mesh,V3((bulb-1)*.07f,.39f,.22f),V3(.025f,.025f,.02f),paint(.97f,.75f,.24f,0),2,4);}
     garden.transform=mat4_identity();
 }
+#include "companions-render.inc"
+
 void golf_garden_draw_feedback(float time) {
     garden.transform=mat4_identity();garden_mesh_t shadow={shadows,0,FX_LIMIT},fx={effects,0,FX_LIMIT};
     golf_game_t *game=golf_game_get();
@@ -844,6 +846,7 @@ void golf_garden_draw_feedback(float time) {
         for(int kind=0;kind<GOLF_WILDLIFE_COUNT;kind++)if(game->mechanics.wildlife.animals[kind].active&&game->mechanics.wildlife.animals[kind].present){
             wild_animal(&actor,&game->mechanics.wildlife.animals[kind],kind,time,game);
         }
+        companions_draw(&actor,game,time);
         campaign_obstacles(&actor,&game->mechanics.wildlife,time);
         for(int i=0;i<GOLF_MUD_PRINTS;i++){
             const golf_mud_print_t *p=&game->mechanics.wildlife.mud_prints[i];if(!p->active)continue;

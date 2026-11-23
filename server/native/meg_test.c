@@ -28,7 +28,7 @@ int main(int argc,char **argv){
   assert(fabsf(probe.ball.pos.y-floor.y-probe.ball.radius)<.002f);assert(probe.stroke_count==1);
   printf("Meg safe placement and grounded release: %s\n",argv[1]);return 0;
  }
- golf_wildlife_t w=m.wildlife;w.wind_count=w.portal_count=0;
+ golf_wildlife_t w=m.wildlife;w.companions.benedita.active=w.companions.smanata.active=false;w.wind_count=w.portal_count=0;
  for(int k=0;k<GOLF_WILDLIFE_COUNT;k++)w.animals[k].active=w.animals[k].present=k==GOLF_MEG;
  golf_wild_animal_t *meg=&w.animals[GOLF_MEG];meg->presence=1;vec3 ground=vec3_add(meg->pos,V3(0,GOLF_BALL_RADIUS,0));
  golf_player_t players[50];
