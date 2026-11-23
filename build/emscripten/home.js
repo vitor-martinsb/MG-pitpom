@@ -15,6 +15,8 @@
   }
   new ResizeObserver(layoutControls).observe(home.querySelector(".home-brand"));
   window.addEventListener("resize",layoutControls);
+  // Insets can change without changing the title size (including browser chrome).
+  new MutationObserver(layoutControls).observe(document.documentElement,{attributes:true,attributeFilter:["style"]});
   function layoutSettings(){
     if(route==='menu'&&$("music-controls").open)home.style.setProperty("--home-settings-top",`${$("music-controls").querySelector("summary").getBoundingClientRect().bottom+8}px`);
   }

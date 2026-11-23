@@ -192,7 +192,8 @@ static void animate(golf_wildlife_t *w,float time) {
                 unsigned id=++w->next_mud_print;float side=id&1?.105f:-.105f;
                 // The trail follows actual travel, independently of a gentle body turn.
                 vec3 pos=vec3_add(a->pos,vec3_add(vec3_scale(heading,-.22f),V3(heading.z*side,0,-heading.x*side))),hit;
-                if(!golf_nav_floor(w->floor,pos,&hit,0))continue;pos.y=hit.y;
+                if(!golf_nav_floor(w->floor,pos,&hit,.20f))continue;pos.y=hit.y;
+                if(!golf_wildlife_safe(w,pos,.20f))continue;
                 // Returning through the same corridor refreshes nearby marks;
                 // repeated laps must not stack into an unreadable muddy stripe.
                 for(int j=0;j<GOLF_MUD_PRINTS;j++){

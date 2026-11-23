@@ -80,7 +80,9 @@ try{
   // Settings are available inside the match, following the current UI.
   await a.locator('#music-controls summary').click();for(const [id,value]of [['master-volume','61'],['effects-volume','37'],['ui-volume','19']])await a.locator('#'+id).evaluate((e,value)=>{e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));},value);
   await a.locator('#music-controls summary').click();
-  const initial=await a.evaluate(()=>GolfCourse.inspect().frame);assert.equal(initial.players.filter(p=>p.visible).length,3);
+  const initial=await a.evaluate(()=>GolfCourse.inspect().frame);assert.equal(initial.players.length,3);
+  // Bots start playing immediately and may already be captured/hidden.
+  assert.equal(initial.players.find(p=>p.id===initial.local).visible,true);
   assert.equal(initial.players.find(p=>p.id===initial.local).firstComplete,false);
   await a.locator('#open-adventure').click();await a.locator('#adventure-modal').waitFor({state:'visible'});
   assert.equal(await a.locator('#match-adventure .trail-node').count(),2);assert.equal(await a.locator('#match-adventure .current').count(),1);await a.locator('#close-adventure').click();

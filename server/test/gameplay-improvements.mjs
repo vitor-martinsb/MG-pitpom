@@ -41,6 +41,8 @@ try{
  await guest.waitForFunction(()=>GolfCourse.inspect().frame.overview);assert.equal(await guest.locator('#camera-zoom').isVisible(),true);assert.equal(await host.evaluate(()=>GolfCourse.inspect().frame.overview),false);assert.match(await host.locator('#turn-status').textContent(),/Sua vez/);
  const before=await host.evaluate(()=>GolfCourse.inspect().frame.camera);
  if(!process.argv.includes('--turns-only')){
+ // Practice deliberately restores the prior zoom; start boundary checks at default.
+ await host.locator('#zoom-reset').click();await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom===1);
  await host.locator('#zoom-in').click();await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom<1);
  await host.locator('#zoom-reset').click();await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom===1);
  await host.locator('#canvas').hover({position:{x:800,y:350}});await host.mouse.wheel(0,100);await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom>1);

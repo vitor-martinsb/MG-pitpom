@@ -8,7 +8,7 @@ import {captureMeg,finishMegRelease} from './meg-fixture.mjs';
 const app=createServer();let browser;
 try{
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
- browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true}):chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),args:['--enable-unsafe-swiftshader']}));
+ browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true,...(process.env.WEBKIT_PATH?{executablePath:process.env.WEBKIT_PATH}:{})}):chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),args:['--enable-unsafe-swiftshader']}));
  const errors=[],host=await browser.newPage({viewport:{width:1280,height:800}}),guest=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  for(const page of [host,guest]){page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));}
  await visitMultiplayer(host,url);await createLobby(host,{nickname:'Meg desktop'});
@@ -62,6 +62,12 @@ try{
  for(let tick=0;tick<80;tick++){
   const f=await room.physics.step(60);room.worldTime=f.time;room.mascots=f.mascots;
   for(const ball of f.players)room.members.get(ball.id).ball=ball;room.snapshot(true);
+  // A wall can return a launched ball to Meg after the protection interval.
+  // Explicitly tap again, just like the player: an untouched hold never expires.
+  for(const m of room.members.values())if(m.ball.captureKind===6&&m.ball.captureUntil>1e30){
+   await room.releaseMeg(m,{hole:room.hole,match:room.match});await finishMegRelease(room,[m]);
+   assert.equal(m.ball.strokes,1,'another Meg release is not a new stroke');
+  }
   if([...room.members.values()].every(m=>!m.ball.moving))break;
  }
  for(const [page,member] of [[host,owner],[guest,room.members.get(2)]]){

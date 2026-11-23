@@ -50,10 +50,23 @@ int main(int argc,char **argv){
  golf_physics_world_t world={.level=&level,.config=&config,.static_bvh=&fixed,.dynamic_bvh=&moving,.multiplayer=true};golf_physics_build_world(&world,false);
  golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);assert(m.wildlife.animals[GOLF_JUJU].active);
  if(argc>1){
+  int selected_seeds=0;
   for(int seed=1;seed<=32;seed++){
    golf_mechanics_t resident=m;golf_mechanics_seed(&resident,seed,-1);
    golf_wild_animal_t *a=&resident.wildlife.animals[GOLF_JUJU];
-   assert(a->active&&golf_wildlife_safe(&resident.wildlife,a->pos,.44f));
+   bool selected=(resident.pet_mask&(1u<<GOLF_JUJU))!=0;
+   assert(a->active==selected&&a->present==selected);
+   if(!selected){
+    vec3 before=a->pos;
+    for(int tick=0;tick<200;tick++){
+     golf_mechanics_tick(&resident,NULL,0,tick/10.f);
+     assert(!a->active&&!a->present&&vec3_distance(a->pos,before)<.0001f);
+     assert(resident.wildlife.next_mud_print==0);
+    }
+    continue;
+   }
+   selected_seeds++;
+   assert(golf_wildlife_safe(&resident.wildlife,a->pos,.44f));
    assert(vec3_distance(a->pos,m.start)>1.24f&&vec3_distance(a->pos,m.hole)>1.49f&&(resident.third_kind!=GOLF_JUJU||vec3_distance(a->pos,resident.dog)>1.24f));
    float distance=0;for(int tick=0;tick<200;tick++){
     vec3 before=a->pos;golf_mechanics_tick(&resident,NULL,0,tick/10.f);
@@ -62,12 +75,13 @@ int main(int argc,char **argv){
     distance+=vec3_distance(before,a->pos);
    }
    assert(vec3_distance(a->a,a->b)>.1f&&distance>.5f);
-   if(resident.third_kind==GOLF_JUJU){assert(resident.wildlife.next_mud_print>0);int prints=0;
+   if(a->present){assert(resident.wildlife.next_mud_print>0);int prints=0;
     for(int j=0;j<GOLF_MUD_PRINTS;j++)if(resident.wildlife.mud_prints[j].active){prints++;assert(golf_wildlife_safe(&resident.wildlife,resident.wildlife.mud_prints[j].pos,.20f));}
     assert(prints>0&&prints<=GOLF_MUD_PRINTS);
    }else assert(resident.wildlife.next_mud_print==0);
   }
-  printf("Juju safe permanent walking placement and pawprints: %s\n",argv[1]);return 0;
+  assert(selected_seeds>0);
+  printf("Juju selected walking placement, inactive exclusion and pawprints: %s\n",argv[1]);return 0;
  }
  bool found=false;for(int seed=1;seed<64;seed++){golf_mechanics_seed(&m,seed,-1);if(m.third_kind==GOLF_JUJU){found=true;break;}}assert(found);
  readable_trail(m);
