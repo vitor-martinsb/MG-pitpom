@@ -355,15 +355,15 @@
     "tutorial.step5.body": "Get the ball into the cup. Simultaneous has a time limit; By turns allows 20 strokes per player per course, without a timer. An unfinished course receives DNF: strokes taken plus 12 penalty points. Finished players wait or spectate until the next course, which loads with the same room rules.",
     "pet.benedita.name": "Benedita",
     "pet.benedita.description": "Her gentle gaze freezes the ball for three seconds, then restores its motion.",
-    "pet.smanata.name": "Smanata",
+    "pet.smanata.name": "Samanta",
     "pet.smanata.description": "She carries the ball to a safe spot. Tap her when she stops to get it back.",
-    "pet.benedita-smanata.name": "Benedita & Smanata",
+    "pet.benedita-smanata.name": "Benedita & Samanta",
     "pet.benedita-smanata.description": "A magical gaze and a playful game of fetch: meet our new friends!",
-    "smanata.hold": "Tap Smanata to get your ball back!",
-    "smanata.carrying": "Smanata is finding a safe spot…",
+    "smanata.hold": "Tap Samanta to get your ball back!",
+    "smanata.carrying": "Samanta is finding a safe spot…",
     "benedita.gaze": "Benedita’s gaze: a three-second pause.",
     "effect.benedita": "Benedita’s gaze",
-    "effect.smanata": "Smanata is carrying your ball"
+    "effect.smanata": "Samanta is carrying your ball"
   },
   "pt-BR": {
     "meg.releasing": "Meg está se deitando para soltar a bolinha…",
@@ -721,15 +721,15 @@
     "tutorial.step5.body": "Coloque a bola no buraco. Simultâneo tem tempo limite; Por turnos permite 20 tacadas por jogador em cada campo, sem cronômetro. Um campo não concluído recebe DNF: tacadas realizadas mais 12 pontos de penalidade. Quem terminou aguarda ou acompanha os outros até o próximo campo, que carrega com as mesmas regras da sala.",
     "pet.benedita.name": "Benedita",
     "pet.benedita.description": "Seu olhar pausa a bolinha por três segundos e depois devolve seu movimento.",
-    "pet.smanata.name": "Smanata",
+    "pet.smanata.name": "Samanta",
     "pet.smanata.description": "Leva a bolinha para um lugar seguro. Toque nela quando parar para recuperar sua bola.",
-    "pet.benedita-smanata.name": "Benedita e Smanata",
+    "pet.benedita-smanata.name": "Benedita e Samanta",
     "pet.benedita-smanata.description": "Um olhar mágico e uma brincadeira de pega-pega: conheça nossas novas amigas!",
-    "smanata.hold": "Toque na Smanata para recuperar sua bolinha!",
-    "smanata.carrying": "Smanata está procurando um lugar seguro…",
+    "smanata.hold": "Toque na Samanta para recuperar sua bolinha!",
+    "smanata.carrying": "Samanta está procurando um lugar seguro…",
     "benedita.gaze": "Olhar da Benedita: pausa de três segundos.",
     "effect.benedita": "Olhar da Benedita",
-    "effect.smanata": "Smanata está com sua bolinha"
+    "effect.smanata": "Samanta está com sua bolinha"
   },
   "es": {
     "meg.releasing": "Meg se está acostando para soltar la pelota…",
@@ -1087,14 +1087,14 @@
     "tutorial.step5.body": "Mete la bola en el hoyo. Simultáneo tiene límite de tiempo; Por turnos permite 20 golpes por jugador y campo, sin cronómetro. Un campo sin completar recibe DNF: golpes realizados más 12 puntos de penalización. Quien termina espera u observa hasta el siguiente campo, que carga con las mismas reglas.",
     "pet.benedita.name": "Benedita",
     "pet.benedita.description": "Su mirada detiene la pelota tres segundos y luego restablece su movimiento.",
-    "pet.smanata.name": "Smanata",
+    "pet.smanata.name": "Samanta",
     "pet.smanata.description": "Lleva la pelota a un lugar seguro. Tócala cuando pare para recuperarla.",
-    "pet.benedita-smanata.name": "Benedita y Smanata",
+    "pet.benedita-smanata.name": "Benedita y Samanta",
     "pet.benedita-smanata.description": "¡Una mirada mágica y un divertido juego de buscar la pelota!",
-    "smanata.hold": "¡Toca a Smanata para recuperar tu pelota!",
-    "smanata.carrying": "Smanata está buscando un lugar seguro…",
+    "smanata.hold": "¡Toca a Samanta para recuperar tu pelota!",
+    "smanata.carrying": "Samanta está buscando un lugar seguro…",
     "benedita.gaze": "Mirada de Benedita: pausa de tres segundos.",
     "effect.benedita": "Mirada de Benedita",
-    "effect.smanata": "Smanata lleva tu pelota"
+    "effect.smanata": "Samanta lleva tu pelota"
   }
 }

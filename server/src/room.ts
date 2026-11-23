@@ -306,8 +306,8 @@ export class Room {
   async releaseMeg(m:Member,message:any,refresh=true){return this.releasePet(m,message,6,refresh);}
   async releaseSmanata(m:Member,message:any,refresh=true){return this.releasePet(m,message,8,refresh);}
   private async releasePet(m:Member,message:any,kind:6|8,refresh=true){
-    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==kind||!m.ball.captured||m.ball.captureUntil<1e30||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error(kind===6?'Interação com a Meg indisponível.':'Interação com a Smanata indisponível.');
-    const physics=this.physics,generation=this.generation;if(!physics)throw Error(kind===6?'Interação com a Meg indisponível.':'Interação com a Smanata indisponível.');
+    if(this.members.get(m.id)!==m||(!m.socket&&!m.bot)||!m.ready||this.phase!=='playing'||this.timedOut()||message.hole!==this.hole||message.match!==this.match||m.ball?.captureKind!==kind||!m.ball.captured||m.ball.captureUntil<1e30||this.playStyle==='turns'&&this.turn!==m.id||this.shotPending.has(m.id))throw Error(kind===6?'Interação com a Meg indisponível.':'Interação com a Samanta indisponível.');
+    const physics=this.physics,generation=this.generation;if(!physics)throw Error(kind===6?'Interação com a Meg indisponível.':'Interação com a Samanta indisponível.');
     this.shotPending.add(m.id);
     try{
       if(!await (kind===6?physics.releaseMeg(m.slot):physics.releaseSmanata(m.slot)))throw Error('A personagem não está pronta para soltar sua bola.');
