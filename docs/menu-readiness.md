@@ -52,3 +52,10 @@ no control overlap with any of the eleven pet targets, no page scrolling, and th
 Settings panel bounds at six desktop/phone/tablet sizes. The seasonal regression
 checks the unchanged animal artwork and composition with the Christmas subtitle
 and decorations across daytime, sunset and night.
+
+Desktop landscape layouts at 900 CSS pixels and above with hover input use two staggered rows
+inside the curved foreground green. The welcome action shares the measured
+title anchor instead of covering the front row. Small landscape and portrait
+layouts keep their established positions. Responsive coverage includes the
+reported 1805×830 viewport and 1920×1080 desktop screens. Alfredo uses the latest
+supplied reference with a transparent background and an intact full-body sprite.

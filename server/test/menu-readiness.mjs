@@ -34,7 +34,7 @@ try {
   assert.equal(createHash('sha256').update(served).digest('hex'),createHash('sha256').update(original).digest('hex'));
  }
  fs.mkdirSync('../out/menu-readiness',{recursive:true});
- for(const [width,height]of [[1280,800],[390,844],[320,740],[320,568],[768,1024],[844,390]]){
+ for(const [width,height]of [[1280,800],[1805,830],[1920,1080],[390,844],[320,740],[320,568],[768,1024],[844,390]]){
   await page.setViewportSize({width,height});
   await page.evaluate(mobile=>{
    for(const [edge,value]of Object.entries({top:mobile?24:0,bottom:mobile?24:0,left:0,right:0}))document.documentElement.style.setProperty(`--safe-${edge}`,`${value}px`);
@@ -68,6 +68,9 @@ try {
   assert.equal(await page.locator('#main-menu').isHidden(),true);
   const button=await page.locator('#continue-home').boundingBox();
   assert.ok(button.x>=0&&button.y>=0&&button.x+button.width<=width&&button.y+button.height<=height);
+  if(width>=900&&width>height){
+   const brand=await page.locator('.home-brand').boundingBox();assert.ok(button.y>=brand.y+brand.height,'desktop welcome action stays below the title');
+  }
   await page.screenshot({path:`../out/menu-readiness/welcome-${width}x${height}.png`});
   await page.locator('#continue-home').click();
   assert.deepEqual(await geometry(),menuGeometry,'opening the menu never moves or scales animals');
@@ -94,5 +97,5 @@ try {
  await page.locator('#back-main').click();await page.locator('#exit-game').click();
  assert.equal(await page.locator('#continue-home').isVisible(),true);
  assert.deepEqual(await page.evaluate(()=>window.partialMenus),[]);assert.deepEqual(errors,[]);
- console.log('Menu readiness: delayed artwork gate, simultaneous enabled buttons, clean responsive artwork, full viewport and uncovered pets in six resolutions with stable welcome/menu character geometry, opacity-only controls and compact settings, separate welcome button, static campaign decorations, moving mill/water and multiplayer/back/exit passed.');
+ console.log('Menu readiness: delayed artwork gate, simultaneous enabled buttons, clean responsive artwork, full viewport and uncovered pets in eight resolutions with stable welcome/menu character geometry, opacity-only controls and compact settings, separate welcome button, static campaign decorations, moving mill/water and multiplayer/back/exit passed.');
 } finally {await browser?.close();app.close();}

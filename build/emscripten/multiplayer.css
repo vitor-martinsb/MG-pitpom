@@ -560,3 +560,9 @@ body[data-tutorial] #camera-zoom{right:calc(min(360px,100vw - 24px) + 24px + var
 
 /* Keep each pet name intact in the responsive menu description. */
 .menu-pet-tooltip strong{white-space:nowrap;word-break:normal;letter-spacing:normal}
+
+/* Desktop welcome action shares the title anchor, away from the pet artwork. */
+@media(min-width:900px) and (orientation:landscape) and (hover:hover){
+ #home #continue-home{top:var(--home-controls-top,180px);bottom:auto;left:50%;right:auto;max-width:calc(100% - 24px - var(--safe-left) - var(--safe-right));transform:translateX(-50%)}
+ #home #continue-home:active{transform:translateX(-50%) translateY(1px)}
+}

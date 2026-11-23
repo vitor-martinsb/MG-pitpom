@@ -21,7 +21,7 @@
   // The supplied six-character RGBA atlas is retained byte for byte. Crops and
   // transparent gutters are composed at runtime, never re-encoded or recolored.
   const referenceRigs={
-    alfredo:{bounds:[0,0,1122,1402],feet:550,head:[560,350,380,310],ears:[],eyes:[]},
+    alfredo:{bounds:[140,65,1115,1205],feet:620,head:[595,420,420,340],ears:[],eyes:[]},
     smanata:{bounds:[50,10,760,880],feet:440,head:[470,260,230,210],ears:[],eyes:[]},
     benedita:{bounds:[1060,35,1730,880],feet:1390,head:[1390,310,230,210],ears:[],eyes:[]},
     meg:{bounds:[135,16,1135,1215],feet:700,head:[720,280,270,250],ears:[],eyes:[],tail:[205,785,190,344],pivot:[394,1100]},
@@ -194,6 +194,14 @@
     layouts.portrait.pets.push({id,anchor:[portraitX,1430],head:[portraitX,1240,150,15],ears:[],eyes:[]});
   }
   for(const [name,d]of Object.entries(layouts)){const bird=d.pets.find(p=>p.id==='maritaca');bird.anchor[1]=name==='portrait'?1039:647;}
+  // Desktop uses the wide foreground green: two staggered rows, with all
+  // paws inside the curved border. Portrait and small landscape keep their rigs.
+  const desktopSlots={luna:[520,735],romeu:[720,735],frida:[920,735],meg:[1120,735],maritaca:[1280,735],juju:[350,930],pituca:[560,930],pompom:[770,930],smanata:[980,930],benedita:[1190,930],alfredo:[1400,930]};
+  const desktopLayout={...layouts.landscape,pets:layouts.landscape.pets.map(p=>{
+    const [x,y]=desktopSlots[p.id],[ax,ay]=p.anchor,scale=.85;
+    const point=([px,py,...r])=>[x+(px-ax)*scale,y+(py-ay)*scale,...r.map(v=>typeof v==='number'?v*scale:v)];
+    return {...p,anchor:[x,y],head:point(p.head),ears:p.ears.map(point)};
+  })};
   // Interaction uses the same sprite bounds as the canvas painter. The hidden
   // SVG rig and animated artwork never need to intercept pointer events.
   function petHelp(home,getRoot){
@@ -261,7 +269,7 @@
     return {add,layout,reset(){hide();items=[];layer.replaceChildren();},ready(){translate();requestAnimationFrame(layout);}};
   }
   function mount(container,home){
-    let current,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
+    let current,currentDesktop,root,animations=[],loaded=false,tick,clock=new Date(),lastClock=0,serial=0,painter;const originals={};let contours;
     let petGroup,ensembleBounds,petsHeld=false,holdTimer,heldPets=[];
     function holdPets(duration){
       clearTimeout(holdTimer);petsHeld=true;
@@ -287,14 +295,14 @@
     }
     const fitObserver=new ResizeObserver(()=>{fitPets();help.layout();});
     fitObserver.observe(container);fitObserver.observe(document.getElementById('home-art-floor'));
-    const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)'),tails=new Map();
+    const motion=matchMedia('(prefers-reduced-motion: reduce)'),portrait=matchMedia('(orientation:portrait)'),desktop=matchMedia('(min-width:900px) and (orientation:landscape) and (hover:hover)'),tails=new Map();
     const tailFrames=swing=>[{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'},{transform:`rotate(${swing}deg)`,offset:.5,easing:'ease-in-out'},{transform:`rotate(${-swing}deg)`,easing:'ease-in-out'}];
     function image(file,w,h){return el('image',{href:`art/${file}`,width:w,height:h});}
     function build(){
-      const layout=portrait.matches?'portrait':'landscape';if(current===layout)return;
+      const layout=portrait.matches?'portrait':'landscape',wide=desktop.matches;if(current===layout&&currentDesktop===wide)return;
       clearTimeout(holdTimer);petsHeld=false;heldPets=[];
-      current=layout;loaded=false;help.reset();painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];tails.clear();
-      const d=layouts[layout],suffix=layout==='portrait'?'-portrait':'',original=`menu-garden${suffix}.png`;
+      current=layout;currentDesktop=wide;loaded=false;help.reset();painter?.stop();painter=undefined;for(const a of animations)a.cancel();animations=[];tails.clear();
+      const d=wide?desktopLayout:layouts[layout],suffix=layout==='portrait'?'-portrait':'',original=`menu-garden${suffix}.png`;
       root=el('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'xMidYMid slice','aria-hidden':'true',class:'living-menu-art'});
       const defs=el('defs');root.append(defs);
       const matrix=el('feColorMatrix',{type:'matrix',values:'1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0'}),filter=el('filter',{id:'menu-light',filterUnits:'userSpaceOnUse',x:0,y:0,width:d.w,height:d.h,'color-interpolation-filters':'sRGB'},[matrix]);defs.append(filter);
@@ -437,7 +445,7 @@
       if(run){clock=new Date();updateLight();tick=setInterval(()=>{clock=new Date();updateLight();},1000);}
     }
     const observer=new MutationObserver(()=>{visibility();fitPets();help.layout();});observer.observe(home,{attributes:true,attributeFilter:['hidden','data-screen']});
-    document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);
+    document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',visibility);portrait.addEventListener('change',build);desktop.addEventListener('change',build);
     // Decode once. The established static illustration remains as a load fallback.
     const images=['menu-pet-alfredo.png','menu-companions-separated.png','menu-pet-meg.png','menu-cast-reference.png','menu-sky-clean.png','menu-sky-clean-portrait.png','menu-garden.png','menu-garden-portrait.png'];
     const ready=Promise.all([fetch('art/menu-contours.json').then(r=>{if(!r.ok)throw new Error('Menu contours unavailable');return r.json();}).then(data=>{contours=data;}),...images.map(file=>{const i=new Image();i.src=`art/${file}`;originals[file]=i;return i.decode();})]).then(build).catch(()=>{home.dataset.sceneReady='fallback';});
