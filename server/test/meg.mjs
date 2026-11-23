@@ -12,7 +12,7 @@ try{
  const errors=[],host=await browser.newPage({viewport:{width:1280,height:800}}),guest=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  for(const page of [host,guest]){page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));}
  await visitMultiplayer(host,url);await createLobby(host,{nickname:'Meg desktop'});
- const room=[...app.rooms.values()][0],owner=room.members.get(1);room.physicsSeed=16;room.configurePool(owner,'custom',[room.levels.indexOf('data/levels/level-2.level')]);room.configure(owner,1,'classic','simultaneous');
+ const room=[...app.rooms.values()][0],owner=room.members.get(1);room.physicsSeed=7;room.configurePool(owner,'custom',[room.levels.indexOf('data/levels/level-2.level')]);room.configure(owner,1,'classic','simultaneous');
  await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Meg mobile'});
  await host.locator('#start').click();for(const page of [host,guest])await finishPresentation(page);
  for(const page of [host,guest])await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);

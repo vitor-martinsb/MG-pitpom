@@ -27,7 +27,7 @@ vec3 golf_wildlife_position(const golf_wild_animal_t *a,float t){
 static bool separated(const golf_wildlife_t *w,vec3 p,int until,vec3 cat,vec3 dog) {
     float reserve=until<0?1.25f:1.6f;
     if(vec3_distance(p,w->spawn)<(until<0?1.25f:2)||vec3_distance(p,w->hole)<1.5f||vec3_distance(p,cat)<reserve||vec3_distance(p,dog)<reserve)return false;
-    /* These are alternative third-pet routes, never simultaneous occupants. */
+    /* Candidate routes retain their authored safe floor and portal clearance. */
     (void)until;
     for(int i=0;i<w->portal_count;i++)if(vec3_distance(p,w->portals[i].pos)<1.6f)return false;
     return true;

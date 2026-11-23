@@ -1,3 +1,5 @@
+// @ts-expect-error Shared browser/native roster assertion.
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -43,10 +45,7 @@ test('two authoritative workers reproduce the same animal patrols and fifty-ball
       for(const ticks of [120,1200,1200,1200,1200,1200,1200]){
         const [x,y]=await Promise.all([a.step(ticks),b.step(ticks)]);
         assert.deepEqual(x.mascots,y.mascots);assert.deepEqual(x.players,y.players);
-        assert.equal(x.mascots.wildlife?.filter(a=>a.active).length,1);assert.equal(x.players.length,50);
-        assert.equal(x.mascots.catActive,true);assert.equal(x.mascots.dogActive,true);
-        assert.equal(x.mascots.wildlife?.find(a=>a.active)?.kind,x.mascots.thirdKind);
-        assert.equal(Number(x.mascots.catVisible)+Number(x.mascots.dogVisible)+x.mascots.wildlife!.filter(a=>a.visible).length,3);
+        assertPetRoster(x.mascots);assert.equal(x.players.length,50);
         for(const p of x.players){assert.ok(p.pos.every(Number.isFinite));assert.equal(p.strokes,0);assert.equal(p.effectSerial,0);}
       }
       const before=await a.step(0);await a.plan(0,'hard');const after=await a.step(0);
@@ -65,14 +64,13 @@ test('resident selection stays fixed for a whole field and never repeats the pre
     const physics=new Physics(root,'data/levels/level-3.level');
     try{
       const configured=await physics.configure(false,field*735+19,.5,previous);
-      assert.ok([0,1,2,3,4].includes(configured.thirdKind));
+      assert.ok([0,1,2,3,4,5,6].includes(configured.thirdKind));
       assert.notEqual(configured.thirdKind,previous);
       previous=configured.thirdKind;
       for(const ticks of [0,1200,1200,1200]){
         const {mascots}=await physics.step(ticks);
         assert.equal(mascots.thirdKind,previous);
-        assert.equal(mascots.catVisible,true);assert.equal(mascots.dogVisible,true);
-        assert.deepEqual(mascots.wildlife?.filter(a=>a.visible).map(a=>a.kind),[previous]);
+        assertPetRoster(mascots);
       }
     }finally{physics.close();}
   }

@@ -1,3 +1,4 @@
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import {createLobby,joinLobby,lobbyTab,selectLobbyMode} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -64,9 +65,7 @@ try{
   assert.ok(Math.abs(after.flagPoint[0]-flag0[0])>.0001);
   const residents=await a.evaluate(()=>GolfCourse.inspect().frame);
   assert.ok(residents.actorVertices>1000&&residents.actorVertices<24576);
-  assert.equal(residents.catActive,true);assert.equal(residents.dogActive,true);
-  assert.equal(residents.catVisible,true);assert.equal(residents.dogVisible,true);
-  assert.equal(residents.wildlife.filter(animal=>animal.active&&animal.visible).length,1);
+  assertPetRoster(residents);
   // Exercise a trusted capture/return snapshot in the renderer. The native
   // tests separately perform real captures for all 50 authoritative balls.
   const capture=await a.evaluate(()=>{

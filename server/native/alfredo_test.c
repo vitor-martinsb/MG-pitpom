@@ -10,7 +10,7 @@ int main(int argc,char **argv){
  headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
  golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);golf_config_t config={0};
  golf_physics_world_t world={.level=&level,.config=&config,.static_bvh=&fixed,.dynamic_bvh=&moving,.multiplayer=true};golf_physics_build_world(&world,false);
- golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);golf_mechanics_seed(&m,6,-1);golf_wildlife_t *w=&m.wildlife;golf_companion_t *a=&w->companions.alfredo;
+ golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);golf_mechanics_seed(&m,1,-1);for(uint32_t seed=1;seed<=128&&!(m.wildlife.companions.alfredo.active);seed++)golf_mechanics_seed(&m,seed,-1);golf_wildlife_t *w=&m.wildlife;golf_companion_t *a=&w->companions.alfredo;
  if(argc>1){if(a->active){assert(golf_wildlife_safe(w,a->pos,.32f));assert(vec3_distance(a->pos,w->spawn)>1.5f);assert(vec3_distance(a->pos,w->hole)>1.2f);}printf("Alfredo placement %s: %s\n",argv[1],a->active?"safe":"no compatible space");return 0;}
  assert(a->active);golf_player_t p;golf_player_init(&p,1,"Alfredo",V4(1,1,1,1),0);golf_player_start_level(&p,w->spawn);p.stroke_count=1;
  p.ball.pos=p.ball.draw_pos=vec3_add(a->pos,V3(0,p.ball.radius,0));p.ball.vel=V3(.05f,0,0);p.ball.is_moving=true;

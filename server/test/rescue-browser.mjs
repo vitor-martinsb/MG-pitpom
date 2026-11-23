@@ -1,3 +1,4 @@
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import {createLobby,selectLobbyMode} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -32,7 +33,7 @@ try{
   await page.evaluate(()=>Module.ccall('golf_course_skip',null,[],[]));
   await page.waitForFunction(()=>GolfCourse.inspect().frame.active&&!GolfCourse.inspect().frame.intro&&document.getElementById('loading').hidden);
   const snapshot=await freezePhysics(room);
-  assert.equal(snapshot.players.length,50);assert.equal(snapshot.mascots.wildlife.filter(a=>a.active).length,1);
+  assert.equal(snapshot.players.length,50);assertPetRoster(snapshot.mascots);
   snapshot.time+=10;
   // Include both original mascots even if their safe-spawn search omitted one.
   snapshot.mascots.catActive=snapshot.mascots.dogActive=true;

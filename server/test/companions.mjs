@@ -1,3 +1,4 @@
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -14,10 +15,11 @@ try{
   const host=await browser.newPage({viewport:{width:1280,height:800}}),guest=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];
   for(const page of [host,guest]){page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));}
   await visitMultiplayer(host,url);await createLobby(host,{nickname:'Desktop'});const room=[...app.rooms.values()].find(r=>r.phase==='lobby'),ownerHost=room.members.get(1);
-  room.physicsSeed=6;room.configurePool(ownerHost,'custom',[room.levels.indexOf('data/levels/level-3.level')]);room.configure(ownerHost,1,'classic','simultaneous');
+  room.physicsSeed=10;room.configurePool(ownerHost,'custom',[room.levels.indexOf('data/levels/level-3.level')]);room.configure(ownerHost,1,'classic','simultaneous');
   await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Mobile'});
   await host.locator('#start').click();for(const page of [host,guest]){await finishPresentation(page);await page.waitForFunction(()=>JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])).canShoot);}
   await freezePhysics(room);await companionFrame(room,0);
+  for(const p of [host,guest])assertPetRoster(await p.evaluate(()=>GolfCourse.inspect().frame));
   const owner=device==='desktop'?ownerHost:room.members.get(2),page=device==='desktop'?host:guest,observer=page===host?guest:host,ball=owner.ball,s=room.mascots.companions.smanata;
   const dx=s.pos[0]-ball.pos[0],dz=s.pos[2]-ball.pos[2],distance=Math.hypot(dx,dz);
   await page.evaluate(direction=>GolfOnline.shot(direction,.22),[dx/distance,0,dz/distance]);

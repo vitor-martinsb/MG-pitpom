@@ -1,6 +1,6 @@
 # Benedita e Samanta
 
-As duas personagens usam o módulo `src/golf/companions.c`, os mesmos passos de física e a navegação dos campos existentes. A inicialização é automática em cada campo, inclusive em campos futuros com navegação válida. O posicionamento respeita piso, paredes, tee, buraco, zonas móveis e os animais residentes. Se um campo não oferecer espaço seguro, a personagem correspondente não ocupa uma posição inválida. A geometria e os parâmetros físicos das fases não mudam.
+As duas personagens usam o módulo `src/golf/companions.c`, os mesmos passos de física e a navegação dos campos existentes. A inicialização encontra posições seguras em cada campo, inclusive em campos futuros com navegação válida. A dupla só é ativada quando sorteada, ocupando as duas vagas ao lado de Pituca ou Pompom; nunca acrescenta animais ao trio. O posicionamento respeita piso, paredes, tee, buraco, zonas móveis e os animais residentes. Se um campo não oferecer espaço seguro, a personagem correspondente não ocupa uma posição inválida. A geometria e os parâmetros físicos das fases não mudam.
 
 Benedita permanece sentada e acompanha a bola com a cabeça. Seu olhar exige uma bola em movimento, linha de visão no piso, distância menor que 2,7 m e um cone frontal de aproximadamente 130°. O estado individual `GOLF_CAPTURE_BENEDITA` suspende a física por três segundos sem esconder a bola; guarda velocidade e rotação e as restaura ao terminar. A recarga de cinco segundos começa na liberação. Olhos, joias rosas centralizadas, piscada e partículas identificam a habilidade.
 

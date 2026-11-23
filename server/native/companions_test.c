@@ -13,7 +13,7 @@ int main(int argc,char **argv){
  headless_config_load();golf_level_t level={0};assert(headless_level_load(&level,argc>1?argv[1]:"data/levels/level-3.level"));
  golf_bvh_t fixed,moving;golf_bvh_init(&fixed);golf_bvh_init(&moving);golf_config_t config={0};
  golf_physics_world_t world={.level=&level,.config=&config,.static_bvh=&fixed,.dynamic_bvh=&moving,.multiplayer=true};golf_physics_build_world(&world,false);
- golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);golf_mechanics_seed(&m,6,-1);golf_wildlife_t *w=&m.wildlife;
+ golf_mechanics_t m;golf_mechanics_init(&m,&level,&fixed);golf_mechanics_seed(&m,17,-1);for(uint32_t seed=1;seed<=128&&!(m.wildlife.companions.benedita.active&&m.wildlife.companions.smanata.active);seed++)golf_mechanics_seed(&m,seed,-1);golf_wildlife_t *w=&m.wildlife;
  golf_companion_t *b=&w->companions.benedita,*s=&w->companions.smanata;
  if(argc>1){
   if(b->active)assert(golf_wildlife_safe(w,b->pos,.30f));

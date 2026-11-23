@@ -1,3 +1,5 @@
+// @ts-expect-error Shared browser/native roster assertion.
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -48,8 +50,7 @@ test('field transitions choose a different companion and broadcast the same thre
       const x=a.messages.findLast(m=>m.type==='snapshot').mascots;
       const y=b.messages.findLast(m=>m.type==='snapshot').mascots;
       assert.deepEqual(x,y);assert.notEqual(x.thirdKind,previous);previous=x.thirdKind;
-      assert.equal(x.catVisible,true);assert.equal(x.dogVisible,true);
-      assert.deepEqual(x.wildlife.filter((pet:any)=>pet.visible).map((pet:any)=>pet.kind),[previous]);
+      assertPetRoster(x);
     }
   }finally{room.close();}
 });

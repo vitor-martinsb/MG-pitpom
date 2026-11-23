@@ -11,7 +11,7 @@ const root=new URL('../..',import.meta.url).pathname.replace(/\/$/,'');
 for(const style of ['simultaneous','turns'] as const)test(`Alfredo ${style}: real capture, three rebounds, fourth aerial kick, authoritative sync and turn/score preservation`,async()=>{
  const room=new Room('ALFR',root,['data/levels/level-1.level'],defaults,()=>0),a=socket(),b=socket();
  try{
-  (room as any).physicsSeed=6;const host=room.join(a,'Host','#ffffff',0),guest=room.join(b,'Guest','#ff0000',1);
+  (room as any).physicsSeed=7;const host=room.join(a,'Host','#ffffff',0),guest=room.join(b,'Guest','#ff0000',1);
   await room.start(host,1,'classic',style);room.ready(host,0);room.ready(guest,0);
   await captureAlfredo(room,host);assert.equal(host.ball!.captureKind,9);assert.equal(host.ball!.strokes,1);
   await assert.rejects(room.shot(host,{sequence:2,direction:[1,0,0],power:.1}),/indisponível/);

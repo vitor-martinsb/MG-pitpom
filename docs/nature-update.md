@@ -55,12 +55,14 @@ contato; os testes de campanha resolvem os 80 campos com física real.
 
 ## Três moradores permanentes
 
-Todos os 80 campos têm Pituca e Pompom mais um integrante sorteado entre
-Romeu, Luna e Frida. A escolha acontece uma vez no carregamento e exclui o
-companheiro do campo anterior, tanto no solo como no multiplayer. As três
-rotas extras guardadas na geometria são alternativas: apenas a escolhida
-integra a partida. Elas podem compartilhar espaço entre si porque nunca
-são usadas simultaneamente.
+Cada campo recebe **exatamente três animais**. Uma vaga é obrigatoriamente Pituca ou
+Pompom. Os outros dois são sorteados entre os animais compatíveis com a pista,
+incluindo Juju, Meg e Alfredo. Benedita e Samanta são uma opção inseparável:
+quando escolhidas, o trio é exclusivamente Pituca ou Pompom com as duas amigas.
+A escolha ocorre no carregamento, usa a mesma semente no solo e na autoridade
+multiplayer e não muda durante a fase. O grupo sorteado no campo anterior é
+excluído do sorteio seguinte quando existem alternativas seguras. A validação
+de piso, paredes e espaço continua sendo aplicada a todos os candidatos.
 
 Os três moradores ficam visíveis durante toda a fase, inclusive em descanso.
 Não há agenda de visitas, temporizador de remoção ou animação de escala para
@@ -82,3 +84,8 @@ ocultos no minimapa.
 As interações existentes foram preservadas. O xixi do Romeu mantém a poça e a
 lentidão por **três tacadas próprias concluídas**, sem alterar a física global.
 Os modelos, identidades, músicas e loading continuam preservados.
+
+A regressão `three_pet_roster` valida 128 sementes num campo e 32 em cada um
+dos 80 campos: contagem total incluindo companheiros, residente obrigatório,
+dupla inseparável, repetibilidade da semente e estabilidade durante a partida.
+As regressões multiplayer verificam os mesmos três moradores nos dois clientes.

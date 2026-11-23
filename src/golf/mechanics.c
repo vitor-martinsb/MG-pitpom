@@ -106,15 +106,17 @@ void golf_mechanics_init(golf_mechanics_t *m,golf_level_t *level,golf_bvh_t *bvh
     }
     m->resident_base=(golf_resident_layout_t){.cat=m->cat_center,.dog=m->dog,.direction=m->direction,.across=m->across,.span=m->cat_span};
     memcpy(m->resident_base.animals,m->wildlife.animals,sizeof(m->resident_base.animals));
+    m->pet_mask=(1u<<GOLF_PET_POMPOM)|(1u<<GOLF_PET_PITUCA)|1u;
+    m->wildlife.companions.benedita.active=m->wildlife.companions.smanata.active=m->wildlife.companions.alfredo.active=false;
     golf_mechanics_animate(m,0);
 }
 void golf_mechanics_animate(golf_mechanics_t *m,float time) {
     uint32_t key=random_word(m->seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
-    m->cat_presence=m->dog_presence=1;
-    m->cat_present=m->cat_valid;m->dog_present=m->dog_valid;
+    m->cat_present=m->cat_valid&&(m->pet_mask&(1u<<GOLF_PET_POMPOM));m->dog_present=m->dog_valid&&(m->pet_mask&(1u<<GOLF_PET_PITUCA));
+    m->cat_presence=m->cat_present?1:0;m->dog_presence=m->dog_present?1:0;
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++){
         golf_wild_animal_t *a=&m->wildlife.animals[i];
-        a->present=a->active&&i==m->third_kind;
+        a->present=a->active&&(m->pet_mask&(1u<<i));
         a->presence=a->present?1:0;
     }
     /* Share Frida-like easing, a bounded speed and a planted turn with the renderer. */
@@ -156,7 +158,7 @@ static void resident_shuffle(golf_mechanics_t *m,uint32_t key){
                 if(actor<2)for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
                     golf_wild_animal_t *a=&m->wildlife.animals[k];
                     int steps=(int)ceilf(vec3_distance(a->a,a->b)/.04f);if(steps<1)steps=1;
-                    for(int n=0;n<=steps;n++)if(k==m->third_kind&&a->active&&vec3_distance(p,golf_wildlife_position(a,n/(float)steps))<1.45f)safe=false;
+                    for(int n=0;n<=steps;n++)if(a->active&&vec3_distance(p,golf_wildlife_position(a,n/(float)steps))<1.45f)safe=false;
                 }
                 for(int portal=0;portal<m->wildlife.portal_count;portal++)if(vec3_distance(p,m->wildlife.portals[portal].pos)<1.6f)safe=false;
             }
@@ -172,23 +174,40 @@ static void resident_shuffle(golf_mechanics_t *m,uint32_t key){
 void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
     m->seed=seed;
     uint32_t key=random_word(seed^((uint32_t)m->wildlife.course*0x9e3779b9u));
-    // Choose once per field; exclude the previous companion without reducing
-    // the other companions to a fixed rotation. Animation never changes this ID.
-    m->third_kind=previous_pet>=0&&previous_pet<GOLF_WILDLIFE_COUNT?(previous_pet+1+(int)(key%(GOLF_WILDLIFE_COUNT-1)))%GOLF_WILDLIFE_COUNT:(int)(key%GOLF_WILDLIFE_COUNT);
+    m->third_kind=(int)(key%GOLF_WILDLIFE_COUNT);
     resident_shuffle(m,key);
-    // All pets coexist: trim only the lateral crossing when it approaches a
-    // third-pet route. Positions and route endpoints remain fixed for the field.
-    golf_wild_animal_t *pet=&m->wildlife.animals[m->third_kind];
+    golf_companions_init(&m->wildlife,m->cat_center,m->dog);
+    // Choose a safe roster once. The two friends are a single two-slot option.
+    bool available[GOLF_PET_GROUPS];int options[GOLF_PET_GROUPS],count=0;
+    for(int i=0;i<GOLF_WILDLIFE_COUNT;i++)available[i]=m->wildlife.animals[i].active;
+    available[5]=m->wildlife.companions.alfredo.active;
+    available[6]=m->wildlife.companions.benedita.active&&m->wildlife.companions.smanata.active;
+    for(int i=0;i<GOLF_PET_GROUPS;i++)if(available[i]&&i!=previous_pet)options[count++]=i;
+    if(!count)for(int i=0;i<GOLF_PET_GROUPS;i++)if(available[i])options[count++]=i;
+    m->third_kind=count?options[key%(unsigned)count]:-1;
+    int resident=m->dog_valid&&(!m->cat_valid||(key&0x100))?GOLF_PET_PITUCA:GOLF_PET_POMPOM;
+    m->pet_mask=1u<<resident;
+    if(m->third_kind==6)m->pet_mask|=(1u<<GOLF_PET_BENEDITA)|(1u<<GOLF_PET_SAMANTA);
+    else if(m->third_kind>=0){
+        m->pet_mask|=1u<<m->third_kind;count=0;
+        for(int i=0;i<6;i++)if(available[i]&&i!=m->third_kind)options[count++]=i;
+        if(count)m->pet_mask|=1u<<options[random_word(key^0xb5297a4du)%(unsigned)count];
+    }
+    m->wildlife.companions.benedita.active=m->wildlife.companions.smanata.active=m->third_kind==6;
+    m->wildlife.companions.alfredo.active=(m->pet_mask&(1u<<GOLF_PET_ALFREDO))!=0;
+    for(int i=0;i<GOLF_WILDLIFE_COUNT;i++)m->wildlife.animals[i].active=(m->pet_mask&(1u<<i))!=0;
+    // Trim the crossing against every selected roaming pet. Routes stay fixed.
     float span=m->cat_span;
     for(float candidate=0;candidate<=span+.001f;candidate+=.05f){
         bool clear=true;
         for(int side=-1;side<=1;side+=2){
             vec3 q=vec3_add(m->cat_center,vec3_scale(m->across,candidate*side));
             if(vec3_distance(q,m->dog)<1.35f)clear=false;
-            for(int sample=0;sample<=12;sample++){
-                vec3 p=golf_wildlife_position(pet,sample/12.f);
-                if(vec3_distance(q,p)<1.25f)clear=false;
-            }
+            for(int k=0;k<GOLF_WILDLIFE_COUNT;k++)if(m->wildlife.animals[k].active)
+                for(int sample=0;sample<=12;sample++){
+                    vec3 p=golf_wildlife_position(&m->wildlife.animals[k],sample/12.f);
+                    if(vec3_distance(q,p)<1.25f)clear=false;
+                }
         }
         if(!clear){m->cat_span=fmaxf(0,candidate-.05f);break;}
     }
@@ -196,7 +215,6 @@ void golf_mechanics_seed(golf_mechanics_t *m,uint32_t seed,int previous_pet){
         m->wildlife.animals[k].clock=((key>>(k*5))%100)/10.f;
         m->wildlife.animals[k].patrol_period=4.8f+((key>>(k*7))%45)/10.f;
     }
-    golf_companions_init(&m->wildlife,m->cat_center,m->dog);
     golf_wildlife_tick(&m->wildlife,NULL,0,0,m->seed,false);
     golf_mechanics_animate(m,0);
 }

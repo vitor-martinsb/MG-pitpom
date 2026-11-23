@@ -1,3 +1,4 @@
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from '@playwright/test';
@@ -16,10 +17,11 @@ try{
   const views=style==='turns'?[['mobile',host],['desktop',guest]]:[['desktop',host],['mobile',guest]];
   for(const p of [host,guest])p.on('pageerror',e=>errors.push(e.message));
   await visitMultiplayer(host,url);await createLobby(host,{nickname:'Alfredo Host'});const room=[...app.rooms.values()].find(r=>r.phase==='lobby'),member=room.members.get(1);
-  room.physicsSeed=6;room.configurePool(member,'custom',[room.levels.indexOf('data/levels/level-1.level')]);room.configure(member,1,'classic',style);
+  room.physicsSeed=7;room.configurePool(member,'custom',[room.levels.indexOf('data/levels/level-1.level')]);room.configure(member,1,'classic',style);
   await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Mobile'});
   room.busy=true; // Advance the authority only at explicitly observed test ticks.
   await host.locator('#start').click();for(const p of [host,guest]){await finishPresentation(p);await p.waitForFunction(()=>GolfCourse.inspect().frame?.alfredoActive);}
+  for(const p of [host,guest])assertPetRoster(await p.evaluate(()=>GolfCourse.inspect().frame));
   await captureAlfredo(room,member,async(m,shot)=>{
    await host.evaluate(shot=>GolfOnline.shot(shot.direction,shot.power),shot);
    for(let i=0;i<160&&m.lastSequence!==1;i++)await host.waitForTimeout(25);

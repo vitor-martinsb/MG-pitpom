@@ -10,12 +10,19 @@ typedef struct golf_resident_layout {
     vec3 cat,dog,direction,across;float span;
     golf_wild_animal_t animals[GOLF_WILDLIFE_COUNT];
 } golf_resident_layout_t;
+#define GOLF_PET_ALFREDO 5
+#define GOLF_PET_BENEDITA 6
+#define GOLF_PET_SAMANTA 7
+#define GOLF_PET_POMPOM 8
+#define GOLF_PET_PITUCA 9
+#define GOLF_PET_GROUPS 7
 /* Shared, allocation-free state: native authority and the offline game. */
 typedef struct golf_mechanics {
     golf_season_t season;
     bool enabled, impact, cat_valid, dog_valid;
     bool cat_present, dog_present;
-    int third_kind;
+    int third_kind; /* Seeded choice group: wildlife 0..4, Alfredo 5, paired friends 6. */
+    uint32_t pet_mask; /* Exactly three selected identities; geometry validity stays separate. */
     float cat_presence,dog_presence,cat_phase;
     uint32_t seed;
     float forward_probability, slap_speed, reach, cooldown;

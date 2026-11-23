@@ -9,7 +9,7 @@ const root=new URL('../..',import.meta.url).pathname.replace(/\/$/,'');
 for(const style of ['simultaneous','turns'] as const)test(`Benedita/Smanata ${style}: gaze, ownership, manual drop, next shot and synchronized safe return`,async()=>{
  const room=new Room('DOGS',root,['data/levels/level-3.level'],defaults,()=>0),a=socket(),b=socket();
  try{
-  (room as any).physicsSeed=6;const host=room.join(a,'Host','#ffffff',0),guest=room.join(b,'Guest','#ff0000',1);
+  (room as any).physicsSeed=10;const host=room.join(a,'Host','#ffffff',0),guest=room.join(b,'Guest','#ff0000',1);
   await room.start(host,1,'classic',style);room.ready(host,0);room.ready(guest,0);
   const captured=await captureSmanata(room,host,undefined,true);assert.equal(captured.gazed,true);assert.equal(host.ball!.captureKind,8);assert.equal(host.ball!.strokes,1);
   const request={hole:room.hole,match:room.match};
@@ -46,7 +46,7 @@ for(const style of ['simultaneous','turns'] as const)test(`Benedita/Smanata ${st
 test('a bot explicitly recovers its own Smanata ball without an extra stroke',async()=>{
  const room=new Room('SMBOT',root,['data/levels/level-3.level'],defaults,()=>0),host=room.join(socket(),'Host','#ffffff',0);
  try{
-  (room as any).physicsSeed=6;room.botSettings(host,'add',null,{difficulty:'medium'});const bot=[...room.members.values()].find(m=>m.bot)!;
+  (room as any).physicsSeed=10;room.botSettings(host,'add',null,{difficulty:'medium'});const bot=[...room.members.values()].find(m=>m.bot)!;
   await room.start(host,1,'classic','simultaneous');room.ready(host,0);await captureSmanata(room,bot);
   assert.equal(bot.ball!.captureKind,8);await room.tick();assert.equal(bot.ball!.captureKind,0);assert.equal(bot.ball!.strokes,1);
   assert.deepEqual(bot.ball!.vel,[0,0,0]);assert.equal((room as any).mascots.companions.smanata.state,4);

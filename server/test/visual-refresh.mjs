@@ -1,3 +1,4 @@
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import {createLobby,joinLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -34,7 +35,7 @@ try{
   const f=await p.evaluate(()=>GolfCourse.inspect().frame);assert.ok(f.actorVertices>0&&f.actorVertices<24576);
   await p.screenshot({path:`../out/visual-refresh/forest-${name}.png`});
  }
- const frame=await freezePhysics(room),romeu=frame.mascots.wildlife[0];assert.equal(frame.mascots.wildlife.filter(a=>a.active).length,1);assert.ok(romeu.pos.every(Number.isFinite));
+ const frame=await freezePhysics(room),romeu=frame.mascots.wildlife[0];assertPetRoster(frame.mascots);assert.ok(romeu.pos.every(Number.isFinite));
  // Renderer fixture only: trusted snapshots are used to check replication of
  // every puddle state. Native tests exercise creation and real shot counting.
  for(const remaining of [3,2,1,0]){

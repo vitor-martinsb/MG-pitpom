@@ -47,7 +47,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"zoom\":%.5g,\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",(g->cam.overview?g->cam.spectator_zoom:g->cam.zoom),m->wildlife.world,m->wildlife.stage,m->wildlife.course);
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         golf_wild_animal_t *a=&m->wildlife.animals[i];
-        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,(a->active&&i==m->third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
+        used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,(a->active&&a->present)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
     }
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"wind\":[");
     for(int i=0;i<m->wildlife.wind_count;i++){
@@ -67,7 +67,7 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"overview\":%s,\"remoteAimPower\":%.5g,\"remoteAimArrows\":%d",g->cam.overview?"true":"false",g->remote_aim_line.power,g->remote_aim_line.num_arrows);
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"cameraPlayer\":%u,\"cameraFocus\":[%.5g,%.5g,%.5g],\"catSpan\":%.9g,\"catPeriod\":%.9g",golf_online_camera_player()->id,g->cam.focus.x,g->cam.focus.y,g->cam.focus.z,m->cat_span,golf_cat_patrol_period(m->cat_span));
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"surfaceGroups\":%u,\"landscapeGap\":%.5g",golf_draw_surface_groups(),golf_garden_landscape_gap());
-    used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",m->cat_valid?"true":"false",m->dog_valid?"true":"false",m->cat_present?"true":"false",m->dog_present?"true":"false",m->third_kind,m->cat_presence,m->dog_presence,m->cat_phase,golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"catActive\":%s,\"dogActive\":%s,\"catVisible\":%s,\"dogVisible\":%s,\"thirdKind\":%d,\"catPresence\":%.5g,\"dogPresence\":%.5g,\"catPhase\":%.5g,\"actorVertices\":%u,\"flagPoint\":[%.5g,%.5g,%.5g],\"obstacles\":[",(m->cat_valid&&m->cat_present)?"true":"false",(m->dog_valid&&m->dog_present)?"true":"false",m->cat_present?"true":"false",m->dog_present?"true":"false",m->third_kind,m->cat_presence,m->dog_presence,m->cat_phase,golf_garden_actor_vertex_count(),flag.x,flag.y,flag.z);
     for(int i=0;i<g->physics.dynamic_bvh.node_infos.length&&i<32;i++) {
         golf_bvh_aabb_t a=g->physics.dynamic_bvh.node_infos.data[i].aabb;
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);

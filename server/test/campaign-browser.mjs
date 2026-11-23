@@ -1,3 +1,4 @@
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import {createLobby,joinLobby} from './navigation-fixture.mjs';
 import {visitMultiplayer,reloadMultiplayer,openCampaign} from './navigation-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -42,11 +43,7 @@ try{
       assert.ok(zone.pos.every(Number.isFinite));assert.ok(Math.abs(Math.hypot(...zone.direction)-1)<.0001);
       assert.ok(zone.gust>=.2499&&zone.gust<=1.0001);assert.ok(zone.strength>0&&zone.strength<=3);
     }
-    assert.equal(f.wildlife.filter(a=>a.active).length,1);
-    assert.equal(f.catActive,true);assert.equal(f.dogActive,true);
-    assert.equal(f.catVisible,true);assert.equal(f.dogVisible,true);
-    assert.equal(f.wildlife.filter(a=>a.visible&&a.presence===1).length,1);
-    assert.equal(f.wildlife.find(a=>a.active).kind,f.thirdKind);
+    assertPetRoster(f);
     for(const animal of f.wildlife.filter(a=>a.active))assert.ok(animal.pos.every(Number.isFinite));
     assert.ok(f.actorVertices>0&&f.actorVertices<24576,`actor capacity, map ${index+1}: ${f.actorVertices}`);
     const vertices=await a.evaluate(()=>Module.ccall('golf_garden_vertex_count','number',[],[]));assert.ok(vertices>0&&vertices<72000);

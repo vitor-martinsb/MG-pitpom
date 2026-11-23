@@ -145,7 +145,7 @@ int main(int argc,char **argv) {
     // Repeated seeding here represents separate fields, never a live respawn.
     assert(m.cat_valid&&m.dog_valid);
     for(int kind=0;kind<3;kind++)assert(m.wildlife.animals[kind].active);
-    bool chosen[GOLF_WILDLIFE_COUNT]={false};int previous=-1;
+    bool chosen[GOLF_PET_GROUPS]={false};int previous=-1;
     for(uint32_t seed=1;seed<=32;seed++){
         golf_mechanics_t resident=m;golf_mechanics_seed(&resident,seed,previous);
         const int selected=resident.third_kind;
@@ -154,26 +154,27 @@ int main(int argc,char **argv) {
         for(int t=0;t<=3600;t+=37){
             golf_mechanics_animate(&resident,(float)t);
             assert(resident.third_kind==selected);
-            assert(resident.cat_present&&resident.dog_present);
-            assert(resident.cat_presence==1&&resident.dog_presence==1);
-            int visible=2;
+            assert(resident.cat_present||resident.dog_present);
+            int visible=resident.cat_present+resident.dog_present;
+            golf_companions_t *c=&resident.wildlife.companions;
+            assert(c->benedita.active==c->smanata.active);
+            visible+=c->benedita.active+c->smanata.active+c->alfredo.active;
             for(int k=0;k<GOLF_WILDLIFE_COUNT;k++){
                 const golf_wild_animal_t *a=&resident.wildlife.animals[k];
-                assert(a->present==(k==selected));
-                if(a->present){assert(a->presence==1);visible++;}
+                assert(a->present==a->active);
+                if(!a->present)continue;
+                assert(a->presence==1);visible++;
+                for(int sample=0;sample<=20;sample++){
+                    vec3 pos=golf_wildlife_position(a,sample/20.f);
+                    assert(golf_wildlife_safe(&resident.wildlife,pos,.44f));
+                    if(resident.cat_present)assert(vec3_distance(resident.cat,pos)>=1.19f);
+                    if(resident.dog_present)assert(vec3_distance(resident.dog,pos)>=1.24f);
+                }
             }
             assert(visible==3);
-            assert(vec3_distance(resident.cat,resident.dog)>=1.3f);
-            golf_wild_animal_t *pet=&resident.wildlife.animals[selected];
-            for(int sample=0;sample<=20;sample++){
-                vec3 pos=golf_wildlife_position(pet,sample/20.f);
-                assert(golf_wildlife_safe(&resident.wildlife,pos,.44f));
-                assert(vec3_distance(resident.cat,pos)>=1.19f);
-                assert(vec3_distance(resident.dog,pos)>=1.24f);
-            }
         }
     }
-    assert(chosen[0]&&chosen[1]&&chosen[2]&&chosen[3]);
+    int varieties=0;for(int i=0;i<GOLF_PET_GROUPS;i++)varieties+=chosen[i];assert(varieties>1);
     // Existing twenty-course records must survive the interleaved catalogue.
     JSON_Value *saved=json_parse_string("{\"stroke_count_level_0\":2,\"stroke_count_level_1\":3,\"stroke_count_level_19\":7,\"pitpom100_best_1\":1}");
     const int old_courses[]={0,4,76},old_scores[]={2,3,7};char key[64];

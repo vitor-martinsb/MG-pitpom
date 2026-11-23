@@ -1,3 +1,5 @@
+// @ts-expect-error Shared browser/native roster assertion.
+import {assertPetRoster} from './pet-roster-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -10,7 +12,7 @@ test('Juju is a stable Juju companion candidate; authority includes clean mud st
   await p.add(0,1);await p.add(1,2);let selected=-1;
   for(let seed=1;seed<=32;seed++){
    await p.configure(false,seed);const frame=await p.step(0);
-   assert.equal(frame.mascots.wildlife!.length,5);assert.equal(frame.mascots.wildlife!.filter(a=>a.active).length,1);
+   assert.equal(frame.mascots.wildlife!.length,5);assertPetRoster(frame.mascots);
    if(frame.mascots.thirdKind===3){selected=seed;break;}
   }
   assert.ok(selected>0);const before=await p.step(0),after=await p.step(1200);
@@ -34,8 +36,7 @@ test('resident layouts vary between seeds, replay exactly and stay synchronized 
    const frames=await Promise.all(workers.map(async p=>{await p.configure(false,seed);return p.step(0);}));
    assert.deepEqual(frames[0]!.mascots,frames[1]!.mascots);
    const m=frames[0]!.mascots;dogs.add(JSON.stringify(m.dog));
-   assert.equal(m.wildlife!.filter(a=>a.visible).length,1);
-   assert.ok(m.catVisible&&m.dogVisible);
+   assertPetRoster(m);
    if(seed===1)saved=structuredClone(m);
   }
   assert.ok(dogs.size>=3,'stationary Pituca must have multiple actual start locations');
