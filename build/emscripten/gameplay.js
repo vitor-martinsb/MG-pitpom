@@ -14,7 +14,9 @@
   }
   function paintZoom(){
     zoom.setAttribute('aria-label',t('camera.zoom'));$('zoom-in').setAttribute('aria-label',t('camera.in'));$('zoom-out').setAttribute('aria-label',t('camera.out'));$('zoom-reset').setAttribute('aria-label',t('camera.reset'));
-    $('zoom-reset').textContent=(1/distance).toFixed(1)+'×';$('zoom-in').disabled=distance<=.6501;$('zoom-out').disabled=distance>=2.2499;
+    // Keep the label node stable across frames: WebKit can cancel a click
+    // when its text target is removed between pointer-down and pointer-up.
+    const caption=(1/distance).toFixed(1)+'×';if($('zoom-reset').textContent!==caption)$('zoom-reset').textContent=caption;$('zoom-in').disabled=distance<=.6501;$('zoom-out').disabled=distance>=2.2499;
   }
   $('zoom-in').onclick=()=>changeZoom(distance*.85);$('zoom-out').onclick=()=>changeZoom(distance/.85);$('zoom-reset').onclick=()=>changeZoom(1);
   $('canvas').addEventListener('wheel',e=>{if(zoom.hidden||GolfOnline.blocked())return;e.preventDefault();changeZoom(distance*Math.exp(Math.max(-100,Math.min(100,e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?innerHeight:1)))*.002));},{passive:false});

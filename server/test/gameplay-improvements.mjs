@@ -46,7 +46,8 @@ try{
  // Practice deliberately restores the prior zoom; start boundary checks at default.
  await host.locator('#zoom-reset').click();await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom===1);
  await host.locator('#zoom-in').click();await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom<1);
- await host.locator('#zoom-reset').click();await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom===1);
+ // Hold across multiple course frames: refreshing the caption must not drop the click.
+ await host.locator('#zoom-reset').click({delay:250});await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom===1);
  await host.locator('#canvas').hover({position:{x:800,y:350}});await host.mouse.wheel(0,100);await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom>1);
  for(let i=0;i<12;i++)if(await host.locator('#zoom-out').isEnabled())await host.locator('#zoom-out').click();
  await host.waitForFunction(()=>GolfCourse.inspect().frame.zoom===2.25);assert.equal(await host.locator('#zoom-out').isDisabled(),true);
