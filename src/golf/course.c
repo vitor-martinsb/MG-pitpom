@@ -43,7 +43,8 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         int n=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"id\":%u,\"pos\":[%.5g,%.5g],\"color\":[%.4g,%.4g,%.4g],\"visible\":%s,\"hole\":%s,\"captured\":%s,\"firstComplete\":%s,\"strokes\":%d,\"slowShots\":%d,\"slowUntil\":%.5g,\"mudShots\":%d,\"mudFadeUntil\":%.5g,\"captureKind\":%d,\"effectKind\":%d,\"effectTime\":%.5g,\"effectSerial\":%u,\"seasonSkin\":%d,\"seasonTrail\":%d,\"seasonColor\":[%.4g,%.4g,%.4g]}",i?",":"",p->id,p->ball.draw_pos.x,p->ball.draw_pos.z,p->color.x,p->color.y,p->color.z,golf_game_player_visible(p)?"true":"false",p->ball.is_in_hole?"true":"false",p->ball.captured?"true":"false",p->ball.first_shot_complete?"true":"false",p->stroke_count,p->ball.slow_shots,p->ball.slow_until,p->ball.mud_shots,p->ball.mud_fade_until,p->ball.capture_kind,p->ball.effect_kind,p->ball.effect_time,p->ball.effect_serial,p->season_skin,p->season_trail,golf_season_ball_color(p).x,golf_season_ball_color(p).y,golf_season_ball_color(p).z);
         if(n<0||(size_t)n>=sizeof(text)-(size_t)used-8)break;used+=n;
     }
-    used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"zoom\":%.5g,\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",(g->cam.overview?g->cam.spectator_zoom:g->cam.zoom),m->wildlife.world,m->wildlife.stage,m->wildlife.course);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used," ],\"tutorial\":%s,\"aimPower\":%.5g",golf->tutorial?"true":"false",g->aim_line.power);
+    used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"zoom\":%.5g,\"world\":%d,\"stage\":%d,\"course\":%d,\"wildlife\":[",(g->cam.overview?g->cam.spectator_zoom:g->cam.zoom),m->wildlife.world,m->wildlife.stage,m->wildlife.course);
     for(int i=0;i<GOLF_WILDLIFE_COUNT;i++) {
         golf_wild_animal_t *a=&m->wildlife.animals[i];
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s{\"kind\":%d,\"active\":%s,\"visible\":%s,\"presence\":%.5g,\"pos\":[%.5g,%.5g,%.5g],\"walking\":%s,\"stride\":%.5g,\"gait\":%.5g,\"speed\":%.5g,\"actionTime\":%.5g,\"action\":%d}",i?",":"",i,(a->active&&i==m->third_kind)?"true":"false",(a->active&&a->present)?"true":"false",a->presence,a->pos.x,a->pos.y,a->pos.z,a->walking?"true":"false",a->stride,a->gait,a->speed,a->action_time,a->action);
@@ -72,12 +73,12 @@ EMSCRIPTEN_KEEPALIVE const char *golf_course_frame(void) {
         used+=snprintf(text+used,sizeof(text)-(size_t)used,"%s[%.5g,%.5g,%.5g,%.5g]",i?",":"",a.min.x,a.min.z,a.max.x,a.max.z);
     }
     const golf_companion_t *smanata=&m->wildlife.companions.smanata;
-    vec2 smanata_screen=golf_graphics_world_to_screen(vec3_add(smanata->draw_pos,V3(0,.65f,0)));
+    vec2 smanata_screen=smanata->active?golf_graphics_world_to_screen(vec3_add(smanata->draw_pos,V3(0,.65f,0))):V2(0,0);
     used+=snprintf(text+used,sizeof(text)-(size_t)used,"],\"smanataScreen\":[%.5g,%.5g],\"smanataState\":%d,\"beneditaActive\":%s,\"smanataActive\":%s",smanata_screen.x,smanata_screen.y,smanata->state,m->wildlife.companions.benedita.active?"true":"false",smanata->active?"true":"false");
     const golf_companion_t *alfredo=&m->wildlife.companions.alfredo;
     used+=snprintf(text+used,sizeof(text)-(size_t)used,",\"alfredoActive\":%s,\"alfredoState\":%d,\"alfredoBeats\":%u,\"alfredoPos\":[%.5g,%.5g,%.5g]",alfredo->active?"true":"false",alfredo->state,alfredo->cycles,alfredo->draw_pos.x,alfredo->draw_pos.y,alfredo->draw_pos.z);
     vec3 meg_forward=golf_garden_meg_forward();
-    vec2 meg_screen=golf_graphics_world_to_screen(vec3_add(m->wildlife.animals[GOLF_MEG].pos,V3(0,.65f,0)));
+    vec2 meg_screen=m->wildlife.animals[GOLF_MEG].active?golf_graphics_world_to_screen(vec3_add(m->wildlife.animals[GOLF_MEG].pos,V3(0,.65f,0))):V2(0,0);
     snprintf(text+used,sizeof(text)-(size_t)used,",\"megScreen\":[%.5g,%.5g],\"megForward\":[%.5g,%.5g,%.5g],\"megLie\":%.5g,\"season\":{\"theme\":%s,\"enabled\":%s,\"items\":%d,\"vertices\":%d}}",meg_screen.x,meg_screen.y,meg_forward.x,meg_forward.y,meg_forward.z,golf_meg_lie(&m->wildlife.animals[GOLF_MEG],g->t),golf_season_settings(-1,0,0,0)?"true":"false",m->season.enabled?"true":"false",m->season.count,golf_season_vertex_count());return text;
 }
 EMSCRIPTEN_KEEPALIVE void golf_course_skip(void) {golf_game_skip_presentation();}

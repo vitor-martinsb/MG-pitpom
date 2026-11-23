@@ -22,14 +22,34 @@ A Pompom usa desaceleração suave, giro de 1,2 s com as patas apoiadas e passos
 
 ## Tutorial
 
-O botão Tutorial fica abaixo de Multijogador. Um diálogo com seis etapas explica mira/força, câmera/zoom, obstáculos/bichinhos, pontuação, simultâneo/turnos e conclusão/DNF. Há ajuste de força por arrasto e teclado, uma demonstração ilustrada e zoom da ilustração. A demonstração nunca cria uma partida nem altera pontuações, e não implementa outra física de jogo. É possível avançar, voltar e sair por botão ou Escape a qualquer momento. O diálogo contém o foco; o teclado não aciona o jogo ao fundo. Todo o texto usa o catálogo existente em português, inglês e espanhol.
+O botão Tutorial abre um campo 3D de treino independente, em
+`data/tutorial/practice.level`, fora do catálogo dos 80 campos. O campo tem piso
+plano, quatro bordas fixas e um buraco real, sem animais, vento, portais ou
+obstáculos sazonais. Reutiliza o carregador, a física, a mira e a câmera nativos.
+
+As seis etapas explicam mira, força, câmera/zoom, rebotes, conclusão e os modos
+de partida. As instruções distinguem botão esquerdo/roda do mouse e toque/arrasto
+no celular. O medidor lê a força real da mira; não existe uma simulação SVG nem
+uma física em JavaScript. `Praticar` recolhe o cartão para liberar a visão, e
+`Instruções` o reabre. A interface respeita áreas seguras, orientação e alvos de
+toque de 44 pixels. É possível navegar pelas etapas, reiniciar o campo e sair por
+botão ou Escape, inclusive enquanto o recurso carrega.
+
+O treino não participa de uma sala, não registra recordes, não desbloqueia fases
+e não grava os antigos avisos nativos de primeira jogada. O nível selecionado,
+o perfil e o zoom anterior são preservados ao voltar ao menu. Ao acertar o
+buraco, a interface permite repetir o treino; não aparece o botão de próxima
+fase da campanha. Texto em português, inglês e espanhol usa o catálogo existente.
+`build/generate-tutorial.py --check` verifica o recurso sem alterar nenhuma fase
+existente.
 
 ## Validação
 
+- `tutorial_practice_physics`: valida a conclusão do buraco e as colisões das bordas no motor real.
 - Testes nativos de rampas em 5°, 15°, 25° e 35°, nos dois sentidos, com início parado e velocidade pequena, faces duplicadas e repouso em piso plano/quase plano.
 - Suíte nativa completa: captura, colisões, efeitos individuais, trilha da Juju, trajetos reais e amostras dos companheiros, orçamento de simulação e todos os campos do catálogo.
 - `server/test/turns.test.ts`: autoridade, tacada concorrente, rotação após repouso, sincronização, desconexão/reconexão, jogadores finalizados, ambos os modos físicos e bots.
-- `server/test/gameplay-improvements.mjs`: tutorial em quatro resoluções, navegação por teclado, zoom nativo com limites/restauração/roda/botões e dois clientes com bloqueio nativo por turno. O CI executa em Chromium e WebKit, junto às regressões existentes.
+- `server/test/gameplay-improvements.mjs`: treino nativo em quatro resoluções e um cliente de toque, conclusão real, progresso intacto, reinício/saída, navegação por teclado, zoom nativo com limites/restauração/roda/botões e dois clientes com bloqueio nativo por turno. O CI executa em Chromium e WebKit, junto às regressões existentes.
 - Regressões do menu preservam a exigência de carregamento simultâneo de todos os botões, agora incluindo Tutorial. A lista de mapas e os hashes dos recursos originais permanecem protegidos. Somente os hashes dos pontos de integração de gameplay intencionalmente alterados são atualizados na baseline revisada.
 
 ### Verificação da visão aérea e mira compartilhada

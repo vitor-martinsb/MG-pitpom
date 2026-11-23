@@ -36,33 +36,65 @@
       if(turnText!==text){turnText=text;turn.textContent=text;}
     }
   });
-  // This illustrated rehearsal never enters a match or changes a player's score.
-  const dialog=document.createElement('dialog');dialog.id='tutorial';dialog.setAttribute('aria-labelledby','tutorial-heading');
-  dialog.innerHTML='<section class="tutorial-panel"><header class="chat-heading"><h2 id="tutorial-heading"></h2><button type="button" id="tutorial-close"></button></header><p id="tutorial-step" role="status"></p><h3 id="tutorial-title" tabindex="-1"></h3><p id="tutorial-copy"></p><div id="tutorial-demo"><svg viewBox="0 0 320 170" aria-hidden="true"><g id="tutorial-field"><rect x="10" y="20" width="300" height="135" rx="35" fill="#96b477" stroke="#6d885b" stroke-width="5"/><path d="M170 25v45m-13 0h26" stroke="#936e48" stroke-width="9" stroke-linecap="round"/><ellipse cx="260" cy="105" rx="12" ry="6" fill="#294632"/><path d="M260 104V45l30 9-30 11" fill="#c74a3d" stroke="#8e3d35" stroke-width="2"/><path id="tutorial-aim" d="M70 108h80" stroke="#fff7dc" stroke-width="4" stroke-dasharray="6 4"/><circle id="tutorial-ball" cx="70" cy="108" r="9" fill="#fff9e9" stroke="#415c42" stroke-width="2"/></g></svg><div id="tutorial-pet"></div></div><label id="tutorial-force-label" for="tutorial-force"></label><input id="tutorial-force" type="range" min="10" max="100" value="55"><div class="tutorial-demo-actions"><button type="button" id="tutorial-practice"></button><button type="button" id="tutorial-demo-out">−</button><button type="button" id="tutorial-demo-in">+</button></div><p id="tutorial-feedback" role="status"></p><footer><button type="button" id="tutorial-prev" class="secondary"></button><button type="button" id="tutorial-next"></button></footer></section>';
-  document.body.append(dialog);let step=0,animation,demonstrationZoom=1,pointer;
-  function force(){const v=Number($('tutorial-force').value);$('tutorial-aim').setAttribute('d',`M70 108h${v*1.7}`);$('tutorial-force-label').textContent=t('tutorial.power',{value:v});}
+  // A separate practice course uses the SAME native physics and input as a match.
+  const tutorial=document.createElement('section');tutorial.id='tutorial';tutorial.hidden=true;
+  tutorial.setAttribute('aria-labelledby','tutorial-heading');
+  tutorial.innerHTML='<header class="tutorial-toolbar"><div><h2 id="tutorial-heading"></h2><small id="tutorial-shot-count"></small></div><button id="tutorial-reset" type="button">↺</button><button id="tutorial-close" type="button">×</button></header><section class="tutorial-card"><div class="tutorial-details"><p id="tutorial-step" role="status"></p><h3 id="tutorial-title" tabindex="-1"></h3><p id="tutorial-copy"></p><label id="tutorial-force-label" for="tutorial-force"></label><meter id="tutorial-force" min="0" max="1" value="0"></meter><p id="tutorial-feedback" role="status" aria-live="polite"></p></div><footer><button type="button" id="tutorial-prev" class="secondary"></button><button type="button" id="tutorial-practice"></button><button type="button" id="tutorial-next"></button></footer></section>';
+  document.body.append(tutorial);
+  const card=tutorial.querySelector('.tutorial-card'),coarse=matchMedia('(pointer:coarse)');
+  let active=false,pending=false,step=0,ready=false,completed=false,collapsed=false,trainingFrame;
+  function call(name,result='number'){return Module.ccall(name,result,[],[]);}
+  function layoutTutorial(){document.body.style.setProperty('--tutorial-card-height',`${Math.ceil(card.getBoundingClientRect().height)}px`);}
+  new ResizeObserver(layoutTutorial).observe(card);
+  function setCollapsed(value){collapsed=value;card.classList.toggle('is-collapsed',value);$('tutorial-practice').setAttribute('aria-expanded',String(!value));$('tutorial-practice').textContent=t(value?'tutorial.instructions':'tutorial.practice');layoutTutorial();}
   function showStep(focus=true){
-    animation?.cancel();$('tutorial-feedback').textContent='';demonstrationZoom=1;$('tutorial-field').style.transform='';
-    $('tutorial-heading').textContent=t('tutorial.title');$('tutorial-title').textContent=t('tutorial.step'+step+'.title');$('tutorial-copy').textContent=t('tutorial.step'+step+'.body');$('tutorial-step').textContent=t('tutorial.progress',{current:step+1,total:6});
-    for(const [id,key]of [['tutorial-close','tutorial.close'],['tutorial-prev','back'],['tutorial-next',step===5?'tutorial.done':'tutorial.next'],['tutorial-practice','tutorial.practice']])$(id).textContent=t(key);
-    $('tutorial-demo-in').setAttribute('aria-label',t('camera.in'));$('tutorial-demo-out').setAttribute('aria-label',t('camera.out'));
-    $('tutorial-prev').disabled=step===0;$('tutorial-demo-in').hidden=$('tutorial-demo-out').hidden=step!==1;
-    $('tutorial-pet').hidden=step!==2;if(step===2&&!$('tutorial-pet').firstChild)$('tutorial-pet').append(GolfOnline.petAvatar(5));
-    force();if(focus)$('tutorial-title').focus();
+    const device=coarse.matches||navigator.maxTouchPoints>0?'touch':'mouse';
+    $('tutorial-heading').textContent=t('tutorial.field');$('tutorial-title').textContent=t(`tutorial.lesson${step}.title`);$('tutorial-copy').textContent=t(`tutorial.lesson${step}.${device}`);
+    $('tutorial-step').textContent=t('tutorial.progress',{current:step+1,total:6});
+    for(const [id,key]of [['tutorial-close','tutorial.close'],['tutorial-reset','tutorial.reset']]){$(id).setAttribute('aria-label',t(key));$(id).title=t(key);}
+    $('tutorial-prev').textContent=t('back');$('tutorial-next').textContent=t(step===5?'tutorial.done':'tutorial.next');$('tutorial-prev').disabled=step===0;
+    $('tutorial-practice').disabled=!ready;$('tutorial-reset').disabled=!ready;
+    setCollapsed(collapsed);feedback();if(focus&&!collapsed)$('tutorial-title').focus({preventScroll:true});
   }
-  $('open-tutorial').onclick=()=>{step=0;GolfOnline.cancelAim();dialog.showModal();showStep();};
-  window.addEventListener('keydown',e=>{if(dialog.open){e.stopImmediatePropagation();if(e.key==='Escape'){e.preventDefault();dialog.close();}}},true);
-  $('tutorial-close').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{animation?.cancel();$('open-tutorial').focus();});
-  $('tutorial-prev').onclick=()=>{if(step>0){step--;showStep();}};$('tutorial-next').onclick=()=>{if(step===5)dialog.close();else {step++;showStep();}};
-  $('tutorial-force').oninput=force;
-  $('tutorial-practice').onclick=()=>{
-    animation?.cancel();const v=Number($('tutorial-force').value),target=Math.min(190,v*2.3);
-    animation=$('tutorial-ball').animate([{transform:'translateX(0)'},{transform:`translateX(${target}px)`}],{duration:matchMedia('(prefers-reduced-motion:reduce)').matches?1:950,easing:'cubic-bezier(.15,.6,.3,1)',fill:'forwards'});
-    $('tutorial-feedback').textContent=t('tutorial.demoNote');
+  function put(id,value){const node=$(id);if(node.textContent!==value)node.textContent=value;}
+  function feedback(){
+    const ball=trainingFrame?.players.find(p=>p.id===trainingFrame.local),shots=ball?.strokes??0,power=trainingFrame?.aimPower??0;
+    put('tutorial-shot-count',t(ready?'tutorial.strokes':'tutorial.loading',{count:shots}));
+    $('tutorial-force').value=power;put('tutorial-force-label',t('tutorial.power',{value:Math.round(power*100)}));
+    put('tutorial-feedback',!ready?t('tutorial.loading'):ball?.hole?t('tutorial.complete'):power>0?t('tutorial.release'):shots>0?t('tutorial.afterShot'):t('tutorial.ready'));
+  }
+  function attempt(){
+    if(!active||!pending)return;
+    if(call('golf_tutorial_start')){pending=false;GolfHome.show('game',false);GolfAudio?.phase('game');}
+  }
+  function close(){
+    if(!active)return;active=pending=ready=false;trainingFrame=undefined;tutorial.hidden=true;
+    delete document.body.dataset.tutorial;document.body.style.removeProperty('--tutorial-card-height');
+    call('golf_tutorial_stop',null);GolfHome.show('menu');$('open-tutorial').focus({preventScroll:true});
+  }
+  $('open-tutorial').onclick=()=>{
+    if(active||!GolfCourse.initialized)return;
+    active=pending=true;ready=completed=collapsed=false;step=0;trainingFrame=undefined;tutorial.hidden=false;tutorial.dataset.ready='false';document.body.dataset.tutorial='true';
+    GolfOnline.cancelAim();showStep();attempt();
   };
-  const demo=$('tutorial-demo');demo.addEventListener('pointerdown',e=>{if(e.button!==0)return;pointer=e.pointerId;demo.setPointerCapture(pointer);setForce(e);});
-  function setForce(e){const r=demo.getBoundingClientRect();$('tutorial-force').value=Math.round(Math.max(10,Math.min(100,(e.clientX-r.left)/r.width*140-20)));force();}
-  demo.addEventListener('pointermove',e=>{if(e.pointerId===pointer)setForce(e);});demo.addEventListener('pointerup',e=>{if(e.pointerId===pointer){pointer=undefined;$('tutorial-practice').click();}});demo.addEventListener('pointercancel',()=>{pointer=undefined;});
-  for(const [id,delta]of [['tutorial-demo-in',.15],['tutorial-demo-out',-.15]])$(id).onclick=()=>{demonstrationZoom=Math.max(.8,Math.min(1.5,demonstrationZoom+delta));$('tutorial-field').style.transform=`scale(${demonstrationZoom})`;};
-  window.addEventListener('languagechange',()=>{paintZoom();if(dialog.open)showStep(false);});paintZoom();
+  $('tutorial-close').onclick=close;
+  $('tutorial-reset').onclick=()=>{if(!ready)return;GolfOnline.cancelAim();if(call('golf_tutorial_reset')){completed=false;trainingFrame=undefined;feedback();$('canvas').focus({preventScroll:true});}};
+  $('tutorial-prev').onclick=()=>{if(step>0){step--;setCollapsed(false);showStep();}};
+  $('tutorial-next').onclick=()=>{if(step===5)close();else{step++;setCollapsed(false);showStep();}};
+  $('tutorial-practice').onclick=()=>{setCollapsed(!collapsed);if(collapsed)$('canvas').focus({preventScroll:true});};
+  window.addEventListener('keydown',e=>{if(active&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}},true);
+  window.addEventListener('courseframe',e=>{
+    if(!active)return;
+    if(pending){attempt();return;}
+    trainingFrame=e.detail;
+    if(!trainingFrame.tutorial)return;
+    const wasReady=ready;ready=!!trainingFrame.active;tutorial.dataset.ready=String(ready);
+    if(wasReady!==ready){$('tutorial-reset').disabled=$('tutorial-practice').disabled=!ready;}
+    const ball=trainingFrame.players.find(p=>p.id===trainingFrame.local);
+    if(ball?.hole&&!completed){completed=true;setCollapsed(false);}
+    feedback();
+  });
+  window.addEventListener('languagechange',()=>{paintZoom();if(active)showStep(false);});
+  coarse.addEventListener('change',()=>{if(active)showStep(false);});paintZoom();
+  window.GolfTutorial=Object.freeze({get active(){return active;},get ready(){return ready;},close});
 })();

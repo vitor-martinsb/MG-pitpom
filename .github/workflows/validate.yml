@@ -26,6 +26,7 @@ jobs:
           python3 build/verify-gameplay-assets.py
           python3 build/generate-visual-shaders.py --check
           python3 build/generate-campaign.py --check
+          python3 build/generate-tutorial.py --check
           python3 -m unittest discover -s tests -p test_campaign_layouts.py
           node --test .github/ci/contracts.test.mjs
 

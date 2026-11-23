@@ -2,29 +2,26 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium,webkit} from '@playwright/test';
 import {createServer} from '../dist/index.js';
+import {exerciseTutorial} from './tutorial-fixture.mjs';
 import {freezePhysics} from './room-fixture.mjs';
 import {visitMultiplayer,createLobby,joinLobby,lobbyTab,finishPresentation} from './navigation-fixture.mjs';
 process.env.GOLF_HOLE_SECONDS='300';
 const app=createServer();let browser;
 try{
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
- browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true}):chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),headless:true,args:['--enable-unsafe-swiftshader']}));
+ browser=await (process.argv.includes('--webkit')?webkit.launch({headless:true,...(process.env.WEBKIT_PATH?{executablePath:process.env.WEBKIT_PATH}:{})}):chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),headless:true,args:['--enable-unsafe-swiftshader']}));
  const errors=[],host=await browser.newPage({viewport:{width:1280,height:800}});host.on('pageerror',e=>errors.push(e.message));
  await host.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));
  await host.goto(url);await host.locator('#home-loading').waitFor({state:'hidden',timeout:90000});await host.locator('#continue-home').click();
  fs.mkdirSync('../out/gameplay',{recursive:true});
- if(!process.argv.includes('--turns-only'))for(const [width,height]of [[1280,800],[390,844],[320,740],[844,390]]){
-  await host.setViewportSize({width,height});await host.locator('#open-tutorial').click();
-  await host.locator('#tutorial').waitFor({state:'visible'});assert.equal(await host.locator('#tutorial-step').textContent(),'Etapa 1 de 6');
-  await host.locator('#tutorial-force').focus();await host.locator('#tutorial-force').press('End');await host.locator('#tutorial-practice').click();assert.match(await host.locator('#tutorial-feedback').textContent(),/Demonstração/);
-  await host.locator('#tutorial-next').click();await host.locator('#tutorial-demo-in').click();assert.match(await host.locator('#tutorial-field').getAttribute('style'),/scale\(1.15\)/);
-  await host.locator('#tutorial-prev').click();assert.equal(await host.locator('#tutorial-step').textContent(),'Etapa 1 de 6');
-  for(let n=0;n<5;n++)await host.locator('#tutorial-next').click();assert.equal(await host.locator('#tutorial-step').textContent(),'Etapa 6 de 6');
-  const g=await host.locator('#tutorial').evaluate(e=>({w:e.getBoundingClientRect().width,scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert.ok(g.w<=width&&g.scroll<=width);
-  await host.screenshot({path:`../out/gameplay/tutorial-${width}x${height}.png`});await host.locator('#tutorial-next').click();assert.equal(await host.locator('#tutorial').isVisible(),false);
-  await host.locator('#open-tutorial').click();await host.keyboard.press('Escape');assert.equal(await host.locator('#tutorial').isVisible(),false);
+ if(!process.argv.includes('--turns-only')){
+  for(const [width,height]of [[1280,800],[390,844],[320,568],[844,390]])await exerciseTutorial(host,{width,height,webkit:process.argv.includes('--webkit'),win:width===1280});
+  const touch=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});touch.on('pageerror',e=>errors.push(e.message));
+  await touch.addInitScript(()=>localStorage.setItem('pitpom-language','pt-BR'));await touch.goto(url);await touch.locator('#continue-home').click({timeout:90000});
+  await exerciseTutorial(touch,{width:390,height:844,touch:true,webkit:process.argv.includes('--webkit')});await touch.close();
+  console.log('Native tutorial: real PC/touch shots, real hole, animal-free course, camera/zoom, responsive instructions, reset/exit and unchanged campaign progress passed');
  }
- if(!process.argv.includes('--turns-only'))console.log('Tutorial desktop/mobile passed');
+ if(process.argv.includes('--tutorial-only')){assert.deepEqual(errors,[]);process.exitCode=0;}else{
  await host.setViewportSize({width:1280,height:800});await host.locator('#open-multiplayer').click();await createLobby(host,{nickname:'Host'});
  const room=[...app.rooms.values()][0];room.configurePool([...room.members.values()][0],'custom',[0]);room.configure([...room.members.values()][0],1,'classic','simultaneous');const guest=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});guest.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(guest,url);await joinLobby(guest,{code:room.code,nickname:'Guest'});
  const observer=await browser.newPage({viewport:{width:1024,height:768}});observer.on('pageerror',e=>errors.push(e.message));await visitMultiplayer(observer,url);await joinLobby(observer,{code:room.code,nickname:'Observer'});
@@ -117,6 +114,7 @@ try{
  assert.equal(await host.locator('#timer').textContent(),'Sem limite de tempo');assert.match(await host.locator('#help').textContent(),/20.*DNF/);
 
  assert.deepEqual(errors,[]);console.log('Gameplay: synced turn settings, native turn gating, settled-ball rotation, host and two guests follow the current ball with independent spectator zoom, shared native mouse/touch aiming and power, mobile zoom, own-turn return and disconnect recovery passed.');
+ }
 }catch(error){
  for(const [index,page]of (browser?.contexts().flatMap(c=>c.pages())??[]).entries()){
   try{console.error('Gameplay failure client',index,await page.evaluate(()=>({native:JSON.parse(Module.ccall('golf_online_diagnostics','string',[],[])),frame:GolfCourse.inspect().frame,turn:GolfOnline.turnState()})));await page.screenshot({path:`../out/gameplay/failure-${index}.png`,timeout:10000});}catch{}

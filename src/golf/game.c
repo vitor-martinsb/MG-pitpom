@@ -320,7 +320,7 @@ static void _golf_game_update_state_watching_ball(float dt) {
         game.celebration.cam_pos1 = vec3_add(graphics->cam_pos, vec3_scale(graphics->cam_dir, -1.5f));
         game.celebration.cam_dir1 = vec3_normalize(vec3_sub(player->ball.draw_pos, game.celebration.cam_pos1));
 
-        {
+        if(!golf->tutorial){
             char storage_key[256];
             golf_progress_key(storage_key,256,game_cfg,golf->level_num);
 
@@ -434,6 +434,7 @@ void golf_game_update(float dt) {
             golf_physics_world_t world = _physics_world();
             golf_physics_build_world(&world, true);
             golf_physics_tick_player(&world, player, physics_dt);
+            if(golf->tutorial&&(player->ball.is_out_of_bounds||player->ball.is_in_water))golf_ball_return_before_shot(player);
             golf_mechanics_tick(&game.mechanics,player,1,game.t);
             game.physics.time_behind -= physics_dt;
             num_ticks++;
@@ -624,12 +625,19 @@ void golf_game_start_level(void) {
     world.time = 0;
     golf_physics_build_world(&world, false);
     golf_mechanics_init(&game.mechanics,level,&game.physics.static_bvh);
-    if(!golf_online_active()){
+    if(!golf_online_active()&&!golf->tutorial){
         golf_mechanics_seed(&game.mechanics,(uint32_t)rand()^((uint32_t)rand()<<16),previous_solo_pet);
         previous_solo_pet=game.mechanics.third_kind;
     }
-    if(!golf_online_active())golf_season_prepare(&game.mechanics.season,golf_mechanics_navigation(),game.mechanics.seed,golf_season_solo_obstacles(),game.mechanics.start,&game.mechanics.wildlife);
-    game.mechanics.enabled=true;
+    if(!golf_online_active()&&!golf->tutorial)golf_season_prepare(&game.mechanics.season,golf_mechanics_navigation(),game.mechanics.seed,golf_season_solo_obstacles(),game.mechanics.start,&game.mechanics.wildlife);
+    game.mechanics.enabled=!golf->tutorial;
+    if(golf->tutorial){
+        game.mechanics.cat_valid=game.mechanics.dog_valid=game.mechanics.cat_present=game.mechanics.dog_present=false;
+        golf_wildlife_t *w=&game.mechanics.wildlife;
+        for(int i=0;i<GOLF_WILDLIFE_COUNT;i++)w->animals[i].active=w->animals[i].present=false;
+        w->companions.benedita.active=w->companions.smanata.active=w->companions.alfredo.active=false;
+        w->wind_count=w->portal_count=0;game.mechanics.season.enabled=false;
+    }
 
     game.t = 0;
 

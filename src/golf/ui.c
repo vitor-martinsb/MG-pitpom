@@ -1366,6 +1366,12 @@ static bool _golf_ui_meg(void){
 }
 
 static void _golf_ui_in_game(float dt) {
+    if(golf->tutorial){
+        if(game->state==GOLF_GAME_STATE_WAITING_FOR_AIM)_golf_ui_in_game_waiting_for_aim(dt);
+        else if(game->state==GOLF_GAME_STATE_AIMING)_golf_ui_in_game_aiming(dt);
+        else if(game->state==GOLF_GAME_STATE_WATCHING_BALL)_golf_ui_in_game_watching_ball(dt);
+        return;
+    }
 
     _golf_ui_player_labels();
     if (golf_online_input_blocked()) return;

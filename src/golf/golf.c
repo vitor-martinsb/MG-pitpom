@@ -9,6 +9,14 @@
 #include "golf/game.h"
 #include "golf/ui.h"
 
+#ifdef GOLF_PLATFORM_EMSCRIPTEN
+#include <emscripten.h>
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#endif
+static bool tutorial_exit_requested;
+static int tutorial_previous_level;
+static float tutorial_previous_zoom;
 static golf_t golf;
 static golf_config_t *game_cfg;
 static golf_graphics_t *graphics;
@@ -53,6 +61,7 @@ void golf_update(float dt) {
                 golf.state = GOLF_STATE_IN_GAME;
                 golf.in_game.t = 0;
                 golf_game_start_level();
+                if(golf.tutorial){golf_game_skip_presentation();if(tutorial_exit_requested)golf_goto_main_menu();}
             }
             break;
         }
@@ -89,6 +98,7 @@ void golf_start_level(int level_num) {
         return;
     }
 
+    golf.tutorial=false;tutorial_exit_requested=false;
     golf.level_num = level_num;
     golf.level = NULL;
     golf_data_unload(golf.level_loading_path);
@@ -102,7 +112,25 @@ void golf_start_level(int level_num) {
     golf.state = GOLF_STATE_LOADING_LEVEL;
 }
 
+EMSCRIPTEN_KEEPALIVE int golf_tutorial_start(void){
+    if(golf.state!=GOLF_STATE_MAIN_MENU||golf_online_active()||golf_data_get_load_state(golf.level_loading_path)!=GOLF_DATA_LOADED)return 0;
+    tutorial_previous_level=golf.level_num;tutorial_previous_zoom=game->cam.zoom;game->cam.zoom=1;golf.tutorial=true;tutorial_exit_requested=false;
+    golf.level_num=-1;golf.level=NULL;golf_data_unload(golf.level_loading_path);
+    snprintf(golf.level_loading_path,GOLF_FILE_MAX_PATH,"data/tutorial/practice.level");
+    golf_data_load(golf.level_loading_path,true);golf.state=GOLF_STATE_LOADING_LEVEL;return 1;
+}
+EMSCRIPTEN_KEEPALIVE int golf_tutorial_reset(void){
+    if(!golf.tutorial||golf.state!=GOLF_STATE_IN_GAME)return 0;
+    game->cam.zoom=1;golf_game_start_level();golf_game_skip_presentation();return 1;
+}
+EMSCRIPTEN_KEEPALIVE void golf_tutorial_stop(void){
+    if(!golf.tutorial)return;
+    if(golf.state==GOLF_STATE_LOADING_LEVEL){tutorial_exit_requested=true;return;}
+    golf_goto_main_menu();
+}
 void golf_goto_main_menu(void) {
+    if(golf.tutorial){golf.level_num=tutorial_previous_level;game->cam.zoom=tutorial_previous_zoom;}
+    golf.tutorial=false;tutorial_exit_requested=false;
     ui->main_menu.is_level_select_open = false;
     golf.state = GOLF_STATE_MAIN_MENU;
     golf.main_menu.t = 0;
